@@ -1,11 +1,19 @@
 import Client from "../models/Client.model.js";
+
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
 export const createClient = asyncHandler(async (req, res) => {
     const { workspaceId } = req.params;
-    const { name, email, companyName, phone, notes } = req.body;
+
+    const {
+        name,
+        email,
+        companyName,
+        phone,
+        notes,
+    } = req.body;
 
     const existingClient = await Client.findOne({
         workspace: workspaceId,
@@ -13,7 +21,7 @@ export const createClient = asyncHandler(async (req, res) => {
     });
 
     if (existingClient) {
-        throw new ApiError(400, "Client already exists with this email");
+        throw new ApiError(400, "Client with this email already exists in this workspace");
     }
 
     const client = await Client.create({
@@ -26,29 +34,36 @@ export const createClient = asyncHandler(async (req, res) => {
         createdBy: req.user._id,
     });
 
-    res.status(201).json(
-        new ApiResponse(201, "Client created successfully", {
-            client,
-        })
-    );
+    return res
+        .status(201)
+        .json(
+            new ApiResponse(
+                201,
+                { client },
+                "Client created successfully"
+            )
+        );
 });
 
-export const getWorkspaceClients = asyncHandler(async (req, res) => {
+export const getClients = asyncHandler(async (req, res) => {
     const { workspaceId } = req.params;
 
     const clients = await Client.find({
         workspace: workspaceId,
-        status: { $ne: "archived" },
+        status: "active",
     })
         .populate("createdBy", "name email")
-        .populate("portalUser", "name email avatar status")
         .sort({ createdAt: -1 });
 
-    res.status(200).json(
-        new ApiResponse(200, "Clients fetched successfully", {
-            clients,
-        })
-    );
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                { clients },
+                "Clients fetched successfully"
+            )
+        );
 });
 
 export const getClientById = asyncHandler(async (req, res) => {
@@ -57,24 +72,34 @@ export const getClientById = asyncHandler(async (req, res) => {
     const client = await Client.findOne({
         _id: clientId,
         workspace: workspaceId,
-    })
-        .populate("createdBy", "name email")
-        .populate("portalUser", "name email avatar status");
+    }).populate("createdBy", "name email");
 
     if (!client) {
         throw new ApiError(404, "Client not found");
     }
 
-    res.status(200).json(
-        new ApiResponse(200, "Client fetched successfully", {
-            client,
-        })
-    );
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                { client },
+                "Client fetched successfully"
+            )
+        );
 });
 
 export const updateClient = asyncHandler(async (req, res) => {
     const { workspaceId, clientId } = req.params;
-    const { name, email, companyName, phone, notes, status } = req.body;
+
+    const {
+        name,
+        email,
+        companyName,
+        phone,
+        notes,
+        status,
+    } = req.body;
 
     const client = await Client.findOne({
         _id: clientId,
@@ -86,29 +111,74 @@ export const updateClient = asyncHandler(async (req, res) => {
     }
 
     if (email && email !== client.email) {
-        const emailExists = await Client.findOne({
+        const existingClient = await Client.findOne({
             workspace: workspaceId,
             email,
         });
 
-        if (emailExists) {
-            throw new ApiError(400, "Another client already uses this email");
+        if (existingClient) {
+            throw new ApiError(400, "Client with this email already exists in this workspace");
         }
 
         client.email = email;
     }
 
-    if (name !== undefined) client.name = name;
-    if (companyName !== undefined) client.companyName = companyName;
-    if (phone !== undefined) client.phone = phone;
-    if (notes !== undefined) client.notes = notes;
-    if (status !== undefined) client.status = status;
+    if (name !== undefined) {
+        client.name = name;
+    }
+
+    if (companyName !== undefined) {
+        client.companyName = companyName;
+    }
+
+    if (phone !== undefined) {
+        client.phone = phone;
+    }
+
+    if (notes !== undefined) {
+        client.notes = notes;
+    }
+
+    if (status !== undefined) {
+        client.status = status;
+    }
 
     await client.save();
 
-    res.status(200).json(
-        new ApiResponse(200, "Client updated successfully", {
-            client,
-        })
-    );
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                { client },
+                "Client updated successfully"
+            )
+        );
+});
+
+export const deleteClient = asyncHandler(async (req, res) => {
+    const { workspaceId, clientId } = req.params;
+
+    const client = await Client.findOne({
+        _id: clientId,
+        workspace: workspaceId,
+    });
+
+    if (!client) {
+        throw new ApiError(404, "Client not found");
+    }
+
+    client.status = "inactive";
+
+    await client.save();
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                { client },
+                "Client deleted successfully"
+            )
+        );
 });

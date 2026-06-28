@@ -1,5 +1,7 @@
 import Project from "../models/Project.model.js";
 import Client from "../models/Client.model.js";
+import Task from "../models/Task.model.js";
+import Comment from "../models/Comment.model.js";
 
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
@@ -182,6 +184,16 @@ export const deleteProject = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Project not found");
     }
 
+    await Comment.deleteMany({
+        workspace: workspaceId,
+        project: projectId,
+    });
+
+    await Task.deleteMany({
+        workspace: workspaceId,
+        project: projectId,
+    });
+
     await project.deleteOne();
 
     return res
@@ -190,7 +202,7 @@ export const deleteProject = asyncHandler(async (req, res) => {
             new ApiResponse(
                 200,
                 {},
-                "Project deleted successfully"
+                "Project, related tasks, and related comments deleted successfully"
             )
         );
 });
