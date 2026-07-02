@@ -10,8 +10,18 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.10",
+    "@tailwindcss/vite": "^4.3.1",
+    "axios": "^1.18.1",
+    "cmdk": "^1.1.1",
+    "lucide-react": "^1.22.0",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-datepicker": "^9.1.0",
+    "react-dom": "^19.2.7",
+    "react-router": "^8.0.1",
+    "react-select": "^5.10.2",
+    "sweetalert2": "^11.26.25",
+    "tailwindcss": "^4.3.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

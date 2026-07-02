@@ -5,6 +5,7 @@ import {
     getTasks,
     getTaskById,
     updateTask,
+    updateTaskStatus,
     deleteTask,
 } from "../controllers/task.controller.js";
 
@@ -48,7 +49,7 @@ router
         protect,
         updateTaskValidator,
         validate,
-        checkWorkspaceRole("owner", "admin", "member"),
+        checkWorkspaceRole("owner", "admin"),
         updateTask
     )
     .delete(
@@ -58,5 +59,14 @@ router
         checkWorkspaceRole("owner", "admin"),
         deleteTask
     );
+
+router.patch(
+    "/:workspaceId/projects/:projectId/tasks/:taskId/status",
+    protect,
+    taskIdValidator,
+    validate,
+    checkWorkspaceRole("owner", "admin", "member"),
+    updateTaskStatus
+);
 
 export default router;

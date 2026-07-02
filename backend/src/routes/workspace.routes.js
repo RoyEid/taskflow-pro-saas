@@ -10,7 +10,7 @@ const router = express.Router();
 
 router.post("/", protect, createWorkspaceValidator, validate, createWorkspace);
 router.get("/", protect, getMyWorkspaces);
-router.get("/:workspaceId", protect, checkWorkspaceRole("owner", "admin", "manager", "member", "client"), getMyWorkspaceById,
+router.get("/:workspaceId", protect, checkWorkspaceRole("owner", "admin", "member"), getMyWorkspaceById,
 
 );
 export default router;

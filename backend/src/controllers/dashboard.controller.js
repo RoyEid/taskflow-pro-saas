@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Client from "../models/Client.model.js";
 import Project from "../models/Project.model.js";
 import Task from "../models/Task.model.js";
@@ -62,6 +63,48 @@ export const getWorkspaceDashboard = asyncHandler(async (req, res) => {
         status: { $ne: "done" },
     });
 
+    // ---------------------------------
+    // NEW LOGIC FOR DYNAMIC TRENDS
+    // ---------------------------------
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const sixtyDaysAgo = new Date(thirtyDaysAgo);
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 30);
+
+    // Calculate Projects created in last 30 vs prev 30
+    const projectsLast30 = await Project.countDocuments({ workspace: workspaceId, createdAt: { $gte: thirtyDaysAgo } });
+    const projectsPrev30 = await Project.countDocuments({ workspace: workspaceId, createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } });
+    
+    // Calculate New Tasks created in last 30 vs prev 30
+    const newTasksLast30 = await Task.countDocuments({ workspace: workspaceId, createdAt: { $gte: thirtyDaysAgo } });
+    const newTasksPrev30 = await Task.countDocuments({ workspace: workspaceId, createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } });
+
+    // Calculate Completed Tasks in last 30 vs prev 30
+    const completedTasksLast30 = await Task.countDocuments({ workspace: workspaceId, status: "done", updatedAt: { $gte: thirtyDaysAgo } });
+    const completedTasksPrev30 = await Task.countDocuments({ workspace: workspaceId, status: "done", updatedAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } });
+
+    // Active tasks change (all tasks not done)
+    const activeTasksLast30 = await Task.countDocuments({ workspace: workspaceId, status: { $ne: "done" }, createdAt: { $gte: thirtyDaysAgo } });
+    const activeTasksPrev30 = await Task.countDocuments({ workspace: workspaceId, status: { $ne: "done" }, createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } });
+
+    // Aggregation for chart (tasks created per day in last 30 days)
+    const tasksTrend = await Task.aggregate([
+        { 
+            $match: { 
+                workspace: new mongoose.Types.ObjectId(workspaceId), 
+                createdAt: { $gte: thirtyDaysAgo } 
+            } 
+        },
+        { 
+            $group: { 
+                _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, 
+                count: { $sum: 1 } 
+            } 
+        },
+        { $sort: { "_id": 1 } }
+    ]);
+
     const recentProjects = await Project.find({
         workspace: workspaceId,
     })
@@ -73,7 +116,7 @@ export const getWorkspaceDashboard = asyncHandler(async (req, res) => {
         workspace: workspaceId,
     })
         .populate("project", "name")
-        .populate("assignedTo", "name email")
+        .populate("assignee", "name email")
         .sort({ createdAt: -1 })
         .limit(5);
 
@@ -82,6 +125,7 @@ export const getWorkspaceDashboard = asyncHandler(async (req, res) => {
         .json(
             new ApiResponse(
                 200,
+                "Dashboard data fetched successfully",
                 {
                     stats: {
                         clients: {
@@ -91,6 +135,8 @@ export const getWorkspaceDashboard = asyncHandler(async (req, res) => {
                             total: totalProjects,
                             active: activeProjects,
                             completed: completedProjects,
+                            last30: projectsLast30,
+                            prev30: projectsPrev30,
                         },
                         tasks: {
                             total: totalTasks,
@@ -100,12 +146,18 @@ export const getWorkspaceDashboard = asyncHandler(async (req, res) => {
                             done: doneTasks,
                             blocked: blockedTasks,
                             overdue: overdueTasks,
+                            activeLast30: activeTasksLast30,
+                            activePrev30: activeTasksPrev30,
+                            completedLast30: completedTasksLast30,
+                            completedPrev30: completedTasksPrev30,
+                            newLast30: newTasksLast30,
+                            newPrev30: newTasksPrev30,
                         },
                     },
+                    tasksTrend,
                     recentProjects,
                     recentTasks,
-                },
-                "Dashboard data fetched successfully"
+                }
             )
         );
 });

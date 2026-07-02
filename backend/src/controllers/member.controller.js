@@ -102,3 +102,27 @@ export const updateMemberRole = asyncHandler(async (req, res) => {
         })
     );
 });
+
+export const removeWorkspaceMember = asyncHandler(async (req, res) => {
+    const { workspaceId, memberId } = req.params;
+
+    const member = await WorkspaceMember.findOne({
+        _id: memberId,
+        workspace: workspaceId,
+    });
+
+    if (!member) {
+        throw new ApiError(404, "Workspace member not found");
+    }
+
+    if (member.role === "owner") {
+        throw new ApiError(403, "Owner cannot be removed");
+    }
+
+    member.status = "inactive";
+    await member.save();
+
+    res.status(200).json(
+        new ApiResponse(200, "Workspace member removed successfully")
+    );
+});

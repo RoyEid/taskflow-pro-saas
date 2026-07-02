@@ -48,8 +48,8 @@ export const createComment = asyncHandler(async (req, res) => {
         .json(
             new ApiResponse(
                 201,
-                { comment },
-                "Comment created successfully"
+                "Comment created successfully",
+                { comment }
             )
         );
 });
@@ -72,8 +72,8 @@ export const getComments = asyncHandler(async (req, res) => {
         .json(
             new ApiResponse(
                 200,
-                { comments },
-                "Comments fetched successfully"
+                "Comments fetched successfully",
+                { comments }
             )
         );
 });
@@ -99,8 +99,8 @@ export const getCommentById = asyncHandler(async (req, res) => {
         .json(
             new ApiResponse(
                 200,
-                { comment },
-                "Comment fetched successfully"
+                "Comment fetched successfully",
+                { comment }
             )
         );
 });
@@ -136,8 +136,8 @@ export const updateComment = asyncHandler(async (req, res) => {
         .json(
             new ApiResponse(
                 200,
-                { comment },
-                "Comment updated successfully"
+                "Comment updated successfully",
+                { comment }
             )
         );
 });
@@ -169,8 +169,8 @@ export const deleteComment = asyncHandler(async (req, res) => {
         .json(
             new ApiResponse(
                 200,
-                {},
-                "Comment deleted successfully"
+                "Comment deleted successfully",
+                {}
             )
         );
 });

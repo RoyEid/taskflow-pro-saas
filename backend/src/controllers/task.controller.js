@@ -20,14 +20,14 @@ const checkProjectExists = async (projectId, workspaceId) => {
     return project;
 };
 
-const checkAssignedUser = async (assignedTo, workspaceId) => {
-    if (!assignedTo) {
+const checkAssignedUser = async (assignee, workspaceId) => {
+    if (!assignee) {
         return;
     }
 
     const workspaceMember = await WorkspaceMember.findOne({
         workspace: workspaceId,
-        user: assignedTo,
+        user: assignee,
         status: "active",
     });
 
@@ -42,7 +42,7 @@ export const createTask = asyncHandler(async (req, res) => {
     const {
         title,
         description,
-        assignedTo,
+        assignee,
         status,
         priority,
         dueDate,
@@ -50,14 +50,23 @@ export const createTask = asyncHandler(async (req, res) => {
 
     await checkProjectExists(projectId, workspaceId);
 
-    await checkAssignedUser(assignedTo, workspaceId);
+    let finalAssignee = assignee || null;
+
+    if (req.workspaceMember && req.workspaceMember.role === "member") {
+        finalAssignee = req.user._id;
+    }
+
+    if (finalAssignee && String(finalAssignee) !== String(req.user._id) || req.workspaceMember?.role !== "member") {
+        // Only strictly check if it's not the default override, or if it's admin/owner assigning
+        await checkAssignedUser(finalAssignee, workspaceId);
+    }
 
     const task = await Task.create({
         workspace: workspaceId,
         project: projectId,
         title,
         description,
-        assignedTo: assignedTo || null,
+        assignee: finalAssignee,
         status,
         priority,
         dueDate,
@@ -70,8 +79,8 @@ export const createTask = asyncHandler(async (req, res) => {
         .json(
             new ApiResponse(
                 201,
-                { task },
-                "Task created successfully"
+                "Task created successfully",
+                { task }
             )
         );
 });
@@ -85,7 +94,7 @@ export const getTasks = asyncHandler(async (req, res) => {
         workspace: workspaceId,
         project: projectId,
     })
-        .populate("assignedTo", "name email")
+        .populate("assignee", "name email avatar")
         .populate("createdBy", "name email")
         .sort({ createdAt: -1 });
 
@@ -94,8 +103,8 @@ export const getTasks = asyncHandler(async (req, res) => {
         .json(
             new ApiResponse(
                 200,
-                { tasks },
-                "Tasks fetched successfully"
+                "Tasks fetched successfully",
+                { tasks }
             )
         );
 });
@@ -110,7 +119,7 @@ export const getTaskById = asyncHandler(async (req, res) => {
         workspace: workspaceId,
         project: projectId,
     })
-        .populate("assignedTo", "name email")
+        .populate("assignee", "name email avatar")
         .populate("createdBy", "name email");
 
     if (!task) {
@@ -122,8 +131,8 @@ export const getTaskById = asyncHandler(async (req, res) => {
         .json(
             new ApiResponse(
                 200,
-                { task },
-                "Task fetched successfully"
+                "Task fetched successfully",
+                { task }
             )
         );
 });
@@ -134,7 +143,7 @@ export const updateTask = asyncHandler(async (req, res) => {
     const {
         title,
         description,
-        assignedTo,
+        assignee,
         status,
         priority,
         dueDate,
@@ -152,12 +161,12 @@ export const updateTask = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Task not found");
     }
 
-    if (assignedTo !== undefined) {
-        if (assignedTo === null) {
-            task.assignedTo = null;
+    if (assignee !== undefined) {
+        if (assignee === null) {
+            task.assignee = null;
         } else {
-            await checkAssignedUser(assignedTo, workspaceId);
-            task.assignedTo = assignedTo;
+            await checkAssignedUser(assignee, workspaceId);
+            task.assignee = assignee;
         }
     }
 
@@ -194,8 +203,46 @@ export const updateTask = asyncHandler(async (req, res) => {
         .json(
             new ApiResponse(
                 200,
-                { task },
-                "Task updated successfully"
+                "Task updated successfully",
+                { task }
+            )
+        );
+});
+
+export const updateTaskStatus = asyncHandler(async (req, res) => {
+    const { workspaceId, projectId, taskId } = req.params;
+    const { status } = req.body;
+
+    await checkProjectExists(projectId, workspaceId);
+
+    const task = await Task.findOne({
+        _id: taskId,
+        workspace: workspaceId,
+        project: projectId,
+    });
+
+    if (!task) {
+        throw new ApiError(404, "Task not found");
+    }
+
+    if (status !== undefined) {
+        task.status = status;
+        if (status === "done") {
+            task.completedAt = new Date();
+        } else {
+            task.completedAt = null;
+        }
+    }
+
+    await task.save();
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                "Task status updated successfully",
+                { task }
             )
         );
 });
@@ -228,8 +275,8 @@ export const deleteTask = asyncHandler(async (req, res) => {
         .json(
             new ApiResponse(
                 200,
-                {},
-                "Task and related comments deleted successfully"
+                "Task and related comments deleted successfully",
+                {}
             )
         );
 });

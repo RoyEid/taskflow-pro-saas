@@ -1,9 +1,9 @@
 import express from "express";
-
-import {
+import{
     addWorkspaceMember,
     getWorkspaceMembers,
     updateMemberRole,
+    removeWorkspaceMember,
 } from "../controllers/member.controller.js";
 
 import protect from "../middleware/auth.middleware.js";
@@ -23,7 +23,7 @@ router.get(
     protect,
     workspaceIdValidator,
     validate,
-    checkWorkspaceRole("owner", "admin", "manager"),
+    checkWorkspaceRole("owner", "admin", "member"),
     getWorkspaceMembers
 );
 
@@ -33,7 +33,7 @@ router.post(
     workspaceIdValidator,
     addMemberValidator,
     validate,
-    checkWorkspaceRole("owner", "admin"),
+    checkWorkspaceRole("owner"),
     addWorkspaceMember
 );
 
@@ -43,8 +43,17 @@ router.patch(
     workspaceIdValidator,
     updateMemberRoleValidator,
     validate,
-    checkWorkspaceRole("owner", "admin"),
+    checkWorkspaceRole("owner"),
     updateMemberRole
+);
+
+router.delete(
+    "/:workspaceId/members/:memberId",
+    protect,
+    workspaceIdValidator,
+    validate,
+    checkWorkspaceRole("owner"),
+    removeWorkspaceMember
 );
 
 export default router;

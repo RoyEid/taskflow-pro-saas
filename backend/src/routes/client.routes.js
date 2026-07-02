@@ -26,7 +26,7 @@ router
         protect,
         createClientValidator,
         validate,
-        checkWorkspaceRole("owner", "admin", "member"),
+        checkWorkspaceRole("owner", "admin"),
         createClient
     )
     .get(
@@ -48,7 +48,7 @@ router
         protect,
         updateClientValidator,
         validate,
-        checkWorkspaceRole("owner", "admin", "member"),
+        checkWorkspaceRole("owner", "admin"),
         updateClient
     )
     .delete(

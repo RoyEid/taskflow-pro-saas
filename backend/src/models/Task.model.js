@@ -26,7 +26,7 @@ const taskSchema = new mongoose.Schema(
             default: "",
         },
 
-        assignedTo: {
+        assignee: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             default: null,
@@ -67,7 +67,7 @@ const taskSchema = new mongoose.Schema(
 
 taskSchema.index({ workspace: 1 });
 taskSchema.index({ project: 1 });
-taskSchema.index({ assignedTo: 1 });
+taskSchema.index({ assignee: 1 });
 taskSchema.index({ workspace: 1, status: 1 });
 taskSchema.index({ project: 1, status: 1 });
 

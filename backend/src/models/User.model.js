@@ -21,9 +21,32 @@ const userSchema = new mongoose.Schema(
 
         password: {
             type: String,
-            required: [true, "Password is required"],
+            required: [
+                function () {
+                    return this.provider === "local";
+                },
+                "Password is required",
+            ],
             minlength: [6, "Password must be at least 6 characters"],
             select: false,
+        },
+
+        provider: {
+            type: String,
+            enum: ["local", "google", "github"],
+            default: "local",
+        },
+
+        googleId: {
+            type: String,
+            unique: true,
+            sparse: true,
+        },
+
+        githubId: {
+            type: String,
+            unique: true,
+            sparse: true,
         },
 
         avatar: {
@@ -34,6 +57,26 @@ const userSchema = new mongoose.Schema(
         isEmailVerified: {
             type: Boolean,
             default: false,
+        },
+
+        emailVerificationCode: {
+            type: String,
+            select: false,
+        },
+
+        emailVerificationExpires: {
+            type: Date,
+            select: false,
+        },
+
+        passwordResetCode: {
+            type: String,
+            select: false,
+        },
+
+        passwordResetExpires: {
+            type: Date,
+            select: false,
         },
 
         status: {
@@ -48,7 +91,7 @@ const userSchema = new mongoose.Schema(
 );
 
 userSchema.pre("save", async function () {
-    if (!this.isModified("password")) {
+    if (!this.isModified("password") || !this.password) {
         return;
     }
 
@@ -57,6 +100,9 @@ userSchema.pre("save", async function () {
 });
 
 userSchema.methods.comparePassword = async function (enteredPassword) {
+    if (!this.password) {
+        return false;
+    }
     return await bcrypt.compare(enteredPassword, this.password);
 };
 

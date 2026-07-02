@@ -47,8 +47,8 @@ export const createProject = asyncHandler(async (req, res) => {
         .json(
             new ApiResponse(
                 201,
-                { project },
-                "Project created successfully"
+                "Project created successfully",
+                { project }
             )
         );
 });
@@ -68,8 +68,8 @@ export const getProjects = asyncHandler(async (req, res) => {
         .json(
             new ApiResponse(
                 200,
-                { projects },
-                "Projects fetched successfully"
+                "Projects fetched successfully",
+                { projects }
             )
         );
 });
@@ -93,8 +93,8 @@ export const getProjectById = asyncHandler(async (req, res) => {
         .json(
             new ApiResponse(
                 200,
-                { project },
-                "Project fetched successfully"
+                "Project fetched successfully",
+                { project }
             )
         );
 });
@@ -166,8 +166,8 @@ export const updateProject = asyncHandler(async (req, res) => {
         .json(
             new ApiResponse(
                 200,
-                { project },
-                "Project updated successfully"
+                "Project updated successfully",
+                { project }
             )
         );
 });
@@ -201,8 +201,8 @@ export const deleteProject = asyncHandler(async (req, res) => {
         .json(
             new ApiResponse(
                 200,
-                {},
-                "Project, related tasks, and related comments deleted successfully"
+                "Project, related tasks, and related comments deleted successfully",
+                {}
             )
         );
 });

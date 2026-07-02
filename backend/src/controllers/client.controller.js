@@ -39,8 +39,8 @@ export const createClient = asyncHandler(async (req, res) => {
         .json(
             new ApiResponse(
                 201,
-                { client },
-                "Client created successfully"
+                "Client created successfully",
+                { client }
             )
         );
 });
@@ -60,8 +60,8 @@ export const getClients = asyncHandler(async (req, res) => {
         .json(
             new ApiResponse(
                 200,
-                { clients },
-                "Clients fetched successfully"
+                "Clients fetched successfully",
+                { clients }
             )
         );
 });
@@ -83,8 +83,8 @@ export const getClientById = asyncHandler(async (req, res) => {
         .json(
             new ApiResponse(
                 200,
-                { client },
-                "Client fetched successfully"
+                "Client fetched successfully",
+                { client }
             )
         );
 });
@@ -150,8 +150,8 @@ export const updateClient = asyncHandler(async (req, res) => {
         .json(
             new ApiResponse(
                 200,
-                { client },
-                "Client updated successfully"
+                "Client updated successfully",
+                { client }
             )
         );
 });
@@ -177,8 +177,8 @@ export const deleteClient = asyncHandler(async (req, res) => {
         .json(
             new ApiResponse(
                 200,
-                { client },
-                "Client deleted successfully"
+                "Client deleted successfully",
+                { client }
             )
         );
 });

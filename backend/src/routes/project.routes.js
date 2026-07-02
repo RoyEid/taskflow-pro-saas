@@ -26,7 +26,7 @@ router
         protect,
         createProjectValidator,
         validate,
-        checkWorkspaceRole("owner", "admin", "member"),
+        checkWorkspaceRole("owner", "admin"),
         createProject
     )
     .get(
@@ -48,7 +48,7 @@ router
         protect,
         updateProjectValidator,
         validate,
-        checkWorkspaceRole("owner", "admin", "member"),
+        checkWorkspaceRole("owner", "admin"),
         updateProject
     )
     .delete(

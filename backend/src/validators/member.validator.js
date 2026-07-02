@@ -19,8 +19,8 @@ export const addMemberValidator = [
         .normalizeEmail(),
     body("role")
         .optional()
-        .isIn(["admin", "manager", "member", "client"])
-        .withMessage("Role must be admin, manager, member, or client"),
+        .isIn(["admin", "member"])
+        .withMessage("Role must be admin or member"),
 ];
 
 export const updateMemberRoleValidator = [
@@ -31,6 +31,6 @@ export const updateMemberRoleValidator = [
     body("role")
         .notEmpty()
         .withMessage("Role is required")
-        .isIn(["admin", "manager", "member", "client"])
-        .withMessage("Role must be admin, manager, member, or client"),
+        .isIn(["admin", "member"])
+        .withMessage("Role must be admin or member"),
 ];

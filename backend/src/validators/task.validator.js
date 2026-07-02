@@ -21,7 +21,7 @@ export const createTaskValidator = [
         .isLength({ max: 2000 })
         .withMessage("Description cannot be more than 2000 characters"),
 
-    body("assignedTo")
+    body("assignee")
         .optional({ nullable: true })
         .isMongoId()
         .withMessage("Invalid assigned user ID"),
@@ -65,7 +65,7 @@ export const updateTaskValidator = [
         .isLength({ max: 2000 })
         .withMessage("Description cannot be more than 2000 characters"),
 
-    body("assignedTo")
+    body("assignee")
         .optional({ nullable: true })
         .isMongoId()
         .withMessage("Invalid assigned user ID"),
