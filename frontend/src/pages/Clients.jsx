@@ -329,116 +329,190 @@ function Clients() {
             />
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[800px] border-collapse text-left">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/50 dark:border-slate-800/60 dark:bg-slate-900/50">
-                  <th className="px-6 py-3.5 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
-                    Client Info
-                  </th>
+          <div>
+            {/* Mobile Card Layout */}
+            <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+              {filteredClients.map((client) => {
+                const clientId = getClientId(client);
+                const clientName = client?.name || "Unnamed Client";
+                const clientEmail = client?.email || "No email";
+                const createdDate = client?.createdAt
+                  ? new Date(client.createdAt).toLocaleDateString()
+                  : "—";
 
-                  <th className="px-6 py-3.5 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
-                    Company
-                  </th>
-
-                  <th className="px-6 py-3.5 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
-                    Status
-                  </th>
-
-                  <th className="px-6 py-3.5 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
-                    Added
-                  </th>
-
-                  {!isMemberRole && (
-                    <th className="px-6 py-3.5 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
-                      Actions
-                    </th>
-                  )}
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredClients.map((client) => {
-                  const clientId = getClientId(client);
-                  const clientName = client?.name || "Unnamed Client";
-                  const clientEmail = client?.email || "No email";
-                  const createdDate = client?.createdAt
-                    ? new Date(client.createdAt).toLocaleDateString()
-                    : "—";
-
-                  return (
-                    <tr
-                      key={clientId || clientName}
-                      onClick={() => !isMemberRole && openEditModal(client)}
-                      className="group/row cursor-pointer border-b border-slate-100 transition-colors duration-300 last:border-b-0 hover:bg-slate-50 dark:border-slate-800/60 dark:hover:bg-slate-800/40"
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-[13px] font-bold text-indigo-600 transition-transform duration-300 group-hover/row:scale-110 dark:bg-indigo-500/20 dark:text-indigo-400">
-                            {clientName.charAt(0).toUpperCase()}
-                          </div>
-
-                          <div>
-                            <p className="text-[13px] font-semibold leading-tight text-slate-900 dark:text-slate-100">
-                              {clientName}
-                            </p>
-
-                            <p className="mt-0.5 text-[12px] text-slate-500 dark:text-slate-400">
-                              {clientEmail}
-                            </p>
-
-                            {client?.phone && (
-                              <p className="mt-0.5 text-[11px] text-slate-400">
-                                {client.phone}
-                              </p>
-                            )}
-                          </div>
+                return (
+                  <div
+                    key={clientId || clientName}
+                    onClick={() => !isMemberRole && openEditModal(client)}
+                    className="p-4 active:bg-slate-50 dark:active:bg-slate-800/40 cursor-pointer"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-[13px] font-bold text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400">
+                          {clientName.charAt(0).toUpperCase()}
                         </div>
-                      </td>
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-semibold text-slate-900 dark:text-slate-100 truncate">
+                            {clientName}
+                          </p>
+                          <p className="text-[12px] text-slate-500 dark:text-slate-400 truncate">
+                            {clientEmail}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant={client?.status || "active"} />
+                    </div>
 
-                      <td className="px-6 py-4 text-[13px] font-medium text-slate-600 dark:text-slate-400">
-                        {client?.companyName || "—"}
-                      </td>
+                    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 items-center justify-between text-[12px]">
+                      <div className="text-slate-500 dark:text-slate-400">
+                        <span className="font-medium text-slate-700 dark:text-slate-300">Company:</span> {client?.companyName || "—"}
+                      </div>
+                      <div className="text-slate-400">
+                        Added {createdDate}
+                      </div>
+                    </div>
 
-                      <td className="px-6 py-4">
-                        <Badge variant={client?.status || "active"} />
-                      </td>
-
-                      <td className="px-6 py-4 text-[13px] text-slate-500 dark:text-slate-400">
-                        {createdDate}
-                      </td>
-
-                      {!isMemberRole && (
-                        <td
-                          className="px-6 py-4"
-                          onClick={(e) => e.stopPropagation()}
+                    {!isMemberRole && (
+                      <div className="mt-4 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-800/60 pt-3">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditModal(client);
+                          }}
+                          className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-[12px] font-medium text-slate-600 dark:border-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-850"
                         >
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => openEditModal(client)}
-                              className="rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-indigo-600 dark:hover:bg-slate-800 dark:hover:text-indigo-400"
-                              aria-label={`Edit ${clientName}`}
-                            >
-                              <Edit2 size={14} />
-                            </button>
+                          <Edit2 size={12} /> Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openDeleteConfirm(client);
+                          }}
+                          className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-[12px] font-medium text-red-650 dark:bg-red-950/20 dark:border-red-900/30 dark:text-red-400"
+                        >
+                          <Trash2 size={12} /> Deactivate
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
 
-                            <button
-                              type="button"
-                              onClick={() => openDeleteConfirm(client)}
-                              className="rounded-md p-1.5 text-slate-400 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400"
-                              aria-label={`Delete ${clientName}`}
-                            >
-                              <Trash2 size={14} />
-                            </button>
+            {/* Desktop Table Layout */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full min-w-[800px] border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50/50 dark:border-slate-800/60 dark:bg-slate-900/50">
+                    <th className="px-6 py-3.5 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
+                      Client Info
+                    </th>
+
+                    <th className="px-6 py-3.5 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
+                      Company
+                    </th>
+
+                    <th className="px-6 py-3.5 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
+                      Status
+                    </th>
+
+                    <th className="px-6 py-3.5 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
+                      Added
+                    </th>
+
+                    {!isMemberRole && (
+                      <th className="px-6 py-3.5 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
+                        Actions
+                      </th>
+                    )}
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {filteredClients.map((client) => {
+                    const clientId = getClientId(client);
+                    const clientName = client?.name || "Unnamed Client";
+                    const clientEmail = client?.email || "No email";
+                    const createdDate = client?.createdAt
+                      ? new Date(client.createdAt).toLocaleDateString()
+                      : "—";
+
+                    return (
+                      <tr
+                        key={clientId || clientName}
+                        onClick={() => !isMemberRole && openEditModal(client)}
+                        className="group/row cursor-pointer border-b border-slate-100 transition-colors duration-300 last:border-b-0 hover:bg-slate-50 dark:border-slate-800/60 dark:hover:bg-slate-800/40"
+                      >
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-[13px] font-bold text-indigo-600 transition-transform duration-300 group-hover/row:scale-110 dark:bg-indigo-500/20 dark:text-indigo-400">
+                              {clientName.charAt(0).toUpperCase()}
+                            </div>
+
+                            <div>
+                              <p className="text-[13px] font-semibold leading-tight text-slate-900 dark:text-slate-100">
+                                {clientName}
+                              </p>
+
+                              <p className="mt-0.5 text-[12px] text-slate-500 dark:text-slate-400">
+                                {clientEmail}
+                              </p>
+
+                              {client?.phone && (
+                                <p className="mt-0.5 text-[11px] text-slate-400">
+                                  {client.phone}
+                                </p>
+                              )}
+                            </div>
                           </div>
                         </td>
-                      )}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+
+                        <td className="px-6 py-4 text-[13px] font-medium text-slate-600 dark:text-slate-400">
+                          {client?.companyName || "—"}
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <Badge variant={client?.status || "active"} />
+                        </td>
+
+                        <td className="px-6 py-4 text-[13px] text-slate-500 dark:text-slate-400">
+                          {createdDate}
+                        </td>
+
+                        {!isMemberRole && (
+                          <td
+                            className="px-6 py-4"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => openEditModal(client)}
+                                className="rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-indigo-600 dark:hover:bg-slate-800 dark:hover:text-indigo-400"
+                                aria-label={`Edit ${clientName}`}
+                              >
+                                <Edit2 size={14} />
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => openDeleteConfirm(client)}
+                                className="rounded-md p-1.5 text-slate-400 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400"
+                                aria-label={`Delete ${clientName}`}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

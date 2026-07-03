@@ -106,6 +106,13 @@ userSchema.methods.comparePassword = async function (enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.password);
 };
 
+userSchema.virtual("resetPasswordCode").get(function () {
+    return this.passwordResetCode;
+});
+userSchema.virtual("resetPasswordCode").set(function (val) {
+    this.passwordResetCode = val;
+});
+
 const User = mongoose.model("User", userSchema);
 
 export default User;

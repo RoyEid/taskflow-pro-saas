@@ -30,7 +30,7 @@ function AuthLayout({ children, title, subtitle }) {
         </div>
 
         {/* Glass Card */}
-        <div className="overflow-hidden rounded-3xl border border-white/40 bg-white/70 p-8 shadow-2xl backdrop-blur-xl transition-all dark:border-slate-800/60 dark:bg-slate-900/70 sm:p-10">
+        <div className="overflow-hidden rounded-3xl border border-white/40 bg-white/70 p-5 shadow-2xl backdrop-blur-xl transition-all dark:border-slate-800/60 dark:bg-slate-900/70 sm:p-10">
           {children}
         </div>
       </div>

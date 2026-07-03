@@ -187,7 +187,10 @@ export const forgotPassword = asyncHandler(async (req, res) => {
     if (!email) throw new ApiError(400, "Email is required");
 
     const normalizedEmail = email.trim().toLowerCase();
+    console.log("FORGOT PASSWORD EMAIL:", normalizedEmail);
+
     const user = await User.findOne({ email: normalizedEmail });
+    console.log("USER FOUND:", !!user);
 
     if (!user) {
         // Return 200 to prevent email enumeration
@@ -195,20 +198,26 @@ export const forgotPassword = asyncHandler(async (req, res) => {
     }
 
     const resetCode = generateCode();
-    console.log(`[Auth] Generated password reset code for: ${normalizedEmail}`);
     
     const hashedCode = await bcrypt.hash(resetCode, 10);
 
     user.passwordResetCode = hashedCode;
     user.passwordResetExpires = Date.now() + 15 * 60 * 1000;
     await user.save();
+    console.log("RESET CODE SAVED:", !!user.resetPasswordCode);
 
-    await sendEmail({
-        email: user.email,
-        subject: "Password Reset Request",
-        message: `Your password reset code is: ${resetCode}\n\nThis code will expire in 15 minutes.`,
-        code: resetCode,
-    });
+    try {
+        await sendEmail({
+            email: user.email,
+            subject: "Your TaskFlow Pro password reset code",
+            message: `Your password reset code is: ${resetCode}\n\nThis code will expire in 15 minutes.`,
+            code: resetCode,
+        });
+        console.log("RESET EMAIL SENT");
+    } catch (error) {
+        console.log("RESET EMAIL ERROR:", error.message);
+        throw new ApiError(500, "Failed to send reset email. Please try again.");
+    }
 
     res.status(200).json(new ApiResponse(200, "If an account exists, a reset code was sent", {}));
 });
@@ -220,8 +229,12 @@ export const resetPassword = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Email, code, and new password are required");
     }
 
-    if (newPassword.length < 6) {
-        throw new ApiError(400, "Password must be at least 6 characters");
+    if (newPassword.length < 8 ||
+        !/[A-Z]/.test(newPassword) ||
+        !/[a-z]/.test(newPassword) ||
+        !/[0-9]/.test(newPassword)
+    ) {
+        throw new ApiError(400, "Password does not meet complexity requirements");
     }
 
     const normalizedEmail = email.trim().toLowerCase();
@@ -264,8 +277,12 @@ export const changePassword = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Please provide current and new password");
     }
 
-    if (newPassword.length < 6) {
-        throw new ApiError(400, "New password must be at least 6 characters long");
+    if (newPassword.length < 8 ||
+        !/[A-Z]/.test(newPassword) ||
+        !/[a-z]/.test(newPassword) ||
+        !/[0-9]/.test(newPassword)
+    ) {
+        throw new ApiError(400, "New password does not meet complexity requirements");
     }
 
     const user = await User.findById(req.user._id).select("+password");

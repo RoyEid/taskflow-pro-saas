@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import WorkspaceContext from "./WorkspaceContext";
-import { getWorkspaceById } from "../services/workspaceService";
+import { getWorkspaceById, getWorkspaces } from "../services/workspaceService";
 import useAuth from "./useAuth";
 
 function getWorkspaceId(ws) {
@@ -27,6 +27,8 @@ function WorkspaceProvider({ children }) {
   const [workspace, setWorkspaceState] = useState(null);
   const [memberRole, setMemberRole] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [workspaces, setWorkspaces] = useState([]);
+  const [loadingWorkspaces, setLoadingWorkspaces] = useState(false);
 
   const setWorkspace = useCallback((ws) => {
     const normalizedWorkspace = normalizeWorkspace(ws);
@@ -34,8 +36,9 @@ function WorkspaceProvider({ children }) {
 
     setWorkspaceState(normalizedWorkspace);
 
-    if (ws?.member?.role || ws?.data?.member?.role) {
-      setMemberRole(ws?.member?.role || ws?.data?.member?.role);
+    const role = ws?.role || ws?.member?.role || ws?.data?.member?.role || ws?.membership?.role || ws?.userRole;
+    if (role) {
+      setMemberRole(role.toLowerCase());
     } else {
       setMemberRole(null);
     }
@@ -46,6 +49,22 @@ function WorkspaceProvider({ children }) {
       localStorage.removeItem("workspaceId");
     }
   }, []);
+
+  const refreshWorkspaces = useCallback(async () => {
+    if (!user) {
+      setWorkspaces([]);
+      return;
+    }
+    setLoadingWorkspaces(true);
+    try {
+      const data = await getWorkspaces();
+      setWorkspaces(data || []);
+    } catch (err) {
+      console.error("Failed to refresh workspaces:", err);
+    } finally {
+      setLoadingWorkspaces(false);
+    }
+  }, [user]);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,7 +77,22 @@ function WorkspaceProvider({ children }) {
       if (!user) {
         setWorkspaceState(null);
         setLoading(false);
+        setWorkspaces([]);
         return;
+      }
+
+      setLoadingWorkspaces(true);
+      try {
+        const wsData = await getWorkspaces();
+        if (!cancelled) {
+          setWorkspaces(wsData || []);
+        }
+      } catch (err) {
+        console.error("Failed to load workspaces list:", err);
+      } finally {
+        if (!cancelled) {
+          setLoadingWorkspaces(false);
+        }
       }
 
       const savedWorkspaceId = localStorage.getItem("workspaceId");
@@ -82,8 +116,9 @@ function WorkspaceProvider({ children }) {
         if (normalizedWorkspace && normalizedWorkspaceId) {
           setWorkspaceState(normalizedWorkspace);
           
-          if (response?.member?.role || response?.data?.member?.role) {
-            setMemberRole(response?.member?.role || response?.data?.member?.role);
+          const role = response?.role || response?.member?.role || response?.data?.member?.role || response?.membership?.role || response?.userRole;
+          if (role) {
+            setMemberRole(role.toLowerCase());
           }
           
           localStorage.setItem("workspaceId", normalizedWorkspaceId);
@@ -120,8 +155,11 @@ function WorkspaceProvider({ children }) {
       workspaceId,
       memberRole,
       loading,
+      workspaces,
+      loadingWorkspaces,
+      refreshWorkspaces,
     };
-  }, [workspace, setWorkspace, memberRole, loading]);
+  }, [workspace, setWorkspace, memberRole, loading, workspaces, loadingWorkspaces, refreshWorkspaces]);
 
   return (
     <WorkspaceContext.Provider value={value}>

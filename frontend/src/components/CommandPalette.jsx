@@ -143,7 +143,7 @@ export default function CommandPalette({ open, setOpen }) {
                 className="px-2 py-3 [&_[cmdk-group-heading]]:px-1 [&_[cmdk-group-heading]]:pb-2 [&_[cmdk-group-heading]]:text-[12px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:text-slate-400 dark:[&_[cmdk-group-heading]]:text-slate-500"
               >
                 <Command.Item
-                  value="Dashboard Overview"
+                  value="Dashboard"
                   onSelect={() => handleSelect("/dashboard")}
                   className="mt-1 flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] text-slate-700 transition-colors aria-selected:bg-indigo-50 aria-selected:text-indigo-700 dark:text-slate-300 dark:aria-selected:bg-indigo-500/20 dark:aria-selected:text-indigo-400"
                 >

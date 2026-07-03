@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import AuthLayout from "../layouts/AuthLayout";
-import { Eye, EyeOff, CheckCircle2, Circle } from "lucide-react";
 import { showSuccess, showError } from "../utils/alerts";
 import api from "../services/api";
+import { checkPasswordRules } from "../utils/passwordValidation";
+import PasswordStrengthIndicator from "../components/PasswordStrengthIndicator";
+import PasswordInput from "../components/ui/PasswordInput";
 
 function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -14,10 +16,6 @@ function ResetPassword() {
   const [code, setCode] = useState(["", "", "", "", "", ""]);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -29,23 +27,7 @@ function ResetPassword() {
     }
   }, [email, navigate]);
 
-  const reqLength = password.length >= 8;
-  const reqUpper = /[A-Z]/.test(password);
-  const reqLower = /[a-z]/.test(password);
-  const reqNum = /[0-9]/.test(password);
-
-  const score = [reqLength, reqUpper, reqLower, reqNum].filter(Boolean).length;
-
-  let strengthLabel = "Weak";
-  let barColor = "bg-red-500";
-
-  if (score === 4) {
-    strengthLabel = "Strong";
-    barColor = "bg-emerald-500";
-  } else if (score >= 2) {
-    strengthLabel = "Medium";
-    barColor = "bg-amber-500";
-  }
+  const { allPassed } = checkPasswordRules(password);
 
   const handleCodeChange = (index, e) => {
     const value = e.target.value;
@@ -109,7 +91,7 @@ function ResetPassword() {
       return;
     }
 
-    if (score < 4) {
+    if (!allPassed) {
       setError("Please meet all password requirements.");
       return;
     }
@@ -176,134 +158,31 @@ function ResetPassword() {
           </div>
         </div>
 
-        <div>
-          <label className="mb-2 block text-[13px] font-semibold text-slate-700 dark:text-slate-300">
-            New Password
-          </label>
+        <PasswordInput
+          label="New Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Create a new password"
+          required
+          autoComplete="new-password"
+        />
 
-          <div className="relative">
-            <input
-              type={showPassword ? "text" : "password"}
-              placeholder="Create a new password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="h-11 w-full rounded-xl border border-slate-200 bg-white/50 pl-4 pr-11 text-[14px] text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700/80 dark:bg-slate-900/50 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-indigo-500 dark:focus:bg-slate-900"
-            />
+        <PasswordStrengthIndicator password={password} confirmPassword={confirmPassword} />
 
-            <button
-              type="button"
-              onClick={() => setShowPassword((prev) => !prev)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
-            >
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </div>
-        </div>
-
-        {password && (
-          <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-900/50">
-            <div className="mb-2 flex items-center justify-between text-[12px]">
-              <span className="font-semibold text-slate-700 dark:text-slate-300">
-                Security Check
-              </span>
-
-              <span
-                className={`font-bold ${
-                  strengthLabel === "Weak"
-                    ? "text-red-500"
-                    : strengthLabel === "Medium"
-                    ? "text-amber-500"
-                    : "text-emerald-500"
-                }`}
-              >
-                {strengthLabel}
-              </span>
-            </div>
-
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-              <div
-                className={`h-full rounded-full transition-all duration-300 ${barColor}`}
-                style={{ width: `${(score / 4) * 100}%` }}
-              />
-            </div>
-
-            <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2">
-              <div
-                className={`flex items-center gap-1.5 text-[12px] ${
-                  reqLength
-                    ? "text-emerald-600 dark:text-emerald-400"
-                    : "text-slate-500 dark:text-slate-400"
-                }`}
-              >
-                {reqLength ? <CheckCircle2 size={14} /> : <Circle size={14} />}
-                8+ Characters
-              </div>
-
-              <div
-                className={`flex items-center gap-1.5 text-[12px] ${
-                  reqUpper
-                    ? "text-emerald-600 dark:text-emerald-400"
-                    : "text-slate-500 dark:text-slate-400"
-                }`}
-              >
-                {reqUpper ? <CheckCircle2 size={14} /> : <Circle size={14} />}
-                Uppercase
-              </div>
-
-              <div
-                className={`flex items-center gap-1.5 text-[12px] ${
-                  reqLower
-                    ? "text-emerald-600 dark:text-emerald-400"
-                    : "text-slate-500 dark:text-slate-400"
-                }`}
-              >
-                {reqLower ? <CheckCircle2 size={14} /> : <Circle size={14} />}
-                Lowercase
-              </div>
-
-              <div
-                className={`flex items-center gap-1.5 text-[12px] ${
-                  reqNum
-                    ? "text-emerald-600 dark:text-emerald-400"
-                    : "text-slate-500 dark:text-slate-400"
-                }`}
-              >
-                {reqNum ? <CheckCircle2 size={14} /> : <Circle size={14} />}
-                Number
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div>
-          <label className="mb-2 block text-[13px] font-semibold text-slate-700 dark:text-slate-300">
-            Confirm Password
-          </label>
-
-          <div className="relative">
-            <input
-              type={showConfirmPassword ? "text" : "password"}
-              placeholder="Confirm your new password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="h-11 w-full rounded-xl border border-slate-200 bg-white/50 pl-4 pr-11 text-[14px] text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700/80 dark:bg-slate-900/50 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-indigo-500 dark:focus:bg-slate-900"
-            />
-
-            <button
-              type="button"
-              onClick={() => setShowConfirmPassword((prev) => !prev)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
-            >
-              {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </div>
-        </div>
+        <PasswordInput
+          label="Confirm Password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          placeholder="Confirm your new password"
+          required
+          autoComplete="new-password"
+        />
 
         <button
           type="submit"
           disabled={
             loading ||
-            score < 4 ||
+            !allPassed ||
             code.join("").length !== 6 ||
             (password && confirmPassword && password !== confirmPassword)
           }

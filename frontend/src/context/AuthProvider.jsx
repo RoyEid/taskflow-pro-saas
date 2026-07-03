@@ -89,6 +89,7 @@ function AuthProvider({ children }) {
     <AuthContext.Provider
       value={{
         user,
+        isAuthenticated: !!user,
         loading,
         login,
         register,

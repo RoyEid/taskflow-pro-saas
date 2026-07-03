@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router";
 import useAuth from "../context/useAuth";
 import useWorkspace from "../context/useWorkspace";
+
 import AppDropdown from "../components/ui/AppDropdown";
-import CommandPalette from "../components/CommandPalette";
 import ComingSoonModal from "../components/ComingSoonModal";
+import GlobalSearchModal from "../components/GlobalSearchModal";
+import WorkspaceSwitcher from "../components/WorkspaceSwitcher";
 
 import {
   LayoutDashboard,
@@ -33,7 +35,7 @@ const navSections = [
     items: [
       {
         to: "/dashboard",
-        label: "Overview",
+        label: "Dashboard",
         icon: LayoutDashboard,
         hoverClass: "group-hover:scale-110 group-active:scale-95",
       },
@@ -102,12 +104,14 @@ const navSections = [
 function DashboardLayout({ children }) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { workspace } = useWorkspace();
+  const { workspaces } = useWorkspace();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const [cmdOpen, setCmdOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [comingSoonFeature, setComingSoonFeature] = useState(null);
+
+  const userWorkspaces = workspaces;
 
   const [isPinned, setIsPinned] = useState(() => {
     return localStorage.getItem("sidebarPinned") === "true";
@@ -120,6 +124,15 @@ function DashboardLayout({ children }) {
   const isExpanded = isPinned || isHovered || mobileOpen;
   const isCompact = !isExpanded && !mobileOpen;
 
+  const [isWorkspacePanelOpen, setIsWorkspacePanelOpen] = useState(false);
+
+  useEffect(() => {
+    if (isCompact) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsWorkspacePanelOpen(false);
+    }
+  }, [isCompact]);
+
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add("dark");
@@ -129,6 +142,18 @@ function DashboardLayout({ children }) {
       localStorage.setItem("theme", "light");
     }
   }, [isDarkMode]);
+
+  // Global hotkey for search (Ctrl+K or Cmd+K)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        setIsSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -145,24 +170,29 @@ function DashboardLayout({ children }) {
     e.preventDefault();
 
     if (action === "help") {
-      setComingSoonFeature("Help Center");
+      navigate("/help");
     }
 
     if (action === "feedback") {
-      setComingSoonFeature("Feedback");
+      navigate("/feedback");
     }
   };
 
   const getNavLinkClass = ({ isActive }) => {
-    const base =
-      "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-all duration-300 overflow-hidden whitespace-nowrap active:scale-[0.98] border";
+    let base =
+      "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-all duration-300 overflow-visible whitespace-nowrap active:scale-[0.97] border w-full";
+
+    if (isCompact) {
+      base =
+        "group relative flex items-center justify-center rounded-lg px-0 py-2.5 text-[13px] font-medium transition-all duration-300 overflow-visible whitespace-nowrap active:scale-[0.97] border w-full";
+    }
 
     if (isActive) {
       if (isCompact) {
-        return `${base} border-transparent bg-indigo-50/80 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400`;
+        return `${base} border-transparent bg-indigo-50/80 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400 animate-nav-pulse`;
       }
 
-      return `${base} border-slate-200 bg-white text-indigo-700 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-indigo-400`;
+      return `${base} border-slate-200 bg-gradient-to-r from-white to-slate-50/50 text-indigo-700 shadow-sm dark:border-slate-700 dark:from-slate-800 dark:to-slate-800/80 dark:text-indigo-400 animate-nav-pulse`;
     }
 
     return `${base} border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-slate-200`;
@@ -180,32 +210,28 @@ function DashboardLayout({ children }) {
   /* ── Sidebar Content ─────────────────────────────────────────── */
 
   const sidebarContent = (
-    <div className="relative flex h-full flex-col bg-slate-50 dark:bg-slate-950/50">
+    <div className="relative flex h-full min-h-full flex-col bg-slate-50 dark:bg-slate-950/50">
       {/* Logo */}
       <div
-        className={`flex min-w-0 items-center gap-3 pb-4 pt-5 transition-all duration-300 ${
-          isCompact ? "px-[16px]" : "px-4"
+        className={`flex min-w-0 items-start justify-between gap-2 pb-4 pt-5 transition-all duration-300 ${
+          isCompact ? "px-2" : "px-4"
         }`}
       >
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-xs font-bold text-white shadow-sm dark:bg-indigo-500">
-          TF
-        </div>
+        <WorkspaceSwitcher
+          userWorkspaces={userWorkspaces}
+          isCompact={isCompact}
+          mobileOpen={mobileOpen}
+          setMobileOpen={setMobileOpen}
+          isOpen={isWorkspacePanelOpen}
+          setIsOpen={setIsWorkspacePanelOpen}
+          onExpandSidebar={() => setIsPinned(true)}
+        />
 
         <div
-          className={`min-w-0 flex-1 items-center justify-between gap-2 whitespace-nowrap transition-opacity duration-300 ${
+          className={`flex items-center pt-1 transition-opacity duration-300 ${
             isCompact ? "hidden opacity-0" : "flex opacity-100"
           }`}
         >
-          <div className="min-w-0">
-            <h1 className="truncate text-sm font-bold tracking-tight text-slate-900 dark:text-white">
-              TaskFlow Pro
-            </h1>
-
-            <p className="mt-0.5 truncate text-[11px] font-medium text-slate-500 dark:text-slate-400">
-              {workspace ? workspace.name : "Select Workspace"}
-            </p>
-          </div>
-
           <button
             type="button"
             onClick={handlePinSidebar}
@@ -229,7 +255,7 @@ function DashboardLayout({ children }) {
         <button
           type="button"
           onClick={() => setMobileOpen(false)}
-          className="ml-auto shrink-0 rounded-md p-1 text-slate-400 hover:bg-slate-200/50 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300 lg:hidden"
+          className="absolute top-5 right-4 z-50 rounded-md p-1 text-slate-400 hover:bg-slate-200/50 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300 lg:hidden"
           aria-label="Close sidebar"
         >
           <X size={18} />
@@ -244,7 +270,7 @@ function DashboardLayout({ children }) {
       >
         <button
           type="button"
-          onClick={() => setCmdOpen(true)}
+          onClick={() => setIsSearchOpen(true)}
           className="group/search relative w-full cursor-text text-left transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98]"
         >
           <span
@@ -256,7 +282,7 @@ function DashboardLayout({ children }) {
           </span>
 
           <div
-            className={`flex h-9 w-full items-center rounded-lg border text-[13px] transition-all duration-300 ${
+            className={`flex h-9 w-full cursor-pointer items-center rounded-lg border text-[13px] transition-all duration-300 ${
               isCompact
                 ? "border-transparent bg-transparent px-0 shadow-none hover:bg-slate-200/50 dark:hover:bg-slate-800/50"
                 : "border-slate-200 bg-white pl-9 pr-14 text-slate-400 shadow-sm hover:border-slate-300 hover:shadow-sm dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-500 dark:hover:border-slate-600"
@@ -305,7 +331,6 @@ function DashboardLayout({ children }) {
                     href="#"
                     className={getNavLinkClass({ isActive: false })}
                     onClick={(e) => handleSupportAction(e, item.action)}
-                    title={isCompact ? item.label : undefined}
                   >
                     <div className="flex shrink-0 items-center justify-center">
                       <item.icon
@@ -322,14 +347,22 @@ function DashboardLayout({ children }) {
                     >
                       {item.label}
                     </span>
+                    
+                    {isCompact && (
+                      <div className="sidebar-tooltip">
+                        {item.label}
+                      </div>
+                    )}
                   </a>
                 ) : (
                   <NavLink
                     key={item.to}
                     to={item.to}
                     className={getNavLinkClass}
-                    onClick={() => setMobileOpen(false)}
-                    title={isCompact ? item.label : undefined}
+                    onClick={() => {
+                      setMobileOpen(false);
+                      setIsWorkspacePanelOpen(false);
+                    }}
                   >
                     <div className="flex shrink-0 items-center justify-center">
                       <item.icon
@@ -346,6 +379,12 @@ function DashboardLayout({ children }) {
                     >
                       {item.label}
                     </span>
+                    
+                    {isCompact && (
+                      <div className="sidebar-tooltip">
+                        {item.label}
+                      </div>
+                    )}
                   </NavLink>
                 )
               )}
@@ -374,12 +413,12 @@ function DashboardLayout({ children }) {
                   : "border border-slate-200 bg-white p-2 shadow-sm hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md dark:border-slate-700/80 dark:bg-slate-900 dark:hover:border-slate-600"
               }`}
             >
-              <div className="relative shrink-0 transition-transform duration-300 group-hover:scale-105">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-[11px] font-bold text-indigo-700 transition-colors duration-300 group-hover:bg-indigo-100 dark:bg-indigo-500/20 dark:text-indigo-300 dark:group-hover:bg-indigo-500/30">
+              <div className="relative shrink-0 transition-all duration-300 group-hover:scale-105 group-hover:-translate-y-0.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-[11px] font-bold text-indigo-700 transition-colors duration-300 group-hover:bg-indigo-100 dark:bg-indigo-500/20 dark:text-indigo-300 dark:group-hover:bg-indigo-500/40">
                   {userInitials}
                 </div>
 
-                <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500 dark:border-slate-900" />
+                <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500 dark:border-slate-900 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse-slow" />
               </div>
 
               <div
@@ -426,7 +465,12 @@ function DashboardLayout({ children }) {
 
           <AppDropdown.Item onClick={() => navigate("/settings")}>
             <Settings size={15} />
-            <span className="ml-2">View Profile / Settings</span>
+            <span className="ml-2">Profile & Settings</span>
+          </AppDropdown.Item>
+
+          <AppDropdown.Item onClick={() => navigate('/workspaces')}>
+            <Building2 size={15} />
+            <span className="ml-2">Switch Workspace</span>
           </AppDropdown.Item>
 
           <AppDropdown.Item
@@ -491,26 +535,18 @@ function DashboardLayout({ children }) {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <div className="relative flex min-h-screen overflow-hidden">
-        {/* Desktop sidebar */}
+      <div className="relative flex min-h-screen">
         <aside
-          className={`absolute z-40 hidden h-full shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-slate-50 transition-[width,box-shadow,border-color] duration-300 ease-in-out dark:border-slate-800/80 dark:bg-slate-950 lg:flex ${
+          className={`sticky top-0 z-40 hidden h-screen shrink-0 self-start flex-col border-r border-slate-200 bg-slate-50 transition-[width,box-shadow,border-color] duration-300 ease-in-out dark:border-slate-800/80 dark:bg-slate-950 lg:flex ${
             isCompact
               ? "w-[68px]"
-              : "w-[260px] border-transparent shadow-2xl dark:border-transparent lg:shadow-[4px_0_24px_rgba(0,0,0,0.05)] dark:lg:shadow-[4px_0_24px_rgba(0,0,0,0.4)]"
+              : "w-[260px] shadow-2xl lg:shadow-[4px_0_24px_rgba(0,0,0,0.05)] dark:lg:shadow-[4px_0_24px_rgba(0,0,0,0.4)]"
           }`}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
           {sidebarContent}
         </aside>
-
-        {/* Spacer for main content when sidebar is absolute */}
-        <div
-          className={`hidden shrink-0 transition-[width] duration-300 ease-in-out lg:block ${
-            isPinned ? "w-[260px]" : "w-[68px]"
-          }`}
-        />
 
         {/* Mobile sidebar overlay */}
         {mobileOpen && (
@@ -522,14 +558,14 @@ function DashboardLayout({ children }) {
               onClick={() => setMobileOpen(false)}
             />
 
-            <aside className="fixed inset-y-0 left-0 z-50 w-[280px] bg-slate-50 shadow-2xl dark:bg-slate-950 lg:hidden">
+            <aside className="fixed inset-y-0 left-0 z-50 w-[280px] h-screen h-[100dvh] bg-slate-50 shadow-2xl dark:bg-slate-950 lg:hidden flex flex-col">
               {sidebarContent}
             </aside>
           </>
         )}
 
         {/* Main content */}
-        <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="flex flex-1 flex-col min-w-0 max-w-full overflow-x-hidden">
           {/* Mobile header */}
           <div className="flex h-14 items-center gap-3 border-b border-slate-200 bg-white px-4 shadow-sm dark:border-slate-800/80 dark:bg-slate-900 lg:hidden">
             <button
@@ -550,18 +586,21 @@ function DashboardLayout({ children }) {
             </span>
           </div>
 
-          <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+          <main className="flex-1 p-4 md:p-6 lg:p-8">
             {children}
           </main>
         </div>
       </div>
 
-      <CommandPalette open={cmdOpen} setOpen={setCmdOpen} />
-
       <ComingSoonModal 
         open={!!comingSoonFeature} 
         onClose={() => setComingSoonFeature(null)} 
         featureName={comingSoonFeature} 
+      />
+
+      <GlobalSearchModal 
+        open={isSearchOpen} 
+        onClose={() => setIsSearchOpen(false)} 
       />
     </div>
   );

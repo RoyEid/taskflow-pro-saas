@@ -385,7 +385,7 @@ function Projects() {
       )}
 
       <div>
-        <div className="relative mb-6 max-w-sm transition-transform duration-300 hover:scale-[1.02] focus-within:scale-[1.02]">
+        <div className="relative mb-6 w-full sm:max-w-sm transition-transform duration-300 hover:scale-[1.02] focus-within:scale-[1.02]">
           <Search
             size={16}
             className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
@@ -429,7 +429,7 @@ function Projects() {
               return (
                 <div
                   key={projectId || projectName}
-                  className="group rounded-2xl border border-slate-200 bg-white p-6 transition-all duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-md dark:border-slate-800/80 dark:bg-slate-900 dark:hover:border-slate-700"
+                  className="group rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 transition-all duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-md dark:border-slate-800/80 dark:bg-slate-900 dark:hover:border-slate-700"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex gap-2">
@@ -438,7 +438,7 @@ function Projects() {
                     </div>
 
                     {!isMemberRole && (
-                      <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                      <div className="flex gap-1 opacity-100 sm:opacity-0 transition-opacity sm:group-hover:opacity-100">
                         <button
                           type="button"
                           onClick={(e) => {

@@ -22,3 +22,18 @@ export const createWorkspaceValidator = [
         .isLength({ max: 500 })
         .withMessage("Description cannot exceed 500 characters"),
 ];
+
+export const updateWorkspaceValidator = [
+    body("name")
+        .trim()
+        .notEmpty()
+        .withMessage("Workspace name is required")
+        .isLength({ min: 2, max: 80 })
+        .withMessage("Workspace name must be between 2 and 80 characters"),
+
+    body("description")
+        .optional()
+        .trim()
+        .isLength({ max: 500 })
+        .withMessage("Description cannot exceed 500 characters"),
+];

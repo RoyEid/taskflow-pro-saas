@@ -4,6 +4,7 @@ import WorkspaceMember from "../models/WorkspaceMember.model.js";
 import Comment from "../models/Comment.model.js";
 
 import ApiError from "../utils/ApiError.js";
+import { createNotification } from "../services/notification.service.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
@@ -11,7 +12,7 @@ const checkProjectExists = async (projectId, workspaceId) => {
     const project = await Project.findOne({
         _id: projectId,
         workspace: workspaceId,
-    });
+    }).populate("workspace", "name");
 
     if (!project) {
         throw new ApiError(404, "Project not found in this workspace");
@@ -48,7 +49,7 @@ export const createTask = asyncHandler(async (req, res) => {
         dueDate,
     } = req.body;
 
-    await checkProjectExists(projectId, workspaceId);
+    const project = await checkProjectExists(projectId, workspaceId);
 
     let finalAssignee = assignee || null;
 
@@ -73,6 +74,26 @@ export const createTask = asyncHandler(async (req, res) => {
         completedAt: status === "done" ? new Date() : null,
         createdBy: req.user._id,
     });
+
+    if (finalAssignee) {
+        await createNotification({
+            recipient: finalAssignee,
+            workspace: workspaceId,
+            actor: req.user._id,
+            type: "task_assigned",
+            title: "New task assigned",
+            message: `${req.user.name} assigned you to ${task.title}`,
+            link: `/tasks/${task._id}?project=${projectId}`,
+            metadata: {
+                taskTitle: task.title,
+                projectName: project.name,
+                workspaceName: project.workspace?.name,
+                assignedByName: req.user.name,
+                priority: task.priority,
+                dueDate: task.dueDate
+            }
+        });
+    }
 
     return res
         .status(201)
@@ -149,7 +170,7 @@ export const updateTask = asyncHandler(async (req, res) => {
         dueDate,
     } = req.body;
 
-    await checkProjectExists(projectId, workspaceId);
+    const project = await checkProjectExists(projectId, workspaceId);
 
     const task = await Task.findOne({
         _id: taskId,
@@ -160,6 +181,9 @@ export const updateTask = asyncHandler(async (req, res) => {
     if (!task) {
         throw new ApiError(404, "Task not found");
     }
+
+    const oldAssignee = task.assignee ? task.assignee.toString() : null;
+    const oldStatus = task.status;
 
     if (assignee !== undefined) {
         if (assignee === null) {
@@ -198,6 +222,43 @@ export const updateTask = asyncHandler(async (req, res) => {
 
     await task.save();
 
+    if (assignee !== undefined && String(assignee) !== oldAssignee && assignee !== null) {
+        await createNotification({
+            recipient: assignee,
+            workspace: workspaceId,
+            actor: req.user._id,
+            type: "task_assigned",
+            title: "Task assigned",
+            message: `${req.user.name} assigned you to ${task.title}`,
+            link: `/tasks/${task._id}?project=${projectId}`,
+            metadata: {
+                taskTitle: task.title,
+                projectName: project.name,
+                workspaceName: project.workspace?.name,
+                assignedByName: req.user.name,
+                priority: task.priority,
+                dueDate: task.dueDate
+            }
+        });
+    }
+
+    if (status !== undefined && status !== oldStatus) {
+        const notifyUsers = [task.assignee?.toString(), task.createdBy?.toString()].filter(Boolean);
+        const uniqueUsers = [...new Set(notifyUsers)];
+
+        for (const userId of uniqueUsers) {
+            await createNotification({
+                recipient: userId,
+                workspace: workspaceId,
+                actor: req.user._id,
+                type: "task_status_changed",
+                title: "Task status updated",
+                message: `${task.title} was moved to ${status.replace("_", " ")}`,
+                link: `/tasks/${task._id}?project=${projectId}`,
+            });
+        }
+    }
+
     return res
         .status(200)
         .json(
@@ -225,6 +286,8 @@ export const updateTaskStatus = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Task not found");
     }
 
+    const oldStatus = task.status;
+
     if (status !== undefined) {
         task.status = status;
         if (status === "done") {
@@ -235,6 +298,23 @@ export const updateTaskStatus = asyncHandler(async (req, res) => {
     }
 
     await task.save();
+
+    if (status !== undefined && status !== oldStatus) {
+        const notifyUsers = [task.assignee?.toString(), task.createdBy?.toString()].filter(Boolean);
+        const uniqueUsers = [...new Set(notifyUsers)];
+
+        for (const userId of uniqueUsers) {
+            await createNotification({
+                recipient: userId,
+                workspace: workspaceId,
+                actor: req.user._id,
+                type: "task_status_changed",
+                title: "Task status updated",
+                message: `${task.title} was moved to ${status.replace("_", " ")}`,
+                link: `/tasks/${task._id}?project=${projectId}`,
+            });
+        }
+    }
 
     return res
         .status(200)

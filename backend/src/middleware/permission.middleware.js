@@ -24,7 +24,14 @@ export const checkWorkspaceRole = (...allowedRoles) =>
             throw new ApiError(403, "You are not a member of this workspace");
         }
 
-        if (!allowedRoles.includes(membership.role)) {
+        const normalizedRole = String(membership.role || "").toLowerCase();
+        if (!allowedRoles.includes(normalizedRole)) {
+            console.error("PERMISSION FAILED:", {
+                user: req.user._id,
+                workspace: workspaceId,
+                role: membership.role,
+                allowed: allowedRoles
+            });
             throw new ApiError(403, "You do not have permission for this action");
         }
 

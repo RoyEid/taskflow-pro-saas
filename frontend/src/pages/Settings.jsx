@@ -4,7 +4,10 @@ import useAuth from "../context/useAuth";
 import useWorkspace from "../context/useWorkspace";
 import { showSuccess, showError, confirmAction } from "../utils/alerts";
 import { changePassword, updateProfile } from "../services/authService";
-import { Sun, Moon, Shield, LogOut } from "lucide-react";
+import { Sun, Moon, LogOut, Mail } from "lucide-react";
+import { checkPasswordRules } from "../utils/passwordValidation";
+import PasswordStrengthIndicator from "../components/PasswordStrengthIndicator";
+import PasswordInput from "../components/ui/PasswordInput";
 
 function getInitialTheme() {
   const savedTheme = localStorage.getItem("theme");
@@ -52,6 +55,8 @@ function Settings() {
 
   const [passwordError, setPasswordError] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
+
+
 
   useEffect(() => {
     if (theme === "dark") {
@@ -109,8 +114,9 @@ function Settings() {
       return;
     }
 
-    if (newPassword.length < 6) {
-      setPasswordError("New password must be at least 6 characters.");
+    const { allPassed } = checkPasswordRules(newPassword);
+    if (!allPassed) {
+      setPasswordError("Please meet all password requirements.");
       return;
     }
 
@@ -171,7 +177,7 @@ function Settings() {
       <div className="mt-8 grid gap-8 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
-            <div className="border-b border-slate-200 px-7 py-6 dark:border-slate-800/60">
+            <div className="border-b border-slate-200 px-4 py-4 sm:px-7 sm:py-6 dark:border-slate-800/60">
               <h3 className="text-[16px] font-bold text-slate-900 dark:text-white">
                 Profile Information
               </h3>
@@ -181,7 +187,7 @@ function Settings() {
               </p>
             </div>
 
-            <div className="space-y-6 px-7 py-7">
+            <div className="space-y-6 px-4 py-5 sm:px-7 sm:py-7">
               <div className="flex items-center gap-5">
                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50 text-2xl font-bold text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400">
                   {getUserInitial(user)}
@@ -256,7 +262,7 @@ function Settings() {
             id="change-password-section"
             className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800/80 dark:bg-slate-900"
           >
-            <div className="border-b border-slate-200 px-7 py-6 dark:border-slate-800/60">
+            <div className="border-b border-slate-200 px-4 py-4 sm:px-7 sm:py-6 dark:border-slate-800/60">
               <h3 className="text-[16px] font-bold text-slate-900 dark:text-white">
                 Change Password
               </h3>
@@ -266,74 +272,80 @@ function Settings() {
               </p>
             </div>
 
-            <div className="px-7 py-7">
+            <div className="px-4 py-5 sm:px-7 sm:py-7">
               {passwordError && (
                 <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
                   {passwordError}
                 </div>
               )}
 
-              <form onSubmit={handleChangePassword} className="space-y-6">
-                <div>
-                  <label className="mb-2 block text-[13px] font-medium text-slate-700 dark:text-slate-300">
-                    Current Password *
-                  </label>
+              <form onSubmit={handleChangePassword} className="space-y-6" autoComplete="off">
+                <PasswordInput
+                  label="Current Password *"
+                  value={passwords.currentPassword}
+                  onChange={(e) =>
+                    setPasswords((prev) => ({
+                      ...prev,
+                      currentPassword: e.target.value,
+                    }))
+                  }
+                  placeholder="••••••••"
+                  required
+                  autoComplete="current-password"
+                  inputClassName="h-10 w-full rounded-lg border border-slate-200 bg-white pl-3.5 pr-11 text-[13px] text-slate-850 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                />
 
-                  <input
-                    type="password"
-                    value={passwords.currentPassword}
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                  <PasswordInput
+                    label="New Password *"
+                    value={passwords.newPassword}
                     onChange={(e) =>
                       setPasswords((prev) => ({
                         ...prev,
-                        currentPassword: e.target.value,
+                        newPassword: e.target.value,
                       }))
                     }
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] text-slate-800 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                    placeholder="••••••••"
+                    required
+                    autoComplete="new-password"
+                    inputClassName="h-10 w-full rounded-lg border border-slate-200 bg-white pl-3.5 pr-11 text-[13px] text-slate-855 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                  />
+
+                  <PasswordInput
+                    label="Confirm Password *"
+                    value={passwords.confirmPassword}
+                    onChange={(e) =>
+                      setPasswords((prev) => ({
+                        ...prev,
+                        confirmPassword: e.target.value,
+                      }))
+                    }
+                    placeholder="••••••••"
+                    required
+                    autoComplete="new-password"
+                    inputClassName="h-10 w-full rounded-lg border border-slate-200 bg-white pl-3.5 pr-11 text-[13px] text-slate-855 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
                   />
                 </div>
 
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                  <div>
-                    <label className="mb-2 block text-[13px] font-medium text-slate-700 dark:text-slate-300">
-                      New Password *
-                    </label>
-
-                    <input
-                      type="password"
-                      value={passwords.newPassword}
-                      onChange={(e) =>
-                        setPasswords((prev) => ({
-                          ...prev,
-                          newPassword: e.target.value,
-                        }))
-                      }
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] text-slate-800 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                {passwords.newPassword && (
+                  <div className="mb-4">
+                    <PasswordStrengthIndicator
+                      password={passwords.newPassword}
+                      confirmPassword={passwords.confirmPassword}
                     />
                   </div>
-
-                  <div>
-                    <label className="mb-2 block text-[13px] font-medium text-slate-700 dark:text-slate-300">
-                      Confirm Password *
-                    </label>
-
-                    <input
-                      type="password"
-                      value={passwords.confirmPassword}
-                      onChange={(e) =>
-                        setPasswords((prev) => ({
-                          ...prev,
-                          confirmPassword: e.target.value,
-                        }))
-                      }
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] text-slate-800 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                    />
-                  </div>
-                </div>
+                )}
 
                 <div className="pt-2">
                   <button
                     type="submit"
-                    disabled={changingPassword}
+                    disabled={
+                      changingPassword ||
+                      !passwords.currentPassword ||
+                      !passwords.newPassword ||
+                      !checkPasswordRules(passwords.newPassword).allPassed ||
+                      passwords.newPassword !== passwords.confirmPassword
+                    }
                     className="h-10 rounded-lg bg-indigo-600 px-5 py-2.5 text-[13px] font-semibold text-white shadow-sm transition-all duration-300 hover:bg-indigo-700 hover:shadow-md active:scale-[0.98] disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
                   >
                     {changingPassword ? "Updating..." : "Update Password"}
@@ -344,7 +356,7 @@ function Settings() {
           </div>
 
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
-            <div className="border-b border-slate-200 px-7 py-6 dark:border-slate-800/60">
+            <div className="border-b border-slate-200 px-4 py-4 sm:px-7 sm:py-6 dark:border-slate-800/60">
               <h3 className="text-[16px] font-bold text-slate-900 dark:text-white">
                 App Preferences
               </h3>
@@ -354,7 +366,7 @@ function Settings() {
               </p>
             </div>
 
-            <div className="px-7 py-7">
+            <div className="px-4 py-5 sm:px-7 sm:py-7">
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="text-[14px] font-medium text-slate-900 dark:text-white">
@@ -390,21 +402,6 @@ function Settings() {
 
         <div className="space-y-6">
           <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
-            <div className="mb-4 flex items-center gap-2">
-              <Shield size={18} className="text-emerald-500" />
-
-              <h3 className="text-[15px] font-bold text-slate-900 dark:text-white">
-                Security Info
-              </h3>
-            </div>
-
-            <p className="text-[13px] leading-relaxed text-slate-500 dark:text-slate-400">
-              For your security, use a strong password and do not share your
-              account. We recommend changing your password every 90 days.
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
             <h3 className="mb-4 text-[15px] font-bold text-slate-900 dark:text-white">
               Workspace Info
             </h3>
@@ -436,6 +433,19 @@ function Settings() {
                 No workspace selected.
               </p>
             )}
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
+            <div className="mb-4 flex items-center gap-2">
+              <Mail size={18} className="text-indigo-500" />
+              <h3 className="text-[15px] font-bold text-slate-900 dark:text-white">
+                Notifications Info
+              </h3>
+            </div>
+
+            <p className="text-[13px] leading-relaxed text-slate-500 dark:text-slate-400">
+              Important account, workspace, feedback, and support emails are sent automatically. Task activity notifications appear in the app.
+            </p>
           </div>
 
           <div className="rounded-2xl border border-red-200 bg-white p-7 shadow-sm dark:border-red-900/30 dark:bg-slate-900">

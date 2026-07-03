@@ -1,5 +1,12 @@
 import Workspace from "../models/Workspace.model.js";
 import WorkspaceMember from "../models/WorkspaceMember.model.js";
+import Project from "../models/Project.model.js";
+import Task from "../models/Task.model.js";
+import Client from "../models/Client.model.js";
+import Comment from "../models/Comment.model.js";
+import Notification from "../models/Notification.model.js";
+import SupportRequest from "../models/SupportRequest.model.js";
+import Feedback from "../models/Feedback.model.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
@@ -64,5 +71,67 @@ export const getMyWorkspaceById = asyncHandler(async (req, res) => {
             workspace,
             member: req.workspaceMember,
         })
+    );
+});
+
+export const updateWorkspace = asyncHandler(async (req, res) => {
+    const { workspaceId } = req.params;
+    const { name, description } = req.body;
+
+    const workspace = await Workspace.findById(workspaceId);
+
+    if (!workspace) {
+        throw new ApiError(404, "Workspace not found");
+    }
+
+    workspace.name = name;
+    if (description !== undefined) {
+        workspace.description = description;
+    }
+
+    await workspace.save();
+
+    res.status(200).json(
+        new ApiResponse(200, "Workspace updated successfully", {
+            workspace,
+        })
+    );
+});
+
+export const deleteWorkspace = asyncHandler(async (req, res) => {
+    const { workspaceId } = req.params;
+
+    const workspace = await Workspace.findById(workspaceId);
+
+    if (!workspace) {
+        throw new ApiError(404, "Workspace not found");
+    }
+
+    // Check if user has other workspaces before deleting this one
+    const userWorkspacesCount = await WorkspaceMember.countDocuments({
+        user: req.user._id,
+        status: "active",
+    });
+
+    if (userWorkspacesCount <= 1) {
+        throw new ApiError(400, "You cannot delete your only workspace. Create or join another workspace first.");
+    }
+
+    // Perform safe cascading delete
+    await Promise.all([
+        Project.deleteMany({ workspace: workspaceId }),
+        Task.deleteMany({ workspace: workspaceId }),
+        Client.deleteMany({ workspace: workspaceId }),
+        Comment.deleteMany({ workspace: workspaceId }),
+        Notification.deleteMany({ workspace: workspaceId }),
+        SupportRequest.deleteMany({ workspace: workspaceId }),
+        Feedback.deleteMany({ workspace: workspaceId }),
+        WorkspaceMember.deleteMany({ workspace: workspaceId }),
+    ]);
+
+    await Workspace.findByIdAndDelete(workspaceId);
+
+    res.status(200).json(
+        new ApiResponse(200, "Workspace deleted successfully", {})
     );
 });

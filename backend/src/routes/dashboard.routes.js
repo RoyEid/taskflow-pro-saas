@@ -1,6 +1,6 @@
 import express from "express";
 
-import { getWorkspaceDashboard } from "../controllers/dashboard.controller.js";
+import { getWorkspaceDashboard, getWorkspaceActivity } from "../controllers/dashboard.controller.js";
 
 import { dashboardValidator } from "../validators/dashboard.validator.js";
 
@@ -17,6 +17,15 @@ router.get(
     validate,
     checkWorkspaceRole("owner", "admin", "member"),
     getWorkspaceDashboard
+);
+
+router.get(
+    "/:workspaceId/activity",
+    protect,
+    dashboardValidator,
+    validate,
+    checkWorkspaceRole("owner", "admin", "member"),
+    getWorkspaceActivity
 );
 
 export default router;

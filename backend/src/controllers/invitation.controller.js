@@ -1,0 +1,490 @@
+import crypto from "crypto";
+import mongoose from "mongoose";
+import User from "../models/User.model.js";
+import WorkspaceMember from "../models/WorkspaceMember.model.js";
+import WorkspaceInvitation from "../models/WorkspaceInvitation.model.js";
+import Workspace from "../models/Workspace.model.js";
+import ApiError from "../utils/ApiError.js";
+import ApiResponse from "../utils/ApiResponse.js";
+import asyncHandler from "../utils/asyncHandler.js";
+import sendEmail from "../utils/sendEmail.js";
+import { createNotification } from "../services/notification.service.js";
+
+// Helper to hash token
+const hashToken = (token) => crypto.createHash("sha256").update(token).digest("hex");
+
+// Send Invitation
+export const sendInvitation = asyncHandler(async (req, res) => {
+    const { workspaceId } = req.params;
+    const { email, role = "member" } = req.body;
+
+    const normalizedEmail = String(email || "").trim().toLowerCase();
+
+    // 1 & 2. Check if current logged-in user is a member and has permissions
+    const requesterMembership = await WorkspaceMember.findOne({
+        workspace: workspaceId,
+        user: req.user._id,
+        status: "active"
+    });
+
+    if (!requesterMembership) {
+        console.log("INVITE DEBUG FAIL: Requester not a member", {
+            workspaceId,
+            requesterId: req.user._id,
+            invitedEmail: normalizedEmail
+        });
+        return res.status(403).json({
+            message: "You are not a member of this workspace"
+        });
+    }
+
+    const requesterRole = String(requesterMembership.role || "").toLowerCase();
+
+    if (!["owner", "admin"].includes(requesterRole)) {
+        console.log("INVITE DEBUG FAIL: Requester lacks permission", {
+            requesterRole
+        });
+        return res.status(403).json({
+            message: "You do not have permission to invite members"
+        });
+    }
+    
+    // Verify user exists
+    const userToAdd = await User.findOne({
+        email: { $regex: new RegExp(`^${normalizedEmail.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") }
+    }).select("_id name email status");
+
+    if (!userToAdd) {
+        return res.status(404).json({
+            message: "User not found. The user must register first."
+        });
+    }
+
+    // Temporary backend log
+    console.log("INVITE DEBUG", {
+        workspaceId,
+        requesterId: req.user._id,
+        invitedEmail: normalizedEmail,
+        requesterMembership: !!requesterMembership,
+        requesterRole,
+        invitedUserId: userToAdd._id
+    });
+
+    if (userToAdd.status === "disabled") {
+        return res.status(403).json({
+            message: "This user account is disabled."
+        });
+    }
+
+    // Verify not already a member
+    const existingMember = await WorkspaceMember.findOne({
+        workspace: workspaceId,
+        user: userToAdd._id,
+        status: "active"
+    });
+
+    if (existingMember) {
+        return res.status(400).json({
+            message: "This user is already a member of this workspace."
+        });
+    }
+
+    // Verify no pending invite
+    const pendingInvite = await WorkspaceInvitation.findOne({
+        workspace: workspaceId,
+        invitedUser: userToAdd._id,
+        status: "pending"
+    });
+
+    if (pendingInvite) {
+        return res.status(400).json({
+            message: "An invitation is already pending for this user."
+        });
+    }
+
+    // Fetch workspace info
+    const workspace = await Workspace.findById(workspaceId).select("name");
+
+    // Generate token
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    const tokenHash = hashToken(rawToken);
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+
+    // Create Invite
+    const invitation = await WorkspaceInvitation.create({
+        workspace: workspaceId,
+        invitedUser: userToAdd._id,
+        invitedEmail: userToAdd.email,
+        invitedBy: req.user._id,
+        role: role.toLowerCase(),
+        tokenHash,
+        expiresAt,
+    });
+
+    // Send email
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const dashboardLink = `${frontendUrl}/dashboard`;
+    const inviterName = req.user.name || "A team member";
+
+    await sendEmail({
+        email: userToAdd.email,
+        subject: "You have a pending workspace invitation in TaskFlow Pro",
+        message: `Hello ${userToAdd.name}, ${inviterName} invited you to join the workspace ${workspace.name} on TaskFlow Pro. Role: ${role}. This invitation is pending until you accept it. Please log in to TaskFlow Pro and go to your Dashboard to accept or decline the invitation. This invitation expires in 7 days. If you were not expecting this invitation, you can ignore this email.`,
+        html: `
+            <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; color: #333;">
+                <p>Hello <strong>${userToAdd.name}</strong>,</p>
+                <p><strong>${inviterName}</strong> invited you to join the workspace <strong>${workspace.name}</strong> on TaskFlow Pro.</p>
+                <p><strong>Role:</strong> <span style="text-transform: capitalize;">${role}</span></p>
+                <p>This invitation is pending until you accept it.</p>
+                <p>Please log in to TaskFlow Pro and go to your Dashboard to accept or decline the invitation.</p>
+                <p>This invitation expires in 7 days.</p>
+                <a href="${dashboardLink}" style="display: inline-block; padding: 12px 24px; color: white; background-color: #4f46e5; text-decoration: none; border-radius: 6px; margin-top: 10px; margin-bottom: 20px; font-weight: bold;">Open TaskFlow Pro</a>
+                <p style="font-size: 13px; color: #6b7280;">If you were not expecting this invitation, you can ignore this email.</p>
+            </div>
+        `
+    });
+
+    // Send in-app notification
+    await createNotification({
+        recipient: userToAdd._id,
+        workspace: workspaceId,
+        actor: req.user._id,
+        type: "workspace_invite",
+        title: "New Workspace Invitation",
+        message: `${inviterName} invited you to join ${workspace.name}`,
+        link: `/workspaces`,
+    });
+
+    res.status(201).json(
+        new ApiResponse(201, "Invitation sent successfully", {
+            invitation: {
+                _id: invitation._id,
+                workspace: invitation.workspace,
+                invitedUser: invitation.invitedUser,
+                invitedEmail: invitation.invitedEmail,
+                role: invitation.role,
+                status: invitation.status,
+                expiresAt: invitation.expiresAt,
+            }
+        })
+    );
+});
+
+// Get Pending Invitations for Workspace
+export const getWorkspaceInvitations = asyncHandler(async (req, res) => {
+    const { workspaceId } = req.params;
+
+    const invitations = await WorkspaceInvitation.find({ workspace: workspaceId })
+        .populate("invitedUser", "name email avatar")
+        .populate("invitedBy", "name email avatar")
+        .sort({ createdAt: -1 });
+
+    res.status(200).json(
+        new ApiResponse(200, "Invitations fetched successfully", {
+            invitations,
+        })
+    );
+});
+
+// Cancel Invitation
+export const cancelInvitation = asyncHandler(async (req, res) => {
+    const { workspaceId, inviteId } = req.params;
+
+    const invitation = await WorkspaceInvitation.findOne({
+        _id: inviteId,
+        workspace: workspaceId
+    });
+
+    if (!invitation) {
+        throw new ApiError(404, "Invitation not found");
+    }
+
+    if (invitation.status !== "pending") {
+        throw new ApiError(400, "Only pending invitations can be cancelled");
+    }
+
+    invitation.status = "cancelled";
+    invitation.cancelledAt = new Date();
+    await invitation.save();
+
+    res.status(200).json(
+        new ApiResponse(200, "Invitation cancelled successfully")
+    );
+});
+
+// Get Invitation Details by Token (Public / Semi-public)
+export const getInvitationByToken = asyncHandler(async (req, res) => {
+    const { token } = req.params;
+    const tokenHash = hashToken(token);
+
+    const invitation = await WorkspaceInvitation.findOne({ tokenHash })
+        .populate("workspace", "name logo")
+        .populate("invitedBy", "name email avatar")
+        .populate("invitedUser", "name email avatar");
+
+    if (!invitation) {
+        throw new ApiError(404, "Invitation not found or invalid token");
+    }
+
+    // Do not leak raw tokenHash, just return safe details
+    res.status(200).json(
+        new ApiResponse(200, "Invitation fetched successfully", {
+            invitation: {
+                _id: invitation._id,
+                workspace: invitation.workspace,
+                invitedBy: invitation.invitedBy,
+                invitedUser: invitation.invitedUser,
+                invitedEmail: invitation.invitedEmail,
+                role: invitation.role,
+                status: invitation.status,
+                expiresAt: invitation.expiresAt,
+            }
+        })
+    );
+});
+
+// Accept Invitation
+export const acceptInvitation = asyncHandler(async (req, res) => {
+    const { token } = req.params;
+    const tokenHash = hashToken(token);
+
+    const invitation = await WorkspaceInvitation.findOne({ tokenHash })
+        .populate("workspace", "name");
+
+    if (!invitation) {
+        throw new ApiError(404, "Invalid invitation link");
+    }
+
+    if (invitation.status !== "pending") {
+        throw new ApiError(400, `This invitation is already ${invitation.status}`);
+    }
+
+    if (new Date() > invitation.expiresAt) {
+        invitation.status = "expired";
+        await invitation.save();
+        throw new ApiError(400, "This invitation has expired");
+    }
+
+    // Security check: Must be authenticated and match the invited user
+    if (String(invitation.invitedUser) !== String(req.user._id) && invitation.invitedEmail !== req.user.email) {
+        throw new ApiError(403, "This invitation belongs to another user");
+    }
+
+    // Update invite status
+    invitation.status = "accepted";
+    invitation.acceptedAt = new Date();
+    await invitation.save();
+
+    // Add to workspace members
+    let member = await WorkspaceMember.findOne({
+        workspace: invitation.workspace._id,
+        user: req.user._id
+    });
+
+    if (member) {
+        member.status = "active";
+        member.role = invitation.role;
+        member.joinedAt = new Date();
+        await member.save();
+    } else {
+        member = await WorkspaceMember.create({
+            workspace: invitation.workspace._id,
+            user: req.user._id,
+            role: invitation.role,
+            status: "active",
+            invitedBy: invitation.invitedBy,
+            joinedAt: new Date()
+        });
+    }
+
+    // Notify inviter
+    await createNotification({
+        recipient: invitation.invitedBy,
+        workspace: invitation.workspace._id,
+        actor: req.user._id,
+        type: "invite_accepted",
+        title: "Invitation Accepted",
+        message: `${req.user.name} accepted your invitation to workspace ${invitation.workspace.name}`,
+    });
+
+    res.status(200).json(
+        new ApiResponse(200, "Invitation accepted successfully", {
+            workspace: invitation.workspace
+        })
+    );
+});
+
+// Decline Invitation
+export const declineInvitation = asyncHandler(async (req, res) => {
+    const { token } = req.params;
+    const tokenHash = hashToken(token);
+
+    const invitation = await WorkspaceInvitation.findOne({ tokenHash })
+        .populate("workspace", "name");
+
+    if (!invitation) {
+        throw new ApiError(404, "Invalid invitation link");
+    }
+
+    if (invitation.status !== "pending") {
+        throw new ApiError(400, `This invitation is already ${invitation.status}`);
+    }
+
+    // Security check
+    if (String(invitation.invitedUser) !== String(req.user._id) && invitation.invitedEmail !== req.user.email) {
+        throw new ApiError(403, "This invitation belongs to another user");
+    }
+
+    invitation.status = "declined";
+    invitation.declinedAt = new Date();
+    await invitation.save();
+
+    // Notify inviter
+    await createNotification({
+        recipient: invitation.invitedBy,
+        workspace: invitation.workspace._id,
+        actor: req.user._id,
+        type: "invite_declined",
+        title: "Invitation Declined",
+        message: `${req.user.name} declined your invitation to workspace ${invitation.workspace.name}`,
+    });
+
+    res.status(200).json(
+        new ApiResponse(200, "Invitation declined successfully")
+    );
+});
+
+// Get My Pending Invitations
+export const getMyInvitations = asyncHandler(async (req, res) => {
+    const invitations = await WorkspaceInvitation.find({
+        invitedUser: req.user._id,
+        status: "pending",
+        expiresAt: { $gt: new Date() }
+    })
+    .populate("workspace", "name logo")
+    .populate("invitedBy", "name email avatar")
+    .sort({ createdAt: -1 });
+
+    res.status(200).json(
+        new ApiResponse(200, "Pending invitations fetched successfully", {
+            invitations
+        })
+    );
+});
+
+// Accept Invitation by ID
+export const acceptInvitationById = asyncHandler(async (req, res) => {
+    const { invitationId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(invitationId)) {
+        throw new ApiError(400, "Invalid invitation ID format");
+    }
+
+    const invitation = await WorkspaceInvitation.findOne({ _id: invitationId })
+        .populate("workspace", "name");
+
+    if (!invitation) {
+        throw new ApiError(404, "Invitation not found");
+    }
+
+    if (invitation.status !== "pending") {
+        throw new ApiError(400, `This invitation is already ${invitation.status}`);
+    }
+
+    if (new Date() > invitation.expiresAt) {
+        invitation.status = "expired";
+        await invitation.save();
+        throw new ApiError(400, "This invitation has expired");
+    }
+
+    if (String(invitation.invitedUser) !== String(req.user._id)) {
+        throw new ApiError(403, "This invitation belongs to another user");
+    }
+
+    // Update invite status
+    invitation.status = "accepted";
+    invitation.acceptedAt = new Date();
+    await invitation.save();
+
+    // Add to workspace members
+    let member = await WorkspaceMember.findOne({
+        workspace: invitation.workspace._id,
+        user: req.user._id
+    });
+
+    if (member) {
+        member.status = "active";
+        member.role = invitation.role;
+        member.joinedAt = new Date();
+        await member.save();
+    } else {
+        await WorkspaceMember.create({
+            workspace: invitation.workspace._id,
+            user: req.user._id,
+            role: invitation.role,
+            status: "active",
+            invitedBy: invitation.invitedBy,
+            joinedAt: new Date()
+        });
+    }
+
+    // Notify inviter
+    await createNotification({
+        recipient: invitation.invitedBy,
+        workspace: invitation.workspace._id,
+        actor: req.user._id,
+        type: "invite_accepted",
+        title: "Invitation Accepted",
+        message: `${req.user.name} accepted your invitation to workspace ${invitation.workspace.name}`,
+    });
+
+    res.status(200).json(
+        new ApiResponse(200, "Invitation accepted successfully", {
+            workspace: invitation.workspace
+        })
+    );
+});
+
+// Decline Invitation by ID
+export const declineInvitationById = asyncHandler(async (req, res) => {
+    const { invitationId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(invitationId)) {
+        throw new ApiError(400, "Invalid invitation ID format");
+    }
+
+    const invitation = await WorkspaceInvitation.findOne({ _id: invitationId })
+        .populate("workspace", "name");
+
+    if (!invitation) {
+        throw new ApiError(404, "Invitation not found");
+    }
+
+    if (invitation.status !== "pending") {
+        throw new ApiError(400, `This invitation is already ${invitation.status}`);
+    }
+
+    if (String(invitation.invitedUser) !== String(req.user._id)) {
+        throw new ApiError(403, "This invitation belongs to another user");
+    }
+
+    invitation.status = "declined";
+    invitation.declinedAt = new Date();
+    await invitation.save();
+
+    // Notify inviter
+    await createNotification({
+        recipient: invitation.invitedBy,
+        workspace: invitation.workspace._id,
+        actor: req.user._id,
+        type: "invite_declined",
+        title: "Invitation Declined",
+        message: `${req.user.name} declined your invitation to workspace ${invitation.workspace.name}`,
+    });
+
+    res.status(200).json(
+        new ApiResponse(200, "Invitation declined successfully")
+    );
+});

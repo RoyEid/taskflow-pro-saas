@@ -260,7 +260,7 @@ function ProjectDetail() {
         {activeTab === "overview" && (
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="space-y-6 lg:col-span-2">
-              <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-7 shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
                 <h3 className="text-[15px] font-bold text-slate-900 dark:text-white">
                   Description
                 </h3>
@@ -270,7 +270,7 @@ function ProjectDetail() {
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-7 shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
                 <div className="mb-5 flex items-center justify-between">
                   <h3 className="flex items-center gap-2 text-[15px] font-bold text-slate-900 dark:text-white">
                     <BarChart3 size={16} className="text-slate-400" />
@@ -289,7 +289,7 @@ function ProjectDetail() {
                   />
                 </div>
 
-                <div className="mt-6 grid grid-cols-3 gap-4">
+                <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="rounded-xl border border-slate-100 p-4 dark:border-slate-800/60">
                     <p className="flex items-center gap-1.5 text-[12px] font-medium text-slate-500 dark:text-slate-400">
                       <ListTodo size={14} />
@@ -327,7 +327,7 @@ function ProjectDetail() {
             </div>
 
             <div className="space-y-6">
-              <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-7 shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
                 <h3 className="mb-5 text-[15px] font-bold text-slate-900 dark:text-white">
                   Project Details
                 </h3>
@@ -396,8 +396,50 @@ function ProjectDetail() {
                 />
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[700px] border-collapse text-left">
+              <div>
+                {/* Mobile Card Layout */}
+                <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+                  {tasks.map((task) => {
+                    const taskId = getTaskId(task);
+
+                    return (
+                      <div
+                        key={taskId || task?.title}
+                        className="p-4 flex flex-col gap-2"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <Link
+                            to={
+                              taskId
+                                ? `/tasks/${taskId}?project=${
+                                    projectRealId || projectId
+                                  }`
+                                : `/tasks?project=${projectRealId || projectId}`
+                            }
+                            className="text-[14px] font-semibold text-slate-900 dark:text-slate-100 transition hover:text-indigo-600 dark:hover:text-indigo-400 truncate pr-2"
+                          >
+                            {task?.title || "Untitled Task"}
+                          </Link>
+                          <Badge variant={task?.status || "todo"} />
+                        </div>
+
+                        <div className="mt-2 flex items-center justify-between text-[12px] text-slate-505">
+                          <div className="flex items-center gap-1">
+                            <Badge variant={task?.priority || "medium"} dot />
+                            <span className="capitalize text-slate-600 dark:text-slate-400">{task?.priority || "medium"}</span>
+                          </div>
+                          <div className="text-slate-400">
+                            {task?.dueDate ? getSafeDateLabel(task.dueDate) : "—"}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Desktop Table Layout */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full min-w-[700px] border-collapse text-left">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50/50 dark:border-slate-800/60 dark:bg-slate-900/50">
                       <th className="px-6 py-4 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
@@ -459,7 +501,8 @@ function ProjectDetail() {
                       );
                     })}
                   </tbody>
-                </table>
+                  </table>
+                </div>
               </div>
             )}
           </div>

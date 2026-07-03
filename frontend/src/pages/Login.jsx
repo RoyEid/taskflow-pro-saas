@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import useAuth from "../context/useAuth";
 import AuthLayout from "../layouts/AuthLayout";
-import { Eye, EyeOff } from "lucide-react";
 import { showSuccess, showError } from "../utils/alerts";
+import PasswordInput from "../components/ui/PasswordInput";
 import api from "../services/api";
 
 function GitHubIcon() {
@@ -27,7 +27,7 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
-  const [showPassword, setShowPassword] = useState(false);
+  const [emailReadOnly, setEmailReadOnly] = useState(true);
   const [error, setError] = useState("");
   const [unverifiedEmail, setUnverifiedEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -61,7 +61,8 @@ function Login() {
 
     try {
       await login(email, password, rememberMe);
-      navigate("/dashboard");
+      const redirectTo = searchParams.get("redirect");
+      navigate(redirectTo && redirectTo.startsWith("/") ? redirectTo : "/dashboard");
     } catch (err) {
       const errorMsg =
         err.response?.data?.message || "Login failed. Please try again.";
@@ -118,15 +119,20 @@ function Login() {
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label className="mb-2 block text-[13px] font-semibold text-slate-700 dark:text-slate-300">
+          <label htmlFor="email" className="mb-2 block text-[13px] font-semibold text-slate-700 dark:text-slate-300">
             Email address
           </label>
 
           <input
             type="email"
+            name="email"
+            id="email"
             placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            autoComplete="username"
+            readOnly={emailReadOnly}
+            onFocus={() => setEmailReadOnly(false)}
             className="h-11 w-full rounded-xl border border-slate-200 bg-white/50 px-4 text-[14px] text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700/80 dark:bg-slate-900/50 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-indigo-500 dark:focus:bg-slate-900"
           />
         </div>
@@ -145,24 +151,13 @@ function Login() {
             </Link>
           </div>
 
-          <div className="relative">
-            <input
-              type={showPassword ? "text" : "password"}
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="h-11 w-full rounded-xl border border-slate-200 bg-white/50 pl-4 pr-11 text-[14px] text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700/80 dark:bg-slate-900/50 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-indigo-500 dark:focus:bg-slate-900"
-            />
-
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              aria-label={showPassword ? "Hide password" : "Show password"}
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
-            >
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </div>
+          <PasswordInput
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter your password"
+            required
+            autoComplete="current-password"
+          />
         </div>
 
         <div className="flex items-center">

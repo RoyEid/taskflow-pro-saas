@@ -1,4 +1,4 @@
-import React, { forwardRef } from "react";
+import { forwardRef } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -6,15 +6,16 @@ const AppDatePicker = forwardRef(({ label, error, required = false, ...props }, 
   return (
     <div className={`app-date-picker ${error ? "has-error" : ""}`}>
       {label && (
-        <label className="mb-1.5 block text-[13px] font-medium text-zinc-700 dark:text-zinc-300">
+        <label className="mb-1.5 block text-[13px] font-medium text-slate-700 dark:text-slate-300">
           {label} {required && "*"}
         </label>
       )}
       <div className="relative w-full">
         <DatePicker
           {...props}
-          className="h-10 w-full cursor-pointer rounded-lg border border-zinc-200 bg-zinc-50 pl-3.5 pr-10 text-[13px] text-zinc-800 outline-none transition focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-200 dark:focus:border-zinc-500"
-          calendarClassName="dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-200 font-sans border-zinc-200 shadow-md rounded-lg"
+          ref={ref}
+          className="h-10 w-full cursor-pointer rounded-lg border border-slate-200 bg-slate-50 pl-3.5 pr-10 text-[13px] text-slate-800 outline-none transition focus:border-slate-400 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:focus:border-slate-500"
+          calendarClassName="dark:bg-slate-900 dark:border-slate-800 dark:text-slate-200 font-sans border-slate-200 shadow-md rounded-lg"
           wrapperClassName="w-full"
           popperClassName="z-50"
         />
@@ -27,7 +28,7 @@ const AppDatePicker = forwardRef(({ label, error, required = false, ...props }, 
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500"
+          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"
         >
           <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
           <line x1="16" x2="16" y1="2" y2="6" />

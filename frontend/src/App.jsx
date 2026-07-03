@@ -15,6 +15,9 @@ import Tasks from "./pages/Tasks";
 import TaskDetail from "./pages/TaskDetail";
 import Members from "./pages/Members";
 import Settings from "./pages/Settings";
+import Feedback from "./pages/Feedback";
+import HelpSupport from "./pages/HelpSupport";
+import InviteAccept from "./pages/InviteAccept";
 
 function App() {
   return (
@@ -26,6 +29,7 @@ function App() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/oauth-success" element={<OAuthSuccess />} />
+      <Route path="/invitations/:token" element={<InviteAccept />} />
 
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/workspaces" element={<ProtectedRoute><Workspaces /></ProtectedRoute>} />
@@ -36,6 +40,8 @@ function App() {
       <Route path="/tasks/:taskId" element={<ProtectedRoute><TaskDetail /></ProtectedRoute>} />
       <Route path="/members" element={<ProtectedRoute><Members /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+      <Route path="/feedback" element={<ProtectedRoute><Feedback /></ProtectedRoute>} />
+      <Route path="/help" element={<ProtectedRoute><HelpSupport /></ProtectedRoute>} />
     </Routes>
   );
 }

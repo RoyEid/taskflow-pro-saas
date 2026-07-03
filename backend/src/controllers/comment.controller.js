@@ -4,6 +4,7 @@ import Task from "../models/Task.model.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import { createNotification } from "../services/notification.service.js";
 
 const checkTaskExists = async (workspaceId, projectId, taskId) => {
     const task = await Task.findOne({
@@ -33,7 +34,7 @@ export const createComment = asyncHandler(async (req, res) => {
     const { workspaceId, projectId, taskId } = req.params;
     const { content } = req.body;
 
-    await checkTaskExists(workspaceId, projectId, taskId);
+    const task = await checkTaskExists(workspaceId, projectId, taskId);
 
     const comment = await Comment.create({
         workspace: workspaceId,
@@ -42,6 +43,21 @@ export const createComment = asyncHandler(async (req, res) => {
         content,
         createdBy: req.user._id,
     });
+
+    const notifyUsers = [task.assignee?.toString(), task.createdBy?.toString()].filter(Boolean);
+    const uniqueUsers = [...new Set(notifyUsers)];
+
+    for (const userId of uniqueUsers) {
+        await createNotification({
+            recipient: userId,
+            workspace: workspaceId,
+            actor: req.user._id,
+            type: "task_commented",
+            title: "New comment",
+            message: `${req.user.name} commented on ${task.title}`,
+            link: `/tasks/${taskId}?project=${projectId}`,
+        });
+    }
 
     return res
         .status(201)

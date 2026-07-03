@@ -349,7 +349,7 @@ const assigneeName = task?.assignee?.name || "Unassigned";
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-7 shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
             <div className="mb-4 flex items-center gap-2">
               <Badge variant={task?.status || "todo"} />
               <Badge variant={task?.priority || "medium"} dot />
@@ -371,7 +371,7 @@ const assigneeName = task?.assignee?.name || "Unassigned";
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-7 shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
             <h3 className="mb-6 flex items-center gap-2 text-[15px] font-bold text-slate-900 dark:text-white">
               <MessageSquare size={16} className="text-slate-400" />
               Discussion
@@ -413,7 +413,7 @@ const assigneeName = task?.assignee?.name || "Unassigned";
                             <button
                               type="button"
                               onClick={() => openDeleteComment(comment)}
-                              className="rounded p-1 text-slate-400 opacity-0 transition-colors hover:bg-red-50 hover:text-red-500 group-hover:opacity-100 dark:hover:bg-red-950/30"
+                              className="rounded p-1 text-slate-400 opacity-100 sm:opacity-0 transition-colors hover:bg-red-50 hover:text-red-500 sm:group-hover:opacity-100 dark:hover:bg-red-950/30"
                               aria-label="Delete comment"
                             >
                               <Trash2 size={14} />
@@ -463,7 +463,7 @@ const assigneeName = task?.assignee?.name || "Unassigned";
         </div>
 
         <div className="space-y-6">
-          <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-7 shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
             <h3 className="mb-5 flex items-center gap-2 text-[15px] font-bold text-slate-900 dark:text-white">
               <LayoutList size={16} className="text-slate-400" />
               Task Details

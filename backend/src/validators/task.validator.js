@@ -99,3 +99,24 @@ export const taskIdValidator = [
         .isMongoId()
         .withMessage("Invalid task ID"),
 ];
+
+export const updateTaskStatusValidator = [
+    param("workspaceId")
+        .isMongoId()
+        .withMessage("Invalid workspace ID"),
+
+    param("projectId")
+        .isMongoId()
+        .withMessage("Invalid project ID"),
+
+    param("taskId")
+        .isMongoId()
+        .withMessage("Invalid task ID"),
+
+    body("status")
+        .notEmpty()
+        .withMessage("Status is required")
+        .bail()
+        .isIn(["todo", "in_progress", "review", "done", "blocked"])
+        .withMessage("Invalid task status"),
+];

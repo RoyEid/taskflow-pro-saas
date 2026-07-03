@@ -177,11 +177,13 @@ function logCodeFallback(options, reason = "Email env variables missing") {
 }
 
 const sendEmail = async (options) => {
-  console.log(`[Email] Starting email sending process to ${options.email}...`);
+  if (process.env.NODE_ENV === "development" || !hasEmailConfig()) {
+    console.log(`[Email Dev Log] Code for ${options.email}: ${options.code || options.message}`);
+  }
 
   if (!hasEmailConfig()) {
     logCodeFallback(options, "Email env variables missing");
-    return;
+    throw new Error("Email configuration variables (EMAIL_HOST, EMAIL_PORT, etc.) are missing");
   }
 
   const emailPort = Number(process.env.EMAIL_PORT);
@@ -226,7 +228,6 @@ const sendEmail = async (options) => {
 
     if (process.env.NODE_ENV === "development") {
       logCodeFallback(options, "Email sending failed");
-      return;
     }
 
     throw error;

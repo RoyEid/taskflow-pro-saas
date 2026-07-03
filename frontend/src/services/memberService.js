@@ -8,7 +8,32 @@ export const getMembers = async (wId) => {
 };
 
 export const addMember = async (wId, data) => {
-  const res = await api.post(`/workspaces/${wId}/members`, data);
+  const res = await api.post(`/workspaces/${wId}/invitations`, data);
+  return d(res);
+};
+
+export const getInvitations = async (wId) => {
+  const res = await api.get(`/workspaces/${wId}/invitations`);
+  return d(res);
+};
+
+export const cancelInvite = async (wId, inviteId) => {
+  const res = await api.patch(`/workspaces/${wId}/invitations/${inviteId}/cancel`);
+  return d(res);
+};
+
+export const getInviteByToken = async (token) => {
+  const res = await api.get(`/invitations/${token}`);
+  return d(res);
+};
+
+export const acceptInvite = async (token) => {
+  const res = await api.post(`/invitations/${token}/accept`);
+  return d(res);
+};
+
+export const declineInvite = async (token) => {
+  const res = await api.post(`/invitations/${token}/decline`);
   return d(res);
 };
 
@@ -36,4 +61,19 @@ export const addWorkspaceMember = addMember;
 
 export const updateWorkspaceMemberRole = async (wId, memberId, role) => {
   return updateMemberRole(wId, memberId, { role });
+};
+
+export const getMyInvitations = async () => {
+  const res = await api.get(`/invitations/my`);
+  return d(res);
+};
+
+export const acceptInvitationById = async (id) => {
+  const res = await api.post(`/invitations/my/${id}/accept`);
+  return d(res);
+};
+
+export const declineInvitationById = async (id) => {
+  const res = await api.post(`/invitations/my/${id}/decline`);
+  return d(res);
 };

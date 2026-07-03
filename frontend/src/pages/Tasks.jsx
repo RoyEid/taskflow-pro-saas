@@ -183,6 +183,7 @@ function Tasks() {
   const [formError, setFormError] = useState("");
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeMobileTab, setActiveMobileTab] = useState("todo");
 
   const loadData = useCallback(async () => {
     await Promise.resolve();
@@ -475,7 +476,7 @@ function Tasks() {
 
   return (
     <DashboardLayout>
-      <header className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             Tasks Board
@@ -486,8 +487,8 @@ function Tasks() {
           </p>
         </div>
 
-        <div className="flex w-full flex-col items-center gap-3 sm:flex-row lg:w-auto">
-          <div className="relative w-full min-w-[250px] sm:w-64">
+        <div className="flex w-full items-center gap-2.5 sm:w-auto">
+          <div className="relative flex-1 sm:min-w-[220px] sm:w-56">
             <AppSelect
               value={selectedProjectId}
               onChange={handleProjectSelect}
@@ -500,10 +501,11 @@ function Tasks() {
             type="button"
             onClick={openCreateModal}
             disabled={!selectedProjectId}
-            className="flex h-10 w-full items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-[13px] font-semibold text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-md active:translate-y-0 active:scale-[0.98] disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600 sm:w-auto"
+            className="flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-[13px] font-semibold text-white shadow-[0_4px_12px_rgba(99,102,241,0.2)] transition-all duration-300 hover:-translate-y-0.5 hover:from-indigo-500 hover:to-violet-500 hover:shadow-md active:translate-y-0 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none disabled:shadow-none disabled:transform-none dark:shadow-[0_4px_20px_rgba(99,102,241,0.15)] sm:w-auto"
           >
             <Plus size={16} />
-            New Task
+            <span className="hidden min-[400px]:inline">New Task</span>
+            <span className="min-[400px]:hidden">New</span>
           </button>
         </div>
       </header>
@@ -533,7 +535,7 @@ function Tasks() {
         </div>
       ) : (
         <>
-          <div className="relative mb-6 max-w-sm transition-transform duration-300 hover:scale-[1.02] focus-within:scale-[1.02]">
+          <div className="relative mb-6 w-full sm:max-w-sm">
             <Search
               size={16}
               className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
@@ -544,11 +546,44 @@ function Tasks() {
               placeholder="Search tasks..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-4 text-[13px] text-slate-700 shadow-sm outline-none transition-all placeholder-slate-400 focus:border-slate-400 focus:ring-1 focus:ring-slate-400 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-slate-600 dark:focus:ring-slate-600"
+              className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-4 text-[13px] text-slate-700 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-indigo-500 dark:focus:ring-indigo-500"
             />
           </div>
 
-          <div className="flex gap-4 overflow-x-auto pb-4">
+          {/* Mobile column tabs */}
+          <div className="flex gap-2 overflow-x-auto pb-3 mb-5 sm:hidden no-scrollbar">
+            {KANBAN_COLUMNS.map((column) => {
+              const columnTasks = filteredTasks.filter(
+                (task) => task?.status === column.id
+              );
+              const isActive = activeMobileTab === column.id;
+
+              return (
+                <button
+                  key={column.id}
+                  type="button"
+                  onClick={() => setActiveMobileTab(column.id)}
+                  className={`flex shrink-0 items-center gap-2 rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-all duration-300 border ${
+                    isActive
+                      ? "bg-indigo-600 text-white border-indigo-600 shadow-sm shadow-indigo-600/20 dark:bg-indigo-500 dark:border-indigo-500"
+                      : "bg-white text-slate-650 border-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800"
+                  }`}
+                >
+                  <span
+                    className={`h-2 w-2 rounded-full ${column.dotColor}`}
+                  />
+                  <span>{column.title}</span>
+                  <span className={`rounded-full px-1.5 py-0.5 text-[9px] ${
+                    isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                  }`}>
+                    {columnTasks.length}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory -mx-4 px-4 sm:mx-0 sm:px-0 kanban-board-scroll 2xl:grid 2xl:grid-cols-5 2xl:overflow-x-visible 2xl:w-full">
             {KANBAN_COLUMNS.map((column) => {
               const columnTasks = filteredTasks.filter(
                 (task) => task?.status === column.id
@@ -557,25 +592,28 @@ function Tasks() {
               return (
                 <div
                   key={column.id}
-                  className="flex w-[300px] shrink-0 flex-col rounded-xl bg-slate-100/50 p-3 dark:bg-slate-900/30"
+                  className={`flex w-full sm:w-[310px] 2xl:w-full shrink-0 flex-col rounded-2xl border border-slate-200/50 bg-slate-100/30 p-4 dark:border-slate-800/40 dark:bg-slate-900/20 snap-start shadow-[0_1px_3px_rgba(0,0,0,0.02)] ${
+                    activeMobileTab === column.id ? "flex" : "hidden sm:flex"
+                  }`}
                 >
-                  <div className="mb-3 flex items-center justify-between px-1">
-                    <div className="flex items-center gap-2">
+                  <div className="mb-4 flex items-center justify-between px-1">
+                    <div className="flex items-center gap-2.5">
                       <span
-                        className={`h-2 w-2 rounded-full ${column.dotColor}`}
+                        className={`h-2.5 w-2.5 rounded-full shadow-[0_0_8px_currentColor] ${column.dotColor}`}
+                        style={{ color: column.dotColor.includes("blue") ? "#3b82f6" : column.dotColor.includes("amber") ? "#f59e0b" : column.dotColor.includes("emerald") ? "#10b981" : column.dotColor.includes("red") ? "#ef4444" : "#94a3b8" }}
                       />
 
-                      <h3 className="text-[14px] font-semibold text-slate-900 dark:text-white">
+                      <h3 className="text-[14px] font-bold text-slate-800 dark:text-slate-200">
                         {column.title}
                       </h3>
                     </div>
 
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200/50 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200/50 text-[10px] font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                       {columnTasks.length}
                     </span>
                   </div>
 
-                  <div className="flex min-h-[150px] flex-col gap-3">
+                  <div className="flex min-h-[460px] sm:min-h-[520px] flex-col gap-3">
                     {columnTasks.map((task) => {
                       const taskId = getTaskId(task);
                       const taskTitle = task?.title || "Untitled Task";
@@ -585,18 +623,13 @@ function Tasks() {
                       return (
                         <div
                           key={taskId || taskTitle}
-                          className="group cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-md dark:border-slate-700/80 dark:bg-slate-900 dark:hover:border-slate-600"
+                          className="group cursor-pointer rounded-xl border border-slate-200/60 bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.02)] transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.01] hover:border-slate-300/80 hover:shadow-[0_8px_24px_rgba(148,163,184,0.12)] dark:border-slate-800/80 dark:bg-slate-900/80 dark:hover:border-slate-700/80 dark:hover:shadow-[0_8px_24px_rgba(0,0,0,0.3)]"
                         >
                           <div className="flex items-start justify-between">
                             <Badge variant={task?.priority || "medium"} dot />
 
                             <AppDropdown
-                              align={
-                                column.id ===
-                                KANBAN_COLUMNS[KANBAN_COLUMNS.length - 1].id
-                                  ? "right"
-                                  : "left"
-                              }
+                              align="right"
                               trigger={({ open }) => (
                                 <button
                                   type="button"
@@ -623,7 +656,7 @@ function Tasks() {
                                   }
                                   className={
                                     task?.status === statusColumn.id
-                                      ? "bg-slate-50 dark:bg-slate-800/50"
+                                      ? "bg-indigo-50/50 text-indigo-600 dark:bg-indigo-950/20 dark:text-indigo-400 font-semibold"
                                       : ""
                                   }
                                 >
@@ -675,7 +708,7 @@ function Tasks() {
                               )}
 
                               {!isMemberRole && (
-                                <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                                <div className="flex items-center gap-1 opacity-100 sm:opacity-0 transition-opacity sm:group-hover:opacity-100">
                                   <button
                                     type="button"
                                     onClick={(e) => {

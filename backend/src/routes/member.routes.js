@@ -1,10 +1,15 @@
 import express from "express";
 import{
-    addWorkspaceMember,
     getWorkspaceMembers,
     updateMemberRole,
     removeWorkspaceMember,
 } from "../controllers/member.controller.js";
+
+import {
+    sendInvitation,
+    getWorkspaceInvitations,
+    cancelInvitation,
+} from "../controllers/invitation.controller.js";
 
 import protect from "../middleware/auth.middleware.js";
 import { checkWorkspaceRole } from "../middleware/permission.middleware.js";
@@ -27,14 +32,31 @@ router.get(
     getWorkspaceMembers
 );
 
+router.get(
+    "/:workspaceId/invitations",
+    protect,
+    workspaceIdValidator,
+    validate,
+    checkWorkspaceRole("owner", "admin"),
+    getWorkspaceInvitations
+);
+
 router.post(
-    "/:workspaceId/members",
+    "/:workspaceId/invitations",
     protect,
     workspaceIdValidator,
     addMemberValidator,
     validate,
-    checkWorkspaceRole("owner"),
-    addWorkspaceMember
+    sendInvitation
+);
+
+router.patch(
+    "/:workspaceId/invitations/:inviteId/cancel",
+    protect,
+    workspaceIdValidator,
+    validate,
+    checkWorkspaceRole("owner", "admin"),
+    cancelInvitation
 );
 
 router.patch(

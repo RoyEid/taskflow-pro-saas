@@ -7,6 +7,10 @@ const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
     try {
+        if (process.env.NODE_ENV === "production" && !process.env.FRONTEND_URL) {
+            console.warn("WARNING: FRONTEND_URL is not set in production environment. Invitation links will default to localhost.");
+        }
+
         await connectDB();
 
         app.listen(PORT, () => {

@@ -13,11 +13,16 @@ const protect = asyncHandler(async (req, res, next) => {
         token = req.headers.authorization.split(" ")[1];
     }
 
-    if (!token) {
+    if (!token || token === "null" || token === "undefined") {
         throw new ApiError(401, "Not authorized, token missing");
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    let decoded;
+    try {
+        decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (error) {
+        throw new ApiError(401, "Not authorized, token failed");
+    }
 
     const user = await User.findById(decoded.userId);
 

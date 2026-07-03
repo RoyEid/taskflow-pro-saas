@@ -28,10 +28,8 @@ function ForgotPassword() {
     try {
       await api.post("/auth/forgot-password", { email: cleanEmail });
 
-      setEmail(cleanEmail);
-      setSubmitted(true);
-
       showSuccess("If an account exists, a reset code was sent.");
+      navigate(`/reset-password?email=${encodeURIComponent(cleanEmail)}`);
     } catch (err) {
       const message =
         err?.response?.data?.message ||

@@ -13,6 +13,7 @@ import {
     createTaskValidator,
     updateTaskValidator,
     taskIdValidator,
+    updateTaskStatusValidator,
 } from "../validators/task.validator.js";
 
 import protect from "../middleware/auth.middleware.js";
@@ -63,7 +64,7 @@ router
 router.patch(
     "/:workspaceId/projects/:projectId/tasks/:taskId/status",
     protect,
-    taskIdValidator,
+    updateTaskStatusValidator,
     validate,
     checkWorkspaceRole("owner", "admin", "member"),
     updateTaskStatus
