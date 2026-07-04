@@ -7,6 +7,7 @@ import Workspace from "../models/Workspace.model.js";
 import WorkspaceMember from "../models/WorkspaceMember.model.js";
 import { createNotification } from "./notification.service.js";
 import ApiError from "../utils/ApiError.js";
+import { logActivity } from "./activityLog.service.js";
 
 const ASSISTANT_MESSAGE_MAX_LENGTH = 1000;
 const ASSISTANT_HISTORY_MAX_ITEMS = 8;
@@ -1117,6 +1118,17 @@ const createWorkspaceAction = async ({ payload, user }) => {
         status: "active",
     });
 
+    await logActivity({
+        workspaceId: workspace._id,
+        actorUserId: user._id,
+        actorName: user.name,
+        action: "created_after_confirmation",
+        entityType: "Workspace",
+        entityId: workspace._id,
+        entityName: workspace.name,
+        source: "ai_assistant",
+    });
+
     return {
         message: "Workspace created successfully.",
         created: {
@@ -1133,7 +1145,7 @@ const createClientRecord = async ({ workspaceId, payload, user }) => {
     const fields = validateClientFields(payload, workspaceId);
     await ensureUniqueClientEmail(workspaceId, fields.email);
 
-    return Client.create({
+    const client = await Client.create({
         workspace: workspaceId,
         name: fields.name,
         email: fields.email,
@@ -1142,13 +1154,26 @@ const createClientRecord = async ({ workspaceId, payload, user }) => {
         notes: fields.notes,
         createdBy: user._id,
     });
+
+    await logActivity({
+        workspaceId,
+        actorUserId: user._id,
+        actorName: user.name,
+        action: "created_after_confirmation",
+        entityType: "Client",
+        entityId: client._id,
+        entityName: client.name,
+        source: "ai_assistant",
+    });
+
+    return client;
 };
 
 const createProjectRecord = async ({ workspaceId, payload, user }) => {
     const fields = validateProjectFields(payload, workspaceId);
     await ensureClientInWorkspace(workspaceId, fields.clientId);
 
-    return Project.create({
+    const project = await Project.create({
         workspace: workspaceId,
         client: fields.clientId,
         name: fields.name,
@@ -1158,6 +1183,19 @@ const createProjectRecord = async ({ workspaceId, payload, user }) => {
         dueDate: fields.dueDate,
         createdBy: user._id,
     });
+
+    await logActivity({
+        workspaceId,
+        actorUserId: user._id,
+        actorName: user.name,
+        action: "created_after_confirmation",
+        entityType: "Project",
+        entityId: project._id,
+        entityName: project.name,
+        source: "ai_assistant",
+    });
+
+    return project;
 };
 
 const createTaskRecord = async ({ workspaceId, payload, user, membership }) => {
@@ -1182,6 +1220,17 @@ const createTaskRecord = async ({ workspaceId, payload, user, membership }) => {
         dueDate: fields.dueDate,
         completedAt: fields.status === "done" ? new Date() : null,
         createdBy: user._id,
+    });
+
+    await logActivity({
+        workspaceId,
+        actorUserId: user._id,
+        actorName: user.name,
+        action: "created_after_confirmation",
+        entityType: "Task",
+        entityId: task._id,
+        entityName: task.title,
+        source: "ai_assistant",
     });
 
     if (finalAssignee) {

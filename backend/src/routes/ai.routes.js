@@ -8,6 +8,7 @@ import {
 import protect from "../middleware/auth.middleware.js";
 import validate from "../middleware/validate.middleware.js";
 import { ASSISTANT_ACTION_TYPES } from "../services/ai.service.js";
+import { assistantMessageRateLimiter, confirmedActionRateLimiter } from "../middleware/rateLimiter.middleware.js";
 
 const router = express.Router();
 
@@ -59,7 +60,7 @@ const confirmActionValidator = [
         .withMessage("Payload must be an object"),
 ];
 
-router.post("/assistant", protect, assistantValidator, validate, askTaskFlowAssistant);
-router.post("/actions/confirm", protect, confirmActionValidator, validate, confirmAssistantActionController);
+router.post("/assistant", protect, assistantMessageRateLimiter, assistantValidator, validate, askTaskFlowAssistant);
+router.post("/actions/confirm", protect, confirmedActionRateLimiter, confirmActionValidator, validate, confirmAssistantActionController);
 
 export default router;

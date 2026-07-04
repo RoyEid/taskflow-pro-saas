@@ -195,8 +195,12 @@ function ProposalCard({ proposal, isConfirming, onConfirm, onCancel }) {
   const [fields, setFields] = useState(() => proposal?.fields || {});
 
   useEffect(() => {
-    setFields(proposal?.fields || {});
+    queueMicrotask(() => {
+      setFields(proposal?.fields || {});
+    });
   }, [proposal]);
+
+
 
   const missingDetails = useMemo(() => {
     if (Array.isArray(proposal?.missingFieldDetails)) return proposal.missingFieldDetails;

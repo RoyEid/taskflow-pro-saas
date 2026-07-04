@@ -7,6 +7,7 @@ import ApiError from "../utils/ApiError.js";
 import { createNotification } from "../services/notification.service.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import { logActivity } from "../services/activityLog.service.js";
 
 const checkProjectExists = async (projectId, workspaceId) => {
     const project = await Project.findOne({
@@ -73,6 +74,17 @@ export const createTask = asyncHandler(async (req, res) => {
         dueDate,
         completedAt: status === "done" ? new Date() : null,
         createdBy: req.user._id,
+    });
+
+    await logActivity({
+        workspaceId,
+        actorUserId: req.user._id,
+        actorName: req.user.name,
+        action: "created",
+        entityType: "Task",
+        entityId: task._id,
+        entityName: task.title,
+        source: "manual",
     });
 
     if (finalAssignee) {
@@ -243,6 +255,17 @@ export const updateTask = asyncHandler(async (req, res) => {
     }
 
     if (status !== undefined && status !== oldStatus) {
+        await logActivity({
+            workspaceId,
+            actorUserId: req.user._id,
+            actorName: req.user.name,
+            action: `updated_status_to_${status}`,
+            entityType: "Task",
+            entityId: task._id,
+            entityName: task.title,
+            source: "manual",
+        });
+
         const notifyUsers = [task.assignee?.toString(), task.createdBy?.toString()].filter(Boolean);
         const uniqueUsers = [...new Set(notifyUsers)];
 
@@ -300,6 +323,17 @@ export const updateTaskStatus = asyncHandler(async (req, res) => {
     await task.save();
 
     if (status !== undefined && status !== oldStatus) {
+        await logActivity({
+            workspaceId,
+            actorUserId: req.user._id,
+            actorName: req.user.name,
+            action: `updated_status_to_${status}`,
+            entityType: "Task",
+            entityId: task._id,
+            entityName: task.title,
+            source: "manual",
+        });
+
         const notifyUsers = [task.assignee?.toString(), task.createdBy?.toString()].filter(Boolean);
         const uniqueUsers = [...new Set(notifyUsers)];
 

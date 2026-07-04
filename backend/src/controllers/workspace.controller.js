@@ -1,5 +1,6 @@
 import Workspace from "../models/Workspace.model.js";
 import WorkspaceMember from "../models/WorkspaceMember.model.js";
+import ActivityLog from "../models/ActivityLog.model.js";
 import Project from "../models/Project.model.js";
 import Task from "../models/Task.model.js";
 import Client from "../models/Client.model.js";
@@ -12,6 +13,7 @@ import Feedback from "../models/Feedback.model.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import { logActivity } from "../services/activityLog.service.js";
 
 export const createWorkspace = asyncHandler(async (req, res) => {
     const { name, description } = req.body;
@@ -27,6 +29,17 @@ export const createWorkspace = asyncHandler(async (req, res) => {
         user: req.user._id,
         role: "owner",
         status: "active",
+    });
+
+    await logActivity({
+        workspaceId: workspace._id,
+        actorUserId: req.user._id,
+        actorName: req.user.name,
+        action: "created",
+        entityType: "Workspace",
+        entityId: workspace._id,
+        entityName: workspace.name,
+        source: "manual",
     });
 
     res.status(201).json(
@@ -137,5 +150,18 @@ export const deleteWorkspace = asyncHandler(async (req, res) => {
 
     res.status(200).json(
         new ApiResponse(200, "Workspace deleted successfully", {})
+    );
+});
+
+export const getActivityLogs = asyncHandler(async (req, res) => {
+    const { workspaceId } = req.params;
+    const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 100);
+
+    const logs = await ActivityLog.find({ workspace: workspaceId })
+        .sort({ createdAt: -1 })
+        .limit(limit);
+
+    res.status(200).json(
+        new ApiResponse(200, "Activity logs fetched successfully", { logs })
     );
 });

@@ -3,6 +3,7 @@ import Client from "../models/Client.model.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import { logActivity } from "../services/activityLog.service.js";
 
 export const createClient = asyncHandler(async (req, res) => {
     const { workspaceId } = req.params;
@@ -32,6 +33,17 @@ export const createClient = asyncHandler(async (req, res) => {
         phone,
         notes,
         createdBy: req.user._id,
+    });
+
+    await logActivity({
+        workspaceId,
+        actorUserId: req.user._id,
+        actorName: req.user.name,
+        action: "created",
+        entityType: "Client",
+        entityId: client._id,
+        entityName: client.name,
+        source: "manual",
     });
 
     return res

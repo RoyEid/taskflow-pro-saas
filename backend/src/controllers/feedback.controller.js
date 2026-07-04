@@ -3,6 +3,7 @@ import WorkspaceMember from "../models/WorkspaceMember.model.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import ApiError from "../utils/ApiError.js";
 import sendEmail from "../utils/sendEmail.js";
+import { logActivity } from "../services/activityLog.service.js";
 
 /**
  * @desc    Submit new feedback
@@ -39,6 +40,18 @@ export const createFeedback = asyncHandler(async (req, res) => {
         message,
         rating,
         pageUrl,
+    });
+
+    await logActivity({
+        workspaceId: validWorkspaceId || null,
+        actorUserId: userId,
+        actorName: req.user.name,
+        action: "submitted",
+        entityType: "Feedback",
+        entityId: feedback._id,
+        entityName: category,
+        source: "manual",
+        metadata: { rating },
     });
 
     if (process.env.FEEDBACK_NOTIFY_EMAIL) {

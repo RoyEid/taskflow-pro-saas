@@ -6,6 +6,7 @@ import Comment from "../models/Comment.model.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import { logActivity } from "../services/activityLog.service.js";
 
 export const createProject = asyncHandler(async (req, res) => {
     const { workspaceId } = req.params;
@@ -40,6 +41,17 @@ export const createProject = asyncHandler(async (req, res) => {
         startDate,
         dueDate,
         createdBy: req.user._id,
+    });
+
+    await logActivity({
+        workspaceId,
+        actorUserId: req.user._id,
+        actorName: req.user.name,
+        action: "created",
+        entityType: "Project",
+        entityId: project._id,
+        entityName: project.name,
+        source: "manual",
     });
 
     return res

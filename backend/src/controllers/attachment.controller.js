@@ -12,6 +12,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const uploadDir = path.resolve(__dirname, "../../../uploads");
 
+// TODO: Local uploads are okay for development. For production, use Cloudinary, AWS S3, Supabase Storage, or Firebase Storage.
+
 const normalizeMimeType = (mimeType = "") =>
     String(mimeType).split(";")[0].trim().toLowerCase();
 

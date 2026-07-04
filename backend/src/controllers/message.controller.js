@@ -12,6 +12,7 @@ import {
 } from "../services/chat.service.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import { logActivity } from "../services/activityLog.service.js";
 
 const MESSAGE_PAGE_SIZE = 50;
 const SEARCH_PAGE_SIZE = 50;
@@ -134,6 +135,17 @@ export const startNewWorkspaceChat = asyncHandler(async (req, res) => {
     const archive = await archiveWorkspaceChat({
         workspaceId,
         archivedBy: req.user._id,
+    });
+
+    await logActivity({
+        workspaceId,
+        actorUserId: req.user._id,
+        actorName: req.user.name,
+        action: "archived_and_started_new_chat",
+        entityType: "Chat",
+        entityId: null,
+        entityName: "Workspace Chat",
+        source: "manual",
     });
 
     res.status(200).json(

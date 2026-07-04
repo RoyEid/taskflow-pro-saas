@@ -4,6 +4,7 @@ import asyncHandler from "../utils/asyncHandler.js";
 import ApiError from "../utils/ApiError.js";
 import sendEmail from "../utils/sendEmail.js";
 import { createNotification } from "../services/notification.service.js";
+import { logActivity } from "../services/activityLog.service.js";
 
 /**
  * @desc    Submit new support request
@@ -41,6 +42,18 @@ export const createSupportRequest = asyncHandler(async (req, res) => {
         priority: priority || "Medium",
         message,
         pageUrl,
+    });
+
+    await logActivity({
+        workspaceId: validWorkspaceId || null,
+        actorUserId: userId,
+        actorName: req.user.name,
+        action: "submitted",
+        entityType: "SupportRequest",
+        entityId: supportRequest._id,
+        entityName: subject,
+        source: "manual",
+        metadata: { priority, category },
     });
 
     if (process.env.SUPPORT_NOTIFY_EMAIL) {
