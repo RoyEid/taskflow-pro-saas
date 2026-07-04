@@ -452,19 +452,31 @@ const callAiProvider = async (messages) => {
             let answer = null;
             if (responseData) {
                 if (responseData.result && typeof responseData.result === "object") {
-                    if (typeof responseData.result.response === "string" && responseData.result.response.trim() !== "") {
-                        answer = responseData.result.response;
-                    } else if (typeof responseData.result.text === "string" && responseData.result.text.trim() !== "") {
-                        answer = responseData.result.text;
-                    } else if (typeof responseData.result.output === "string" && responseData.result.output.trim() !== "") {
-                        answer = responseData.result.output;
+                    if (responseData.result.response !== undefined && responseData.result.response !== null) {
+                        answer = typeof responseData.result.response === "object"
+                            ? JSON.stringify(responseData.result.response)
+                            : String(responseData.result.response);
+                    } else if (responseData.result.text !== undefined && responseData.result.text !== null) {
+                        answer = typeof responseData.result.text === "object"
+                            ? JSON.stringify(responseData.result.text)
+                            : String(responseData.result.text);
+                    } else if (responseData.result.output !== undefined && responseData.result.output !== null) {
+                        answer = typeof responseData.result.output === "object"
+                            ? JSON.stringify(responseData.result.output)
+                            : String(responseData.result.output);
                     }
                 }
-                if (!answer && typeof responseData.result === "string" && responseData.result.trim() !== "") {
-                    answer = responseData.result;
+
+                if (!answer && responseData.result !== undefined && responseData.result !== null) {
+                    answer = typeof responseData.result === "object"
+                        ? JSON.stringify(responseData.result)
+                        : String(responseData.result);
                 }
-                if (!answer && typeof responseData.response === "string" && responseData.response.trim() !== "") {
-                    answer = responseData.response;
+
+                if (!answer && responseData.response !== undefined && responseData.response !== null) {
+                    answer = typeof responseData.response === "object"
+                        ? JSON.stringify(responseData.response)
+                        : String(responseData.response);
                 }
             }
 
