@@ -20,6 +20,7 @@ import notificationRoutes from "./routes/notification.routes.js";
 import searchRoutes from "./routes/search.routes.js";
 import messageRoutes from "./routes/message.routes.js";
 import attachmentRoutes from "./routes/attachment.routes.js";
+import aiRoutes from "./routes/ai.routes.js";
 
 import notFound from "./middleware/notFound.middleware.js";
 import errorHandler from "./middleware/error.middleware.js";
@@ -71,6 +72,7 @@ app.use("/api/support", supportRoutes);
 app.use("/api/invitations", invitationRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/search", searchRoutes);
+app.use("/api/ai", aiRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

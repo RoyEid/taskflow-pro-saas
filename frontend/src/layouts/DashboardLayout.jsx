@@ -7,6 +7,7 @@ import { getChatUnreadCount } from "../services/chatService";
 import AppDropdown from "../components/ui/AppDropdown";
 import ComingSoonModal from "../components/ComingSoonModal";
 import GlobalSearchModal from "../components/GlobalSearchModal";
+import TaskFlowAssistant from "../components/TaskFlowAssistant";
 import WorkspaceSwitcher from "../components/WorkspaceSwitcher";
 
 import {
@@ -663,6 +664,8 @@ function DashboardLayout({ children }) {
         open={isSearchOpen} 
         onClose={() => setIsSearchOpen(false)} 
       />
+
+      <TaskFlowAssistant />
     </div>
   );
 }
