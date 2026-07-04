@@ -411,6 +411,9 @@ const callAiProvider = async (messages) => {
                 status: response.status,
                 error: data?.error || data,
             });
+            if (response.status === 429) {
+                throw new ApiError(429, "AI Assistant limit reached. Please try again later.");
+            }
             throw new ApiError(503, "Assistant is temporarily unavailable.");
         }
 
