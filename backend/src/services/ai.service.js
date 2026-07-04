@@ -973,6 +973,13 @@ const normalizeAssistantResult = (parsed, rawAnswer, workspaceContext) => {
         return buildAssistantProposal(parsed.proposal || parsed, workspaceContext);
     }
 
+    if (parsed.answer) {
+        return {
+            type: "answer",
+            answer: normalizeText(parsed.answer),
+        };
+    }
+
     return {
         type: "answer",
         answer: rawAnswer,
