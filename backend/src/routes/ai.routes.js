@@ -1,9 +1,13 @@
 import express from "express";
 import { body } from "express-validator";
 
-import { askTaskFlowAssistant } from "../controllers/ai.controller.js";
+import {
+    askTaskFlowAssistant,
+    confirmAssistantActionController,
+} from "../controllers/ai.controller.js";
 import protect from "../middleware/auth.middleware.js";
 import validate from "../middleware/validate.middleware.js";
+import { ASSISTANT_ACTION_TYPES } from "../services/ai.service.js";
 
 const router = express.Router();
 
@@ -36,7 +40,26 @@ const assistantValidator = [
         .withMessage("History messages cannot exceed 1000 characters"),
 ];
 
+const confirmActionValidator = [
+    body("actionType")
+        .isString()
+        .withMessage("Action type is required")
+        .bail()
+        .isIn(ASSISTANT_ACTION_TYPES)
+        .withMessage("Unsupported assistant action"),
+    body("workspaceId")
+        .optional({ checkFalsy: true, nullable: true })
+        .isMongoId()
+        .withMessage("Invalid workspace ID"),
+    body("payload")
+        .exists({ values: "null" })
+        .withMessage("Payload is required")
+        .bail()
+        .isObject({ strict: true })
+        .withMessage("Payload must be an object"),
+];
+
 router.post("/assistant", protect, assistantValidator, validate, askTaskFlowAssistant);
+router.post("/actions/confirm", protect, confirmActionValidator, validate, confirmAssistantActionController);
 
 export default router;
-

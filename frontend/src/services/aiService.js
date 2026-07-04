@@ -15,3 +15,17 @@ export const askAssistant = async ({ message, workspaceId, history = [] }) => {
   return res.data;
 };
 
+export const confirmAssistantAction = async ({ actionType, workspaceId, payload }) => {
+  const body = {
+    actionType,
+    payload,
+  };
+
+  if (workspaceId) {
+    body.workspaceId = workspaceId;
+  }
+
+  const res = await api.post("/ai/actions/confirm", body);
+
+  return res.data;
+};
