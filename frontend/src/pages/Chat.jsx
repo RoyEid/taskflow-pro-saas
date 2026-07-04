@@ -474,38 +474,39 @@ function Chat() {
   const [tempAudioUrl, setTempAudioUrl] = useState("");
   const [tempAudioDuration, setTempAudioDuration] = useState(0);
 
-  const [prevWorkspaceId, setPrevWorkspaceId] = useState(workspaceId);
-  if (workspaceId !== prevWorkspaceId) {
-    setPrevWorkspaceId(workspaceId);
-    setMessages([]);
-    setMembers([]);
-    setOnlineUserIds([]);
-    setTypingUsers([]);
-    setSearchTerm("");
-    setSearchResults([]);
-    setSearchTotal(0);
-    setActiveSearchIndex(-1);
-    setSearching(false);
-    setJumpingToResult(false);
-    setSearchFocused(false);
-    setUnreadCount(0);
-    setHasMoreMessages(false);
-    setEditingMessageId(null);
-    setEditDraft("");
-    setSavingEdit(false);
-    setDeletingMessageId(null);
+  useEffect(() => {
+    queueMicrotask(() => {
+      setMessages([]);
+      setMembers([]);
+      setOnlineUserIds([]);
+      setTypingUsers([]);
+      setSearchTerm("");
+      setSearchResults([]);
+      setSearchTotal(0);
+      setActiveSearchIndex(-1);
+      setSearching(false);
+      setJumpingToResult(false);
+      setSearchFocused(false);
+      setUnreadCount(0);
+      setHasMoreMessages(false);
+      setEditingMessageId(null);
+      setEditDraft("");
+      setSavingEdit(false);
+      setDeletingMessageId(null);
 
-    setShowStickerPicker(false);
-    setIsUploading(false);
-    setUploadProgress(0);
-    setIsRecording(false);
-    setRecordingDuration(0);
-    setTempAudioBlob(null);
-    if (tempAudioUrl) {
-      URL.revokeObjectURL(tempAudioUrl);
-    }
-    setTempAudioUrl("");
-    setTempAudioDuration(0);
+      setShowStickerPicker(false);
+      setIsUploading(false);
+      setUploadProgress(0);
+      setIsRecording(false);
+      setRecordingDuration(0);
+      setTempAudioBlob(null);
+      setTempAudioUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return "";
+      });
+      setTempAudioDuration(0);
+    });
+
     recordingCancelledRef.current = true;
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       try {
@@ -522,7 +523,7 @@ function Chat() {
       clearInterval(recordingTimerRef.current);
       recordingTimerRef.current = null;
     }
-  }
+  }, [workspaceId]);
 
   const [prevSearchTerm, setPrevSearchTerm] = useState(searchTerm);
   if (searchTerm !== prevSearchTerm) {
@@ -585,7 +586,7 @@ function Chat() {
 
       return sortMessagesByDate([...prev, ...uniqueIncoming]);
     });
-  }, []);
+  }, [setMessages]);
 
   const scrollToMessageElement = useCallback((messageId) => {
     if (!messageId) return;
@@ -649,7 +650,7 @@ function Chat() {
         setJumpingToResult(false);
       }
     },
-    [isMessageLoaded, mergeMessages, workspaceId]
+    [isMessageLoaded, mergeMessages, workspaceId, setError, setHasMoreMessages, setJumpingToResult]
   );
 
   const goToSearchResult = useCallback(
@@ -657,7 +658,7 @@ function Chat() {
       if (index < 0 || index >= searchResults.length) return;
       setActiveSearchIndex(index);
     },
-    [searchResults.length]
+    [searchResults.length, setActiveSearchIndex]
   );
 
   const handleNextSearchResult = useCallback(() => {
@@ -685,7 +686,7 @@ function Chat() {
     setActiveSearchIndex(-1);
     setSearching(false);
     setJumpingToResult(false);
-  }, []);
+  }, [setActiveSearchIndex, setJumpingToResult, setSearchResults, setSearchTerm, setSearchTotal, setSearching]);
 
   const notifyUnreadUpdated = useCallback((count) => {
     if (!workspaceId) return;
@@ -713,7 +714,7 @@ function Chat() {
 
       return [...prev, message];
     });
-  }, []);
+  }, [setArchiveNotice, setMessages]);
 
   const prependMessages = useCallback((olderMessages) => {
     if (!Array.isArray(olderMessages) || olderMessages.length === 0) return;
@@ -727,7 +728,7 @@ function Chat() {
 
       return [...uniqueOlderMessages, ...prev];
     });
-  }, []);
+  }, [setMessages]);
 
   const updateMessageInList = useCallback((updatedMessage) => {
     const updatedMessageId = getMessageId(updatedMessage);
@@ -750,7 +751,7 @@ function Chat() {
           : result
       )
     );
-  }, []);
+  }, [setMessages, setSearchResults]);
 
   const addReaderToMessages = useCallback((reader, readAt) => {
     const readerId = getUserId(reader);
@@ -777,7 +778,7 @@ function Chat() {
         };
       });
     });
-  }, []);
+  }, [setMessages]);
 
   const clearTypingTimer = useCallback(() => {
     if (typingTimeoutRef.current) {
