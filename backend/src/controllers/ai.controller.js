@@ -37,10 +37,10 @@ export const askTaskFlowAssistant = asyncHandler(async (req, res) => {
         if (error instanceof ApiError && error.statusCode < 500) {
             throw error;
         }
-        if (error instanceof ApiError && error.message.includes("AI_API_KEY")) {
+        if (error instanceof ApiError && (error.message.includes("AI_API_KEY") || error.message.includes("configured") || error.message.includes("Configured"))) {
             throw error;
         }
-        throw new ApiError(503, "Assistant is temporarily unavailable.");
+        throw new ApiError(503, "AI Assistant is temporarily unavailable. Please try again later.");
     }
 });
 
