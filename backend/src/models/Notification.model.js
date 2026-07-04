@@ -23,6 +23,7 @@ const notificationSchema = new mongoose.Schema(
                 "task_status_changed",
                 "task_overdue",
                 "role_changed",
+                "chat_message",
                 "support_request_created",
                 "support_status_changed",
                 "system",

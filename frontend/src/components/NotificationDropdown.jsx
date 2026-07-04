@@ -109,6 +109,7 @@ export default function NotificationDropdown({ onOpenSettings }) {
       case "task_assigned":
         return { icon: <CheckSquare size={14} strokeWidth={2.5} />, color: "text-blue-500 bg-blue-50 dark:bg-blue-500/10" };
       case "task_commented":
+      case "chat_message":
         return { icon: <MessageSquare size={14} strokeWidth={2.5} />, color: "text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10" };
       case "task_status_changed":
         return { icon: <Check size={14} strokeWidth={2.5} />, color: "text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10" };

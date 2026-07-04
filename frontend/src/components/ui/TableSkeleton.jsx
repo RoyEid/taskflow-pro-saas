@@ -1,4 +1,4 @@
-import React from "react";
+
 
 export default function TableSkeleton({ rows = 5, cols = 4, className = "" }) {
   return (

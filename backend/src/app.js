@@ -18,6 +18,8 @@ import supportRoutes from "./routes/support.routes.js";
 import invitationRoutes from "./routes/invitation.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import searchRoutes from "./routes/search.routes.js";
+import messageRoutes from "./routes/message.routes.js";
+import attachmentRoutes from "./routes/attachment.routes.js";
 
 import notFound from "./middleware/notFound.middleware.js";
 import errorHandler from "./middleware/error.middleware.js";
@@ -25,7 +27,7 @@ import errorHandler from "./middleware/error.middleware.js";
 const app = express();
 
 app.use(express.json());
-const allowedOrigins = [
+export const allowedOrigins = [
     process.env.CLIENT_URL,
     process.env.FRONTEND_URL,
     "http://localhost:5173"
@@ -60,6 +62,8 @@ app.use("/api/workspaces", commentRoutes);
 app.use("/api/workspaces", taskRoutes);
 app.use("/api/workspaces", projectRoutes);
 app.use("/api/workspaces", dashboardRoutes);
+app.use("/api/workspaces", messageRoutes);
+app.use("/api/workspaces", attachmentRoutes);
 app.use("/api/workspaces", workspaceRoutes);
 
 app.use("/api/feedback", feedbackRoutes);

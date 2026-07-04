@@ -4,6 +4,8 @@ import Project from "../models/Project.model.js";
 import Task from "../models/Task.model.js";
 import Client from "../models/Client.model.js";
 import Comment from "../models/Comment.model.js";
+import ChatReadState from "../models/ChatReadState.model.js";
+import Message from "../models/Message.model.js";
 import Notification from "../models/Notification.model.js";
 import SupportRequest from "../models/SupportRequest.model.js";
 import Feedback from "../models/Feedback.model.js";
@@ -123,6 +125,8 @@ export const deleteWorkspace = asyncHandler(async (req, res) => {
         Task.deleteMany({ workspace: workspaceId }),
         Client.deleteMany({ workspace: workspaceId }),
         Comment.deleteMany({ workspace: workspaceId }),
+        ChatReadState.deleteMany({ workspace: workspaceId }),
+        Message.deleteMany({ workspace: workspaceId }),
         Notification.deleteMany({ workspace: workspaceId }),
         SupportRequest.deleteMany({ workspace: workspaceId }),
         Feedback.deleteMany({ workspace: workspaceId }),

@@ -18,6 +18,7 @@ import Settings from "./pages/Settings";
 import Feedback from "./pages/Feedback";
 import HelpSupport from "./pages/HelpSupport";
 import InviteAccept from "./pages/InviteAccept";
+import Chat from "./pages/Chat";
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
       <Route path="/projects/:projectId" element={<ProtectedRoute><ProjectDetail /></ProtectedRoute>} />
       <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
       <Route path="/tasks/:taskId" element={<ProtectedRoute><TaskDetail /></ProtectedRoute>} />
+      <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
       <Route path="/members" element={<ProtectedRoute><Members /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/feedback" element={<ProtectedRoute><Feedback /></ProtectedRoute>} />

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { NavLink, useNavigate } from "react-router";
+import { NavLink, useLocation, useNavigate } from "react-router";
 import useAuth from "../context/useAuth";
 import useWorkspace from "../context/useWorkspace";
+import { getChatUnreadCount } from "../services/chatService";
 
 import AppDropdown from "../components/ui/AppDropdown";
 import ComingSoonModal from "../components/ComingSoonModal";
@@ -70,6 +71,12 @@ const navSections = [
         icon: Users,
         hoverClass: "group-hover:scale-110 group-active:scale-95",
       },
+      {
+        to: "/chat",
+        label: "Chat",
+        icon: MessageSquare,
+        hoverClass: "group-hover:scale-110 group-active:scale-95",
+      },
     ],
   },
   {
@@ -103,13 +110,15 @@ const navSections = [
 
 function DashboardLayout({ children }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuth();
-  const { workspaces } = useWorkspace();
+  const { workspaces, workspaceId } = useWorkspace();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [comingSoonFeature, setComingSoonFeature] = useState(null);
+  const [chatUnreadCount, setChatUnreadCount] = useState(0);
 
   const userWorkspaces = workspaces;
 
@@ -132,6 +141,48 @@ function DashboardLayout({ children }) {
       setIsWorkspacePanelOpen(false);
     }
   }, [isCompact]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadChatUnreadCount() {
+      if (!workspaceId) {
+        setChatUnreadCount(0);
+        return;
+      }
+
+      try {
+        const data = await getChatUnreadCount(workspaceId);
+
+        if (!cancelled) {
+          setChatUnreadCount(data?.unreadCount || 0);
+        }
+      } catch {
+        if (!cancelled) {
+          setChatUnreadCount(0);
+        }
+      }
+    }
+
+    loadChatUnreadCount();
+
+    const handleChatUnreadUpdated = (event) => {
+      if (!workspaceId || event.detail?.workspaceId !== workspaceId) {
+        return;
+      }
+
+      setChatUnreadCount(event.detail?.unreadCount || 0);
+    };
+
+    window.addEventListener("chatUnreadUpdated", handleChatUnreadUpdated);
+    window.addEventListener("focus", loadChatUnreadCount);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("chatUnreadUpdated", handleChatUnreadUpdated);
+      window.removeEventListener("focus", loadChatUnreadCount);
+    };
+  }, [workspaceId, location.pathname]);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -347,6 +398,16 @@ function DashboardLayout({ children }) {
                     >
                       {item.label}
                     </span>
+
+                    {item.to === "/chat" && chatUnreadCount > 0 && (
+                      <span
+                        className={`ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold leading-none text-white shadow-sm ${
+                          isCompact ? "absolute right-1 top-1" : ""
+                        }`}
+                      >
+                        {chatUnreadCount > 99 ? "99+" : chatUnreadCount}
+                      </span>
+                    )}
                     
                     {isCompact && (
                       <div className="sidebar-tooltip">
