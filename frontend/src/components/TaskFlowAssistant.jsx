@@ -40,8 +40,16 @@ function getWorkspaceId(workspace) {
 }
 
 function getErrorMessage(error) {
+  const data = error?.response?.data;
+  if (error?.response?.status === 429) {
+    if (data?.retryAfter) {
+      const minutes = Math.ceil(data.retryAfter / 60);
+      return `AI Assistant limit reached. Try again in ${minutes} ${minutes === 1 ? "minute" : "minutes"}.`;
+    }
+    return data?.message || "AI Assistant limit reached. Please try again later.";
+  }
   return (
-    error?.response?.data?.message ||
+    data?.message ||
     error?.message ||
     "Assistant is temporarily unavailable."
   );
