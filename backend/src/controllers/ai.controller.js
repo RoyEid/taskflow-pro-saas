@@ -17,6 +17,7 @@ const sendAssistantResult = (res, result) => {
     if (result.missingFields) body.missingFields = result.missingFields;
     if (result.missingFieldDetails) body.missingFieldDetails = result.missingFieldDetails;
     if (result.options) body.options = result.options;
+    if (result.pendingAction) body.pendingAction = result.pendingAction;
 
     return res.status(200).json(body);
 };
@@ -28,6 +29,7 @@ export const askTaskFlowAssistant = asyncHandler(async (req, res) => {
             history: req.body.history,
             workspaceId: req.body.workspaceId,
             userId: req.user._id,
+            pendingAction: req.body.pendingAction,
         });
 
         return sendAssistantResult(res, result);

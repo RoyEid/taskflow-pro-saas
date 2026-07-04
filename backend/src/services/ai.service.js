@@ -327,7 +327,7 @@ const getWorkspaceContext = async ({ workspaceId, userId }) => {
     };
 };
 
-const buildMessages = ({ message, history, workspaceContext }) => {
+const buildMessages = ({ message, history, workspaceContext, pendingAction }) => {
     const messages = [
         {
             role: "system",
@@ -350,6 +350,13 @@ const buildMessages = ({ message, history, workspaceContext }) => {
                     projects: workspaceContext.projects,
                 },
             }),
+        });
+    }
+
+    if (pendingAction && pendingAction.actionType) {
+        messages.push({
+            role: "system",
+            content: `CRITICAL CONTEXT: The user is currently in the middle of performing action "${pendingAction.actionType}". Previously collected fields: ${JSON.stringify(pendingAction.collectedFields || {})}. Merge the user's new input to complete the action. You must return a JSON response with type: "action_proposal" containing all the merged fields.`,
         });
     }
 
@@ -392,6 +399,7 @@ const callAiProvider = async (messages) => {
                 messages,
                 temperature: 0.2,
                 max_tokens: 700,
+                response_format: { type: "json_object" },
             }),
             signal: controller.signal,
         });
@@ -399,9 +407,9 @@ const callAiProvider = async (messages) => {
         const data = await response.json().catch(() => null);
 
         if (!response.ok) {
-            console.error("TaskFlow Assistant provider error:", {
+            console.error("TaskFlow Assistant provider error details:", {
                 status: response.status,
-                message: data?.error?.message || data?.message || "Unknown provider error",
+                error: data?.error || data,
             });
             throw new ApiError(503, "Assistant is temporarily unavailable.");
         }
@@ -937,15 +945,25 @@ const normalizeAssistantResult = (parsed, rawAnswer, workspaceContext) => {
     }
 
     if (responseType === "missing_fields") {
+        const actionType = normalizeActionType(parsed.actionType || parsed.action);
         const details = Array.isArray(parsed.missingFieldDetails)
             ? parsed.missingFieldDetails
             : (parsed.missingFields || []).map((field) => makeMissingDetail(field, field, "text"));
 
-        return makeMissingFieldsResponse({
+        const responseObj = makeMissingFieldsResponse({
             answer: normalizeText(parsed.answer) || "I need a bit more information before I can prepare that.",
             missingFieldDetails: details,
             options: Array.isArray(parsed.options) ? parsed.options : [],
         });
+
+        if (actionType) {
+            responseObj.pendingAction = {
+                actionType,
+                collectedFields: asObject(parsed.fields || parsed.payload || {}),
+            };
+        }
+
+        return responseObj;
     }
 
     if (responseType === "action_proposal" || parsed.proposal || parsed.actionType || parsed.action) {
@@ -963,6 +981,7 @@ export const getTaskFlowAssistantAnswer = async ({
     history = [],
     workspaceId,
     userId,
+    pendingAction,
 }) => {
     const trimmedMessage = normalizeText(message);
 
@@ -987,6 +1006,7 @@ export const getTaskFlowAssistantAnswer = async ({
         message: trimmedMessage,
         history: sanitizeHistory(history),
         workspaceContext,
+        pendingAction,
     }));
 
     return normalizeAssistantResult(parseAssistantJson(rawAnswer), rawAnswer, workspaceContext);

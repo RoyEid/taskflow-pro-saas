@@ -1,6 +1,6 @@
 import api from "./api";
 
-export const askAssistant = async ({ message, workspaceId, history = [] }) => {
+export const askAssistant = async ({ message, workspaceId, history = [], pendingAction }) => {
   const payload = {
     message,
     history,
@@ -8,6 +8,10 @@ export const askAssistant = async ({ message, workspaceId, history = [] }) => {
 
   if (workspaceId) {
     payload.workspaceId = workspaceId;
+  }
+
+  if (pendingAction) {
+    payload.pendingAction = pendingAction;
   }
 
   const res = await api.post("/ai/assistant", payload);

@@ -373,6 +373,7 @@ function TaskFlowAssistant() {
   const [error, setError] = useState("");
   const [activeProposal, setActiveProposal] = useState(null);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null);
 
   const remainingCharacters = MAX_MESSAGE_LENGTH - draft.length;
   const canSend = draft.trim().length > 0 && !loading && !isConfirming;
@@ -409,6 +410,7 @@ function TaskFlowAssistant() {
     setDraft("");
     setError("");
     setActiveProposal(null);
+    setPendingAction(null);
     setLoading(false);
     setIsConfirming(false);
   }, []);
@@ -430,7 +432,12 @@ function TaskFlowAssistant() {
       setLoading(true);
 
       try {
-        const response = await askAssistant({ message, workspaceId, history });
+        const response = await askAssistant({
+          message,
+          workspaceId,
+          history,
+          pendingAction,
+        });
 
         setMessages((prev) => [
           ...prev,
@@ -442,6 +449,18 @@ function TaskFlowAssistant() {
 
         if (response?.type === "action_proposal" && response?.proposal) {
           setActiveProposal(response.proposal);
+          setPendingAction(null);
+        } else if (response?.type === "missing_fields") {
+          if (response?.pendingAction) {
+            setPendingAction(response.pendingAction);
+          } else {
+            setPendingAction({
+              actionType: response.actionType || "create_task",
+              collectedFields: {},
+            });
+          }
+        } else {
+          setPendingAction(null);
         }
       } catch (err) {
         setError(getErrorMessage(err));
@@ -449,7 +468,7 @@ function TaskFlowAssistant() {
         setLoading(false);
       }
     },
-    [draft, isConfirming, loading, messages, workspaceId]
+    [draft, isConfirming, loading, messages, pendingAction, workspaceId]
   );
 
   const handleConfirmAction = useCallback(
@@ -466,6 +485,7 @@ function TaskFlowAssistant() {
         const createdLink = getCreatedLink(response);
 
         setActiveProposal(null);
+        setPendingAction(null);
         setMessages((prev) => [
           ...prev,
           {
@@ -485,6 +505,7 @@ function TaskFlowAssistant() {
 
   const handleCancelProposal = useCallback(() => {
     setActiveProposal(null);
+    setPendingAction(null);
     setError("");
     setMessages((prev) => [
       ...prev,
