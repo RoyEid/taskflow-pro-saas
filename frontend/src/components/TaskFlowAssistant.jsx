@@ -561,7 +561,14 @@ function TaskFlowAssistant() {
 
         if (response?.type === "action_proposal" && response?.proposal) {
           setActiveProposal(response.proposal);
-          setPendingAction(null);
+          if (!response.proposal.canConfirm) {
+            setPendingAction({
+              actionType: response.proposal.actionType,
+              collectedFields: response.proposal.fields || {},
+            });
+          } else {
+            setPendingAction(null);
+          }
         } else if (response?.type === "missing_fields") {
           if (response?.pendingAction) {
             setPendingAction(response.pendingAction);
