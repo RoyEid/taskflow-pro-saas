@@ -1,4 +1,11 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useNavigate } from "react-router";
 import {
   Archive,
@@ -60,7 +67,12 @@ import {
   startNewChat as startNewChatRequest,
   uploadChatFile,
 } from "../services/chatService";
-import { confirmAction, confirmDelete, showError, showSuccess } from "../utils/alerts";
+import {
+  confirmAction,
+  confirmDelete,
+  showError,
+  showSuccess,
+} from "../utils/alerts";
 import { getToken } from "../utils/tokenStorage";
 
 const EDIT_MESSAGE_WINDOW_MS = 15 * 60 * 1000;
@@ -74,8 +86,22 @@ const SUPPORTED_IMAGE_MIME_TYPES = new Set([
   "image/webp",
   "image/gif",
 ]);
-const SUPPORTED_IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp", "gif"]);
-const AUDIO_FILE_EXTENSIONS = new Set(["webm", "ogg", "mp3", "m4a", "mp4", "wav", "aac"]);
+const SUPPORTED_IMAGE_EXTENSIONS = new Set([
+  "jpg",
+  "jpeg",
+  "png",
+  "webp",
+  "gif",
+]);
+const AUDIO_FILE_EXTENSIONS = new Set([
+  "webm",
+  "ogg",
+  "mp3",
+  "m4a",
+  "mp4",
+  "wav",
+  "aac",
+]);
 
 function normalizeMimeType(value = "") {
   return String(value).split(";")[0].trim().toLowerCase();
@@ -93,7 +119,12 @@ function getMessageMediaUrl(message) {
   return message?.fileUrl || message?.audioUrl || message?.imageUrl || "";
 }
 
-function isSupportedImageMedia({ messageType, mimeType, fileName, fileUrl } = {}) {
+function isSupportedImageMedia({
+  messageType,
+  mimeType,
+  fileName,
+  fileUrl,
+} = {}) {
   const type = String(messageType || "").toLowerCase();
   const cleanMime = normalizeMimeType(mimeType);
 
@@ -118,12 +149,15 @@ function isAudioMedia({ messageType, mimeType, fileName, fileUrl } = {}) {
 }
 
 function getMessageKind(message) {
-  const messageType = String(message?.messageType || message?.type || "").toLowerCase();
+  const messageType = String(
+    message?.messageType || message?.type || "",
+  ).toLowerCase();
   const fileUrl = getMessageMediaUrl(message);
 
   if (messageType === "sticker") return "sticker";
   if (isAudioMedia({ ...message, messageType, fileUrl })) return "audio";
-  if (isSupportedImageMedia({ ...message, messageType, fileUrl })) return "image";
+  if (isSupportedImageMedia({ ...message, messageType, fileUrl }))
+    return "image";
   if (messageType === "file" || fileUrl) return "file";
 
   return "text";
@@ -133,7 +167,12 @@ function getAudioExtension(mimeType) {
   const cleanMime = normalizeMimeType(mimeType);
 
   if (cleanMime === "audio/ogg") return "ogg";
-  if (cleanMime === "audio/mp4" || cleanMime === "audio/x-m4a" || cleanMime === "audio/m4a") return "m4a";
+  if (
+    cleanMime === "audio/mp4" ||
+    cleanMime === "audio/x-m4a" ||
+    cleanMime === "audio/m4a"
+  )
+    return "m4a";
   if (cleanMime === "audio/wav" || cleanMime === "audio/x-wav") return "wav";
   if (cleanMime === "audio/aac") return "aac";
   if (cleanMime === "audio/mpeg" || cleanMime === "audio/mp3") return "mp3";
@@ -147,6 +186,155 @@ function formatDuration(seconds) {
   const remainder = normalizedSeconds % 60;
 
   return `${minutes}:${remainder.toString().padStart(2, "0")}`;
+}
+
+async function downloadFile(url, filename) {
+  if (!url) return;
+  try {
+    const res = await fetch(url, { mode: "cors" });
+    if (!res.ok) throw new Error("Network response was not ok");
+    const blob = await res.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = filename || "download";
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+  } catch (err) {
+    console.warn(
+      "[Download Helper] CORS or fetch failed, falling back to direct anchor download:",
+      err,
+    );
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename || "download";
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+}
+
+function CustomAudioPlayer({ src, duration, isOwnMessage }) {
+  const audioRef = useRef(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [totalDuration, setTotalDuration] = useState(duration || 0);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
+    const handleLoadedMetadata = () => {
+      if (audio.duration && !totalDuration) {
+        setTotalDuration(audio.duration);
+      }
+    };
+    const handleEnded = () => {
+      setIsPlaying(false);
+      setCurrentTime(0);
+    };
+
+    audio.addEventListener("play", handlePlay);
+    audio.addEventListener("pause", handlePause);
+    audio.addEventListener("timeupdate", handleTimeUpdate);
+    audio.addEventListener("loadedmetadata", handleLoadedMetadata);
+    audio.addEventListener("ended", handleEnded);
+
+    if (audio.duration && !totalDuration) {
+      setTotalDuration(audio.duration);
+    }
+
+    return () => {
+      audio.removeEventListener("play", handlePlay);
+      audio.removeEventListener("pause", handlePause);
+      audio.removeEventListener("timeupdate", handleTimeUpdate);
+      audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      audio.removeEventListener("ended", handleEnded);
+    };
+  }, [src, totalDuration]);
+
+  const togglePlay = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (isPlaying) {
+      audio.pause();
+    } else {
+      audio.play().catch(() => {});
+    }
+  };
+
+  const handleSeek = (e) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const time = Number(e.target.value);
+    audio.currentTime = time;
+    setCurrentTime(time);
+  };
+
+  const formatAudioTime = (time) => {
+    if (Number.isNaN(time) || !Number.isFinite(time)) return "0:00";
+    const mins = Math.floor(time / 60);
+    const secs = Math.floor(time % 60);
+    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+  };
+
+  return (
+    <div
+      className={`flex items-center gap-3 w-full min-w-[240px] sm:min-w-[280px] p-2 rounded-xl transition ${
+        isOwnMessage
+          ? "bg-white/10 text-white"
+          : "bg-slate-100/70 dark:bg-slate-900/70 text-slate-800 dark:text-slate-200"
+      }`}
+    >
+      <audio ref={audioRef} src={src} preload="metadata" />
+
+      <button
+        type="button"
+        onClick={togglePlay}
+        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all active:scale-90 ${
+          isOwnMessage
+            ? "bg-white text-indigo-600 hover:bg-indigo-50"
+            : "bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+        }`}
+      >
+        {isPlaying ? (
+          <svg className="h-3 w-3 fill-current" viewBox="0 0 24 24">
+            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+          </svg>
+        ) : (
+          <svg className="ml-0.5 h-3.5 w-3.5 fill-current" viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        )}
+      </button>
+
+      <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+        <input
+          type="range"
+          min={0}
+          max={totalDuration || 100}
+          value={currentTime}
+          onChange={handleSeek}
+          className={`h-1.5 w-full cursor-pointer appearance-none rounded-lg accent-indigo-500 bg-slate-200 dark:bg-slate-800 ${
+            isOwnMessage ? "accent-white bg-indigo-400" : ""
+          }`}
+        />
+        <div className="flex justify-between text-[9px] opacity-75 font-mono leading-none mt-0.5">
+          <span>{formatAudioTime(currentTime)}</span>
+          <span>{formatAudioTime(totalDuration)}</span>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function formatFileSize(fileSize) {
@@ -270,7 +458,9 @@ function highlightMessageContent(content, searchTerm, isActiveResult = false) {
 function sortMessagesByDate(items) {
   return [...items].sort((left, right) => {
     const leftTime = left?.createdAt ? new Date(left.createdAt).getTime() : 0;
-    const rightTime = right?.createdAt ? new Date(right.createdAt).getTime() : 0;
+    const rightTime = right?.createdAt
+      ? new Date(right.createdAt).getTime()
+      : 0;
     return leftTime - rightTime;
   });
 }
@@ -376,7 +566,9 @@ function isDeletedMessage(message) {
 }
 
 function isWithinMessageWindow(message, windowMs, now) {
-  const createdAt = message?.createdAt ? new Date(message.createdAt).getTime() : null;
+  const createdAt = message?.createdAt
+    ? new Date(message.createdAt).getTime()
+    : null;
 
   if (!createdAt || Number.isNaN(createdAt)) {
     return false;
@@ -508,7 +700,10 @@ function Chat() {
     });
 
     recordingCancelledRef.current = true;
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state !== "inactive"
+    ) {
       try {
         mediaRecorderRef.current.stop();
       } catch {
@@ -548,7 +743,9 @@ function Chat() {
         ? "0 of 0"
         : "";
   const activeSearchMessageId =
-    activeSearchIndex >= 0 ? getMessageId(searchResults[activeSearchIndex]) : null;
+    activeSearchIndex >= 0
+      ? getMessageId(searchResults[activeSearchIndex])
+      : null;
 
   const currentMemberRole = useMemo(() => {
     if (memberRole) return memberRole;
@@ -570,23 +767,29 @@ function Chat() {
 
   const connectionLabel = connected ? "Live" : "Offline";
 
-  const mergeMessages = useCallback((incomingMessages) => {
-    if (!Array.isArray(incomingMessages) || incomingMessages.length === 0) return;
+  const mergeMessages = useCallback(
+    (incomingMessages) => {
+      if (!Array.isArray(incomingMessages) || incomingMessages.length === 0)
+        return;
 
-    setMessages((prev) => {
-      const existingIds = new Set(prev.map((message) => getMessageId(message)).filter(Boolean));
-      const uniqueIncoming = incomingMessages.filter((message) => {
-        const messageId = getMessageId(message);
-        return !messageId || !existingIds.has(messageId);
+      setMessages((prev) => {
+        const existingIds = new Set(
+          prev.map((message) => getMessageId(message)).filter(Boolean),
+        );
+        const uniqueIncoming = incomingMessages.filter((message) => {
+          const messageId = getMessageId(message);
+          return !messageId || !existingIds.has(messageId);
+        });
+
+        if (uniqueIncoming.length === 0) {
+          return prev;
+        }
+
+        return sortMessagesByDate([...prev, ...uniqueIncoming]);
       });
-
-      if (uniqueIncoming.length === 0) {
-        return prev;
-      }
-
-      return sortMessagesByDate([...prev, ...uniqueIncoming]);
-    });
-  }, [setMessages]);
+    },
+    [setMessages],
+  );
 
   const scrollToMessageElement = useCallback((messageId) => {
     if (!messageId) return;
@@ -599,11 +802,16 @@ function Chat() {
       const containerRect = container.getBoundingClientRect();
       const elementRect = element.getBoundingClientRect();
 
-      const scrollOffset = (elementRect.top - containerRect.top) + container.scrollTop - (containerRect.height / 2) + (elementRect.height / 2);
+      const scrollOffset =
+        elementRect.top -
+        containerRect.top +
+        container.scrollTop -
+        containerRect.height / 2 +
+        elementRect.height / 2;
 
       container.scrollTo({
         top: scrollOffset,
-        behavior: "smooth"
+        behavior: "smooth",
       });
     }
   }, []);
@@ -612,9 +820,11 @@ function Chat() {
     (messageId) => {
       if (!messageId) return false;
 
-      return messages.some((message) => idsEqual(getMessageId(message), messageId));
+      return messages.some((message) =>
+        idsEqual(getMessageId(message), messageId),
+      );
     },
-    [messages]
+    [messages],
   );
 
   const ensureSearchResultLoaded = useCallback(
@@ -644,13 +854,22 @@ function Chat() {
 
         return true;
       } catch (err) {
-        setError(err?.response?.data?.message || "Failed to load search result.");
+        setError(
+          err?.response?.data?.message || "Failed to load search result.",
+        );
         return false;
       } finally {
         setJumpingToResult(false);
       }
     },
-    [isMessageLoaded, mergeMessages, workspaceId, setError, setHasMoreMessages, setJumpingToResult]
+    [
+      isMessageLoaded,
+      mergeMessages,
+      workspaceId,
+      setError,
+      setHasMoreMessages,
+      setJumpingToResult,
+    ],
   );
 
   const goToSearchResult = useCallback(
@@ -658,7 +877,7 @@ function Chat() {
       if (index < 0 || index >= searchResults.length) return;
       setActiveSearchIndex(index);
     },
-    [searchResults.length, setActiveSearchIndex]
+    [searchResults.length, setActiveSearchIndex],
   );
 
   const handleNextSearchResult = useCallback(() => {
@@ -686,99 +905,128 @@ function Chat() {
     setActiveSearchIndex(-1);
     setSearching(false);
     setJumpingToResult(false);
-  }, [setActiveSearchIndex, setJumpingToResult, setSearchResults, setSearchTerm, setSearchTotal, setSearching]);
+  }, [
+    setActiveSearchIndex,
+    setJumpingToResult,
+    setSearchResults,
+    setSearchTerm,
+    setSearchTotal,
+    setSearching,
+  ]);
 
-  const notifyUnreadUpdated = useCallback((count) => {
-    if (!workspaceId) return;
+  const notifyUnreadUpdated = useCallback(
+    (count) => {
+      if (!workspaceId) return;
 
-    window.dispatchEvent(
-      new CustomEvent("chatUnreadUpdated", {
-        detail: {
-          workspaceId,
-          unreadCount: count,
-        },
-      })
-    );
-  }, [workspaceId]);
-
-  const appendMessage = useCallback((message) => {
-    if (!message) return;
-
-    setArchiveNotice("");
-    setMessages((prev) => {
-      const messageId = getMessageId(message);
-
-      if (messageId && prev.some((item) => idsEqual(getMessageId(item), messageId))) {
-        return prev;
-      }
-
-      return [...prev, message];
-    });
-  }, [setArchiveNotice, setMessages]);
-
-  const prependMessages = useCallback((olderMessages) => {
-    if (!Array.isArray(olderMessages) || olderMessages.length === 0) return;
-
-    setMessages((prev) => {
-      const existingIds = new Set(prev.map((message) => getMessageId(message)).filter(Boolean));
-      const uniqueOlderMessages = olderMessages.filter((message) => {
-        const messageId = getMessageId(message);
-        return !messageId || !existingIds.has(messageId);
-      });
-
-      return [...uniqueOlderMessages, ...prev];
-    });
-  }, [setMessages]);
-
-  const updateMessageInList = useCallback((updatedMessage) => {
-    const updatedMessageId = getMessageId(updatedMessage);
-
-    if (!updatedMessageId) return;
-
-    const replaceMessage = (items) =>
-      items.map((message) =>
-        idsEqual(getMessageId(message), updatedMessageId) ? updatedMessage : message
+      window.dispatchEvent(
+        new CustomEvent("chatUnreadUpdated", {
+          detail: {
+            workspaceId,
+            unreadCount: count,
+          },
+        }),
       );
+    },
+    [workspaceId],
+  );
 
-    setMessages(replaceMessage);
-    setSearchResults((prev) =>
-      prev.map((result) =>
-        idsEqual(getMessageId(result), updatedMessageId)
-          ? {
-              ...result,
-              content: updatedMessage.content,
-            }
-          : result
-      )
-    );
-  }, [setMessages, setSearchResults]);
+  const appendMessage = useCallback(
+    (message) => {
+      if (!message) return;
 
-  const addReaderToMessages = useCallback((reader, readAt) => {
-    const readerId = getUserId(reader);
+      setArchiveNotice("");
+      setMessages((prev) => {
+        const messageId = getMessageId(message);
 
-    if (!readerId) return;
-
-    setMessages((prev) => {
-      return prev.map((message) => {
-        const readBy = Array.isArray(message.readBy) ? message.readBy : [];
-
-        if (readBy.some((read) => idsEqual(getReadUserId(read), readerId))) {
-          return message;
+        if (
+          messageId &&
+          prev.some((item) => idsEqual(getMessageId(item), messageId))
+        ) {
+          return prev;
         }
 
-        return {
-          ...message,
-          readBy: [
-            ...readBy,
-            {
-              user: reader,
-              readAt,
-            },
-          ],
-        };
+        return [...prev, message];
       });
-    });
-  }, [setMessages]);
+    },
+    [setArchiveNotice, setMessages],
+  );
+
+  const prependMessages = useCallback(
+    (olderMessages) => {
+      if (!Array.isArray(olderMessages) || olderMessages.length === 0) return;
+
+      setMessages((prev) => {
+        const existingIds = new Set(
+          prev.map((message) => getMessageId(message)).filter(Boolean),
+        );
+        const uniqueOlderMessages = olderMessages.filter((message) => {
+          const messageId = getMessageId(message);
+          return !messageId || !existingIds.has(messageId);
+        });
+
+        return [...uniqueOlderMessages, ...prev];
+      });
+    },
+    [setMessages],
+  );
+
+  const updateMessageInList = useCallback(
+    (updatedMessage) => {
+      const updatedMessageId = getMessageId(updatedMessage);
+
+      if (!updatedMessageId) return;
+
+      const replaceMessage = (items) =>
+        items.map((message) =>
+          idsEqual(getMessageId(message), updatedMessageId)
+            ? updatedMessage
+            : message,
+        );
+
+      setMessages(replaceMessage);
+      setSearchResults((prev) =>
+        prev.map((result) =>
+          idsEqual(getMessageId(result), updatedMessageId)
+            ? {
+                ...result,
+                content: updatedMessage.content,
+              }
+            : result,
+        ),
+      );
+    },
+    [setMessages, setSearchResults],
+  );
+
+  const addReaderToMessages = useCallback(
+    (reader, readAt) => {
+      const readerId = getUserId(reader);
+
+      if (!readerId) return;
+
+      setMessages((prev) => {
+        return prev.map((message) => {
+          const readBy = Array.isArray(message.readBy) ? message.readBy : [];
+
+          if (readBy.some((read) => idsEqual(getReadUserId(read), readerId))) {
+            return message;
+          }
+
+          return {
+            ...message,
+            readBy: [
+              ...readBy,
+              {
+                user: reader,
+                readAt,
+              },
+            ],
+          };
+        });
+      });
+    },
+    [setMessages],
+  );
 
   const clearTypingTimer = useCallback(() => {
     if (typingTimeoutRef.current) {
@@ -787,14 +1035,17 @@ function Chat() {
     }
   }, []);
 
-  const emitTyping = useCallback((isTyping) => {
-    if (!workspaceId || !socketRef.current?.connected) return;
+  const emitTyping = useCallback(
+    (isTyping) => {
+      if (!workspaceId || !socketRef.current?.connected) return;
 
-    socketRef.current.emit("typing", {
-      workspaceId,
-      isTyping,
-    });
-  }, [workspaceId]);
+      socketRef.current.emit("typing", {
+        workspaceId,
+        isTyping,
+      });
+    },
+    [workspaceId],
+  );
 
   const stopTypingSoon = useCallback(() => {
     clearTypingTimer();
@@ -858,7 +1109,9 @@ function Chat() {
           setSearchResults([]);
           setSearchTotal(0);
           setActiveSearchIndex(-1);
-          setError(err?.response?.data?.message || "Failed to search messages.");
+          setError(
+            err?.response?.data?.message || "Failed to search messages.",
+          );
         }
       } finally {
         if (!cancelled) {
@@ -908,7 +1161,13 @@ function Chat() {
     return () => {
       cancelled = true;
     };
-  }, [activeSearchIndex, ensureSearchResultLoaded, searchResults, isMessageLoaded, scrollToMessageElement]);
+  }, [
+    activeSearchIndex,
+    ensureSearchResultLoaded,
+    searchResults,
+    isMessageLoaded,
+    scrollToMessageElement,
+  ]);
 
   useEffect(() => {
     if (!workspaceId) {
@@ -1016,7 +1275,10 @@ function Chat() {
       if (String(messageWorkspaceId) === String(workspaceId)) {
         updateMessageInList(message);
 
-        if (isDeletedMessage(message) && idsEqual(getMessageId(message), editingMessageId)) {
+        if (
+          isDeletedMessage(message) &&
+          idsEqual(getMessageId(message), editingMessageId)
+        ) {
           setEditingMessageId(null);
           setEditDraft("");
           setSavingEdit(false);
@@ -1039,7 +1301,9 @@ function Chat() {
       }
 
       setTypingUsers((prev) => {
-        const withoutUser = prev.filter((item) => !idsEqual(getUserId(item), typingUserId));
+        const withoutUser = prev.filter(
+          (item) => !idsEqual(getUserId(item), typingUserId),
+        );
 
         if (!typing.isTyping) {
           return withoutUser;
@@ -1051,7 +1315,7 @@ function Chat() {
       if (typing.isTyping) {
         setTimeout(() => {
           setTypingUsers((prev) =>
-            prev.filter((item) => !idsEqual(getUserId(item), typingUserId))
+            prev.filter((item) => !idsEqual(getUserId(item), typingUserId)),
           );
         }, 2500);
       }
@@ -1174,17 +1438,21 @@ function Chat() {
     emitTyping(false);
     setDraft("");
 
-    socketRef.current.emit("sendMessage", { workspaceId, content }, (response) => {
-      setSending(false);
+    socketRef.current.emit(
+      "sendMessage",
+      { workspaceId, content },
+      (response) => {
+        setSending(false);
 
-      if (!response?.success) {
-        setDraft(content);
-        setError(response?.message || "Failed to send message.");
-        return;
-      }
+        if (!response?.success) {
+          setDraft(content);
+          setError(response?.message || "Failed to send message.");
+          return;
+        }
 
-      appendMessage(response.message);
-    });
+        appendMessage(response.message);
+      },
+    );
   };
 
   const handleSendSticker = (stickerId) => {
@@ -1201,7 +1469,7 @@ function Chat() {
           return;
         }
         appendMessage(response.message);
-      }
+      },
     );
   };
 
@@ -1220,10 +1488,16 @@ function Chat() {
     setError("");
 
     try {
-      const response = await uploadChatFile(workspaceId, file, (progressEvent) => {
-        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-        setUploadProgress(percentCompleted);
-      });
+      const response = await uploadChatFile(
+        workspaceId,
+        file,
+        (progressEvent) => {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total,
+          );
+          setUploadProgress(percentCompleted);
+        },
+      );
 
       const { fileUrl, fileName, fileSize, mimeType } = response;
       const normalizedMimeType = normalizeMimeType(mimeType || file.type);
@@ -1251,7 +1525,7 @@ function Chat() {
             return;
           }
           appendMessage(sendRes.message);
-        }
+        },
       );
     } catch (err) {
       setError(err?.response?.data?.message || "Failed to upload file.");
@@ -1271,22 +1545,28 @@ function Chat() {
     }
   }, []);
 
-  const stopRecordingTracks = useCallback((stream = recordingStreamRef.current) => {
-    if (!stream) return;
+  const stopRecordingTracks = useCallback(
+    (stream = recordingStreamRef.current) => {
+      if (!stream) return;
 
-    stream.getTracks().forEach((track) => track.stop());
+      stream.getTracks().forEach((track) => track.stop());
 
-    if (recordingStreamRef.current === stream) {
-      recordingStreamRef.current = null;
-    }
-  }, []);
+      if (recordingStreamRef.current === stream) {
+        recordingStreamRef.current = null;
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     return () => {
       recordingCancelledRef.current = true;
       clearRecordingTimer();
 
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      if (
+        mediaRecorderRef.current &&
+        mediaRecorderRef.current.state === "recording"
+      ) {
         try {
           mediaRecorderRef.current.stop();
         } catch {
@@ -1307,7 +1587,10 @@ function Chat() {
   }, [tempAudioUrl]);
 
   const startVoiceRecording = async () => {
-    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+    if (
+      !navigator.mediaDevices?.getUserMedia ||
+      typeof MediaRecorder === "undefined"
+    ) {
       setError("Audio recording is unsupported on this browser.");
       return;
     }
@@ -1330,12 +1613,19 @@ function Chat() {
 
       let options = {};
       let mimeType = "";
-      const canCheckMimeType = typeof MediaRecorder.isTypeSupported === "function";
+      const canCheckMimeType =
+        typeof MediaRecorder.isTypeSupported === "function";
 
-      if (canCheckMimeType && MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+      if (
+        canCheckMimeType &&
+        MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+      ) {
         mimeType = "audio/webm;codecs=opus";
         options = { mimeType };
-      } else if (canCheckMimeType && MediaRecorder.isTypeSupported("audio/webm")) {
+      } else if (
+        canCheckMimeType &&
+        MediaRecorder.isTypeSupported("audio/webm")
+      ) {
         mimeType = "audio/webm";
         options = { mimeType };
       }
@@ -1375,7 +1665,9 @@ function Chat() {
           return;
         }
 
-        const audioBlob = new Blob(audioChunksRef.current, { type: actualMimeType });
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: actualMimeType,
+        });
         if (audioBlob.size === 0) {
           setError("Recorded audio is empty.");
           return;
@@ -1408,14 +1700,19 @@ function Chat() {
       stopRecordingTracks(stream);
       mediaRecorderRef.current = null;
       recordingCancelledRef.current = false;
-      setError("Microphone permission denied or audio recording is unsupported on this browser.");
+      setError(
+        "Microphone permission denied or audio recording is unsupported on this browser.",
+      );
     }
   };
 
   const stopVoiceRecording = () => {
     recordingCancelledRef.current = false;
 
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state === "recording"
+    ) {
       if (typeof mediaRecorderRef.current.requestData === "function") {
         try {
           mediaRecorderRef.current.requestData();
@@ -1435,7 +1732,10 @@ function Chat() {
 
   const cancelVoiceRecording = () => {
     recordingCancelledRef.current = true;
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state === "recording"
+    ) {
       audioChunksRef.current = [];
       mediaRecorderRef.current.stop();
     } else {
@@ -1477,16 +1777,31 @@ function Chat() {
     try {
       const mimeType = tempAudioBlob.type || "audio/webm";
       const fileExt = getAudioExtension(mimeType);
-      const audioFile = new File([tempAudioBlob], `voice_note_${Date.now()}.${fileExt}`, {
-        type: mimeType,
-      });
+      const audioFile = new File(
+        [tempAudioBlob],
+        `voice_note_${Date.now()}.${fileExt}`,
+        {
+          type: mimeType,
+        },
+      );
 
-      const response = await uploadChatFile(workspaceId, audioFile, (progressEvent) => {
-        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-        setUploadProgress(percentCompleted);
-      });
+      const response = await uploadChatFile(
+        workspaceId,
+        audioFile,
+        (progressEvent) => {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total,
+          );
+          setUploadProgress(percentCompleted);
+        },
+      );
 
-      const { fileUrl, fileName, fileSize, mimeType: uploadedMimeType } = response;
+      const {
+        fileUrl,
+        fileName,
+        fileSize,
+        mimeType: uploadedMimeType,
+      } = response;
       const duration = tempAudioDuration;
 
       socketRef.current.emit(
@@ -1497,7 +1812,8 @@ function Chat() {
           fileUrl,
           fileName,
           fileSize,
-          mimeType: uploadedMimeType || normalizeMimeType(mimeType) || "audio/webm",
+          mimeType:
+            uploadedMimeType || normalizeMimeType(mimeType) || "audio/webm",
           audioDuration: duration,
         },
         (sendRes) => {
@@ -1513,7 +1829,7 @@ function Chat() {
           setTempAudioBlob(null);
           setTempAudioUrl("");
           setTempAudioDuration(0);
-        }
+        },
       );
     } catch (err) {
       setError(err?.response?.data?.message || "Failed to upload voice note.");
@@ -1528,7 +1844,11 @@ function Chat() {
     if (getMessageKind(message) !== "text") return false;
     if (!idsEqual(getSenderId(message), currentUserId)) return false;
 
-    return isWithinMessageWindow(message, EDIT_MESSAGE_WINDOW_MS, permissionNow);
+    return isWithinMessageWindow(
+      message,
+      EDIT_MESSAGE_WINDOW_MS,
+      permissionNow,
+    );
   };
 
   const canDeleteMessage = (message) => {
@@ -1542,7 +1862,11 @@ function Chat() {
       return false;
     }
 
-    return isWithinMessageWindow(message, DELETE_MESSAGE_WINDOW_MS, permissionNow);
+    return isWithinMessageWindow(
+      message,
+      DELETE_MESSAGE_WINDOW_MS,
+      permissionNow,
+    );
   };
 
   const beginEditingMessage = (message) => {
@@ -1562,14 +1886,18 @@ function Chat() {
   const requestMessageEdit = (messageId, content) => {
     if (socketRef.current?.connected) {
       return new Promise((resolve, reject) => {
-        socketRef.current.emit("editMessage", { workspaceId, messageId, content }, (response) => {
-          if (!response?.success) {
-            reject(new Error(response?.message || "Failed to edit message."));
-            return;
-          }
+        socketRef.current.emit(
+          "editMessage",
+          { workspaceId, messageId, content },
+          (response) => {
+            if (!response?.success) {
+              reject(new Error(response?.message || "Failed to edit message."));
+              return;
+            }
 
-          resolve(response);
-        });
+            resolve(response);
+          },
+        );
       });
     }
 
@@ -1579,14 +1907,20 @@ function Chat() {
   const requestMessageDelete = (messageId) => {
     if (socketRef.current?.connected) {
       return new Promise((resolve, reject) => {
-        socketRef.current.emit("deleteMessage", { workspaceId, messageId }, (response) => {
-          if (!response?.success) {
-            reject(new Error(response?.message || "Failed to delete message."));
-            return;
-          }
+        socketRef.current.emit(
+          "deleteMessage",
+          { workspaceId, messageId },
+          (response) => {
+            if (!response?.success) {
+              reject(
+                new Error(response?.message || "Failed to delete message."),
+              );
+              return;
+            }
 
-          resolve(response);
-        });
+            resolve(response);
+          },
+        );
       });
     }
 
@@ -1624,7 +1958,11 @@ function Chat() {
       updateMessageInList(response.message);
       cancelEditingMessage();
     } catch (err) {
-      setError(err?.response?.data?.message || err.message || "Failed to edit message.");
+      setError(
+        err?.response?.data?.message ||
+          err.message ||
+          "Failed to edit message.",
+      );
       setSavingEdit(false);
     }
   };
@@ -1653,7 +1991,11 @@ function Chat() {
         cancelEditingMessage();
       }
     } catch (err) {
-      setError(err?.response?.data?.message || err.message || "Failed to delete message.");
+      setError(
+        err?.response?.data?.message ||
+          err.message ||
+          "Failed to delete message.",
+      );
     } finally {
       setDeletingMessageId(null);
     }
@@ -1686,10 +2028,13 @@ function Chat() {
         if (!container) return;
 
         const nextScrollHeight = container.scrollHeight;
-        container.scrollTop = nextScrollHeight - previousScrollHeight + previousScrollTop;
+        container.scrollTop =
+          nextScrollHeight - previousScrollHeight + previousScrollTop;
       }, 0);
     } catch (err) {
-      setError(err?.response?.data?.message || "Failed to load older messages.");
+      setError(
+        err?.response?.data?.message || "Failed to load older messages.",
+      );
     } finally {
       setLoadingOlder(false);
     }
@@ -1713,10 +2058,14 @@ function Chat() {
       setMessages([]);
       setHasMoreMessages(false);
       cancelEditingMessage();
-      setArchiveNotice(`Chat history was archived by ${archivedBy?.name || "you"}.`);
+      setArchiveNotice(
+        `Chat history was archived by ${archivedBy?.name || "you"}.`,
+      );
       setUnreadCount(0);
       notifyUnreadUpdated(0);
-      showSuccess("Chat history archived. New messages will start a fresh chat.");
+      showSuccess(
+        "Chat history archived. New messages will start a fresh chat.",
+      );
     };
 
     try {
@@ -1837,7 +2186,8 @@ function Chat() {
       {isOnlyMemberWorkspace && (
         <div className="mb-5 flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200 sm:flex-row sm:items-center sm:justify-between">
           <span>
-            You are the only member in this workspace. Invite members to start a team conversation.
+            You are the only member in this workspace. Invite members to start a
+            team conversation.
           </span>
           {canInviteMembers && (
             <button
@@ -1889,9 +2239,7 @@ function Chat() {
                     aria-label="Previous result"
                     onClick={handlePreviousSearchResult}
                     disabled={
-                      searching ||
-                      jumpingToResult ||
-                      navigableSearchCount === 0
+                      searching || jumpingToResult || navigableSearchCount === 0
                     }
                     className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 disabled:opacity-40 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800"
                   >
@@ -1903,9 +2251,7 @@ function Chat() {
                     aria-label="Next result"
                     onClick={handleNextSearchResult}
                     disabled={
-                      searching ||
-                      jumpingToResult ||
-                      navigableSearchCount === 0
+                      searching || jumpingToResult || navigableSearchCount === 0
                     }
                     className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 disabled:opacity-40 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800"
                   >
@@ -1969,13 +2315,21 @@ function Chat() {
             </div>
           )}
 
-          <div ref={messageListRef} className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-5 sm:px-6">
+          <div
+            ref={messageListRef}
+            className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-5 sm:px-6"
+          >
             {loading && messages.length === 0 ? (
               <LoadingState message="Loading chat..." />
             ) : messages.length === 0 ? (
               <div className="flex min-h-[320px] items-center justify-center">
                 <EmptyState
-                  icon={<MessageSquare size={44} className="mb-4 text-slate-300 dark:text-slate-600" />}
+                  icon={
+                    <MessageSquare
+                      size={44}
+                      className="mb-4 text-slate-300 dark:text-slate-600"
+                    />
+                  }
                   title={
                     isOnlyMemberWorkspace
                       ? "You are the only member in this workspace"
@@ -1986,8 +2340,16 @@ function Chat() {
                       ? "Invite members to start a team conversation."
                       : "Start the workspace conversation with a quick update."
                   }
-                  action={isOnlyMemberWorkspace && canInviteMembers ? "Invite members" : undefined}
-                  onAction={isOnlyMemberWorkspace && canInviteMembers ? () => navigate("/members") : undefined}
+                  action={
+                    isOnlyMemberWorkspace && canInviteMembers
+                      ? "Invite members"
+                      : undefined
+                  }
+                  onAction={
+                    isOnlyMemberWorkspace && canInviteMembers
+                      ? () => navigate("/members")
+                      : undefined
+                  }
                 />
               </div>
             ) : (
@@ -2008,40 +2370,68 @@ function Chat() {
                 {messages.map((message, index) => {
                   const messageId = getMessageId(message);
                   const previousMessage = messages[index - 1];
-                  const dateSeparatorLabel = getDateSeparatorLabel(message, previousMessage);
+                  const dateSeparatorLabel = getDateSeparatorLabel(
+                    message,
+                    previousMessage,
+                  );
                   const sender = getSender(message);
                   const senderName = sender?.name || "Unknown User";
-                  const isOwnMessage = idsEqual(getSenderId(message), currentUserId);
+                  const isOwnMessage = idsEqual(
+                    getSenderId(message),
+                    currentUserId,
+                  );
                   const messageDeleted = isDeletedMessage(message);
-                  const editingThisMessage = idsEqual(editingMessageId, messageId);
+                  const editingThisMessage = idsEqual(
+                    editingMessageId,
+                    messageId,
+                  );
                   const canEditThisMessage = canEditMessage(message);
                   const canDeleteThisMessage = canDeleteMessage(message);
-                  const showMessageActions = canEditThisMessage || canDeleteThisMessage;
-                  const displayContent = messageDeleted ? DELETED_MESSAGE_TEXT : message.content;
+                  const showMessageActions =
+                    canEditThisMessage || canDeleteThisMessage;
+                  const displayContent = messageDeleted
+                    ? DELETED_MESSAGE_TEXT
+                    : message.content;
                   const displayContentText = String(displayContent || "");
                   const messageKind = getMessageKind(message);
                   const mediaUrl = getMessageMediaUrl(message);
                   const authenticatedMediaUrl = getAuthenticatedUrl(mediaUrl);
                   const isActiveSearchResult =
-                    isSearchMode && activeSearchMessageId && idsEqual(messageId, activeSearchMessageId);
+                    isSearchMode &&
+                    activeSearchMessageId &&
+                    idsEqual(messageId, activeSearchMessageId);
                   const shouldHighlightSearch =
                     isSearchMode &&
                     !messageDeleted &&
-                    displayContentText.toLowerCase().includes(trimmedSearchTerm.toLowerCase());
+                    displayContentText
+                      .toLowerCase()
+                      .includes(trimmedSearchTerm.toLowerCase());
+                  const isMedia =
+                    messageKind === "image" ||
+                    messageKind === "file" ||
+                    messageKind === "audio";
                   const bubbleClassName = messageDeleted
                     ? "whitespace-pre-wrap break-words break-anywhere rounded-2xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-[13px] italic leading-6 text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
                     : messageKind === "sticker"
                       ? `text-5xl select-none p-1 transition-transform hover:scale-110 active:scale-95 duration-200 ${
-                          isActiveSearchResult ? "ring-2 ring-yellow-400 rounded-xl" : ""
+                          isActiveSearchResult
+                            ? "ring-2 ring-yellow-400 rounded-xl"
+                            : ""
                         }`
-                      : `whitespace-pre-wrap break-words break-anywhere rounded-2xl px-4 py-2.5 text-[13px] leading-6 shadow-sm ${
+                      : `whitespace-pre-wrap break-words break-anywhere rounded-2xl text-[13px] leading-6 shadow-sm min-w-0 ${
+                          isMedia
+                            ? "p-1 sm:p-1.5 w-full max-w-full"
+                            : "px-4 py-2.5"
+                        } ${
                           isOwnMessage
                             ? "rounded-br-md bg-indigo-600 text-white dark:bg-indigo-500"
                             : "rounded-bl-md border border-slate-200 bg-slate-50 text-slate-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
                         } ${isActiveSearchResult ? "ring-2 ring-yellow-400 ring-offset-2 ring-offset-white dark:ring-offset-slate-900" : ""}`;
 
                   return (
-                    <Fragment key={messageId || `${senderName}-${message.createdAt}`}>
+                    <Fragment
+                      key={messageId || `${senderName}-${message.createdAt}`}
+                    >
                       {dateSeparatorLabel && (
                         <div className="flex justify-center">
                           <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">
@@ -2055,177 +2445,288 @@ function Chat() {
                           if (!messageId) return;
 
                           if (element) {
-                            messageElementRefs.current.set(String(messageId), element);
+                            messageElementRefs.current.set(
+                              String(messageId),
+                              element,
+                            );
                           } else {
-                            messageElementRefs.current.delete(String(messageId));
+                            messageElementRefs.current.delete(
+                              String(messageId),
+                            );
                           }
                         }}
                         data-message-id={messageId || undefined}
                         className={`flex gap-3 ${isOwnMessage ? "justify-end" : "justify-start"} ${
-                          isActiveSearchResult ? "rounded-xl bg-yellow-50/70 px-1 py-1 dark:bg-yellow-500/10" : ""
+                          isActiveSearchResult
+                            ? "rounded-xl bg-yellow-50/70 px-1 py-1 dark:bg-yellow-500/10"
+                            : ""
                         }`}
                       >
-                      {!isOwnMessage && (
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-[12px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                          {getInitials(senderName)}
-                        </div>
-                      )}
+                        {!isOwnMessage && (
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-[12px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                            {getInitials(senderName)}
+                          </div>
+                        )}
 
-                      <div className={`min-w-0 max-w-[82%] sm:max-w-[70%] ${isOwnMessage ? "items-end" : "items-start"} flex flex-col`}>
-                        <div className="mb-1 flex max-w-full items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
-                          <span className="truncate font-semibold">
-                            {isOwnMessage ? "You" : senderName}
-                          </span>
-                          <span className="shrink-0">{formatMessageTime(message.createdAt)}</span>
-                          {message.editedAt && !messageDeleted && (
-                            <span className="shrink-0 text-[10px] font-semibold text-slate-400 dark:text-slate-500">
-                              edited
+                        <div
+                          className={`min-w-0 max-w-[84vw] sm:max-w-[70%] ${isOwnMessage ? "items-end" : "items-start"} flex flex-col`}
+                        >
+                          <div className="mb-1 flex max-w-full items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+                            <span className="truncate font-semibold">
+                              {isOwnMessage ? "You" : senderName}
+                            </span>
+                            <span className="shrink-0">
+                              {formatMessageTime(message.createdAt)}
+                            </span>
+                            {message.editedAt && !messageDeleted && (
+                              <span className="shrink-0 text-[10px] font-semibold text-slate-400 dark:text-slate-500">
+                                edited
+                              </span>
+                            )}
+                          </div>
+
+                          {editingThisMessage ? (
+                            <form
+                              onSubmit={(e) => handleEditSubmit(e, message)}
+                              className="w-full rounded-2xl border border-indigo-200 bg-white p-2 shadow-sm dark:border-indigo-900/70 dark:bg-slate-950"
+                            >
+                              <textarea
+                                value={editDraft}
+                                onChange={(e) => setEditDraft(e.target.value)}
+                                maxLength={CHAT_MESSAGE_MAX_LENGTH}
+                                rows={3}
+                                autoFocus
+                                className="min-h-20 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] leading-6 text-slate-900 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
+                              />
+                              <div className="mt-2 flex items-center justify-end gap-2">
+                                <button
+                                  type="button"
+                                  title="Cancel edit"
+                                  aria-label="Cancel edit"
+                                  onClick={cancelEditingMessage}
+                                  disabled={savingEdit}
+                                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900"
+                                >
+                                  <X size={14} />
+                                </button>
+                                <button
+                                  type="submit"
+                                  title="Save edit"
+                                  aria-label="Save edit"
+                                  disabled={savingEdit || !editDraft.trim()}
+                                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white transition hover:bg-indigo-700 disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+                                >
+                                  <Check size={14} />
+                                </button>
+                              </div>
+                            </form>
+                          ) : (
+                            <div className={bubbleClassName}>
+                              {messageDeleted ? (
+                                displayContent
+                              ) : messageKind === "image" && mediaUrl ? (
+                                <div className="flex max-w-full flex-col gap-1.5 p-1">
+                                  <img
+                                    src={authenticatedMediaUrl}
+                                    alt={message.fileName || "Chat image"}
+                                    loading="lazy"
+                                    className="block max-h-72 max-w-full rounded-lg object-contain cursor-pointer transition hover:opacity-95 sm:max-w-sm"
+                                    onClick={() =>
+                                      window.open(
+                                        authenticatedMediaUrl,
+                                        "_blank",
+                                        "noopener,noreferrer",
+                                      )
+                                    }
+                                    onError={() =>
+                                      setError(
+                                        "Image preview could not be loaded. Try opening it again or refreshing the chat.",
+                                      )
+                                    }
+                                  />
+                                  <div
+                                    className={`mt-1 flex items-center justify-between gap-2 px-1 text-[11px] font-semibold ${
+                                      isOwnMessage
+                                        ? "text-indigo-200"
+                                        : "text-slate-550 dark:text-slate-400"
+                                    }`}
+                                  >
+                                    <span className="truncate block max-w-[180px]">
+                                      {message.fileName || "image.png"}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        downloadFile(
+                                          authenticatedMediaUrl,
+                                          message.fileName || "image.png",
+                                        )
+                                      }
+                                      className={`flex shrink-0 items-center gap-1 font-bold transition-all active:scale-95 ${
+                                        isOwnMessage
+                                          ? "text-white hover:text-indigo-100"
+                                          : "text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
+                                      }`}
+                                    >
+                                      <Download size={13} strokeWidth={2.5} />
+                                      Download
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : messageKind === "file" && mediaUrl ? (
+                                <div
+                                  className={`flex items-center gap-3 min-w-0 max-w-full rounded-xl p-2 sm:p-2.5 ${
+                                    isOwnMessage
+                                      ? "bg-white/10 text-white"
+                                      : "bg-slate-100/60 dark:bg-slate-900/60 text-slate-800 dark:text-slate-200"
+                                  }`}
+                                >
+                                  <div
+                                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                                      isOwnMessage
+                                        ? "bg-white/15 text-white"
+                                        : "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400"
+                                    }`}
+                                  >
+                                    <FileText size={20} />
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <p
+                                      className={`truncate text-[13px] font-semibold ${
+                                        isOwnMessage
+                                          ? "text-white"
+                                          : "text-slate-850 dark:text-slate-150"
+                                      }`}
+                                    >
+                                      {message.fileName}
+                                    </p>
+                                    <p
+                                      className={`text-[11px] ${
+                                        isOwnMessage
+                                          ? "text-indigo-200"
+                                          : "text-slate-550 dark:text-slate-400"
+                                      }`}
+                                    >
+                                      {formatFileSize(message.fileSize)}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <a
+                                      href={getAuthenticatedUrl(
+                                        mediaUrl,
+                                        false,
+                                      )}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      title="Open file in new tab"
+                                      className={`flex h-8 w-8 items-center justify-center rounded-lg transition ${
+                                        isOwnMessage
+                                          ? "hover:bg-white/20 text-indigo-100 hover:text-white"
+                                          : "hover:bg-slate-200/50 hover:text-slate-850 dark:hover:bg-slate-800/50 dark:hover:text-slate-150 text-slate-500 dark:text-slate-400"
+                                      }`}
+                                    >
+                                      <svg
+                                        className="h-4.5 w-4.5"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                        strokeWidth={2.5}
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                        />
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                        />
+                                      </svg>
+                                    </a>
+                                    <button
+                                      type="button"
+                                      title="Download file"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        downloadFile(
+                                          getAuthenticatedUrl(mediaUrl, true),
+                                          message.fileName,
+                                        );
+                                      }}
+                                      className={`flex h-8 w-8 items-center justify-center rounded-lg transition ${
+                                        isOwnMessage
+                                          ? "hover:bg-white/20 text-indigo-100 hover:text-white"
+                                          : "hover:bg-slate-200/50 hover:text-slate-850 dark:hover:bg-slate-800/50 dark:hover:text-slate-150 text-slate-500 dark:text-slate-400"
+                                      }`}
+                                    >
+                                      <Download size={16} />
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : messageKind === "sticker" ? (
+                                STICKER_MAP[message.stickerId] || "✨"
+                              ) : messageKind === "audio" && mediaUrl ? (
+                                <CustomAudioPlayer
+                                  src={authenticatedMediaUrl}
+                                  duration={message.audioDuration || message.duration}
+                                  isOwnMessage={isOwnMessage}
+                                />
+                              ) : shouldHighlightSearch ? (
+                                highlightMessageContent(
+                                  displayContent,
+                                  trimmedSearchTerm,
+                                  isActiveSearchResult,
+                                )
+                              ) : (
+                                displayContent
+                              )}
+                            </div>
+                          )}
+
+                          {showMessageActions && !editingThisMessage && (
+                            <div
+                              className={`mt-1 flex items-center gap-1 ${isOwnMessage ? "justify-end" : "justify-start"}`}
+                            >
+                              {canEditThisMessage && (
+                                <button
+                                  type="button"
+                                  title="Edit message"
+                                  aria-label="Edit message"
+                                  onClick={() => beginEditingMessage(message)}
+                                  disabled={
+                                    savingEdit ||
+                                    idsEqual(deletingMessageId, messageId)
+                                  }
+                                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-800 disabled:opacity-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-900"
+                                >
+                                  <Edit3 size={14} />
+                                </button>
+                              )}
+                              {canDeleteThisMessage && (
+                                <button
+                                  type="button"
+                                  title="Delete message"
+                                  aria-label="Delete message"
+                                  onClick={() => handleDeleteMessage(message)}
+                                  disabled={
+                                    savingEdit ||
+                                    idsEqual(deletingMessageId, messageId)
+                                  }
+                                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-red-950/40 dark:hover:text-red-300"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
+                            </div>
+                          )}
+
+                          {isOwnMessage && (
+                            <span className="mt-1 text-[10px] font-medium text-slate-400 dark:text-slate-500">
+                              {getSeenLabel(message)}
                             </span>
                           )}
                         </div>
-
-                        {editingThisMessage ? (
-                          <form
-                            onSubmit={(e) => handleEditSubmit(e, message)}
-                            className="w-full rounded-2xl border border-indigo-200 bg-white p-2 shadow-sm dark:border-indigo-900/70 dark:bg-slate-950"
-                          >
-                            <textarea
-                              value={editDraft}
-                              onChange={(e) => setEditDraft(e.target.value)}
-                              maxLength={CHAT_MESSAGE_MAX_LENGTH}
-                              rows={3}
-                              autoFocus
-                              className="min-h-20 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] leading-6 text-slate-900 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
-                            />
-                            <div className="mt-2 flex items-center justify-end gap-2">
-                              <button
-                                type="button"
-                                title="Cancel edit"
-                                aria-label="Cancel edit"
-                                onClick={cancelEditingMessage}
-                                disabled={savingEdit}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900"
-                              >
-                                <X size={14} />
-                              </button>
-                              <button
-                                type="submit"
-                                title="Save edit"
-                                aria-label="Save edit"
-                                disabled={savingEdit || !editDraft.trim()}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white transition hover:bg-indigo-700 disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-400"
-                              >
-                                <Check size={14} />
-                              </button>
-                            </div>
-                          </form>
-                        ) : (
-                          <div className={bubbleClassName}>
-                            {messageDeleted ? (
-                              displayContent
-                            ) : messageKind === "image" && mediaUrl ? (
-                              <div className="flex max-w-full flex-col gap-1">
-                                <img
-                                  src={authenticatedMediaUrl}
-                                  alt={message.fileName || "Chat image"}
-                                  loading="lazy"
-                                  className="block max-h-72 max-w-full rounded-lg object-contain cursor-pointer transition hover:opacity-95 sm:max-w-sm"
-                                  onClick={() => window.open(authenticatedMediaUrl, "_blank", "noopener,noreferrer")}
-                                  onError={() => setError("Image preview could not be loaded. Try opening it again or refreshing the chat.")}
-                                />
-                                {message.fileName && (
-                                  <span className="text-[11px] opacity-70 truncate block max-w-xs">
-                                    {message.fileName}
-                                  </span>
-                                )}
-                              </div>
-                            ) : messageKind === "file" && mediaUrl ? (
-                              <div className="flex items-center gap-3 min-w-0 max-w-full rounded-lg bg-slate-100/50 p-2.5 dark:bg-slate-900/50">
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400">
-                                  <FileText size={20} />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <p className="truncate text-[13px] font-semibold text-slate-800 dark:text-slate-200">
-                                    {message.fileName}
-                                  </p>
-                                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                                    {formatFileSize(message.fileSize)}
-                                  </p>
-                                </div>
-                                <a
-                                  href={getAuthenticatedUrl(mediaUrl, true)}
-                                  download={message.fileName}
-                                  title="Download file"
-                                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg hover:bg-slate-200/50 hover:text-slate-850 dark:hover:bg-slate-800/50 dark:hover:text-slate-150 text-slate-500 dark:text-slate-400 transition"
-                                >
-                                  <Download size={16} />
-                                </a>
-                              </div>
-                            ) : messageKind === "sticker" ? (
-                              STICKER_MAP[message.stickerId] || "✨"
-                            ) : messageKind === "audio" && mediaUrl ? (
-                              <div className="flex flex-col gap-1.5 min-w-0 w-full">
-                                <audio
-                                  controls
-                                  preload="metadata"
-                                  className="h-9 w-full outline-none"
-                                  onError={() => setError("Voice note could not be loaded. Please refresh the chat and try again.")}
-                                >
-                                  <source src={authenticatedMediaUrl} type={normalizeMimeType(message.mimeType) || undefined} />
-                                </audio>
-                                {(message.audioDuration || message.duration) && (
-                                  <span className="text-[10px] opacity-70">
-                                    Voice note • {formatDuration(message.audioDuration || message.duration)}
-                                  </span>
-                                )}
-                              </div>
-                            ) : (
-                              shouldHighlightSearch
-                                ? highlightMessageContent(
-                                    displayContent,
-                                    trimmedSearchTerm,
-                                    isActiveSearchResult
-                                  )
-                                : displayContent
-                            )}
-                          </div>
-                        )}
-
-                        {showMessageActions && !editingThisMessage && (
-                          <div className={`mt-1 flex items-center gap-1 ${isOwnMessage ? "justify-end" : "justify-start"}`}>
-                            {canEditThisMessage && (
-                              <button
-                                type="button"
-                                title="Edit message"
-                                aria-label="Edit message"
-                                onClick={() => beginEditingMessage(message)}
-                                disabled={savingEdit || idsEqual(deletingMessageId, messageId)}
-                                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-800 disabled:opacity-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-900"
-                              >
-                                <Edit3 size={14} />
-                              </button>
-                            )}
-                            {canDeleteThisMessage && (
-                              <button
-                                type="button"
-                                title="Delete message"
-                                aria-label="Delete message"
-                                onClick={() => handleDeleteMessage(message)}
-                                disabled={savingEdit || idsEqual(deletingMessageId, messageId)}
-                                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-red-950/40 dark:hover:text-red-300"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            )}
-                          </div>
-                        )}
-
-                        {isOwnMessage && (
-                          <span className="mt-1 text-[10px] font-medium text-slate-400 dark:text-slate-500">
-                            {getSeenLabel(message)}
-                          </span>
-                        )}
-                      </div>
                       </div>
                     </Fragment>
                   );
@@ -2260,35 +2761,39 @@ function Chat() {
             )}
 
             <input
-                type="file"
-                id="chat-file-upload"
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
-                onChange={handleAttachFile}
-                className="hidden"
-                disabled={isUploading || isRecording || !connected}
-              />
+              type="file"
+              id="chat-file-upload"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
+              onChange={handleAttachFile}
+              className="hidden"
+              disabled={isUploading || isRecording || !connected}
+            />
 
-              <input
-                type="file"
-                id="chat-image-upload"
-                accept="image/*"
-                onChange={handleAttachFile}
-                className="hidden"
-                disabled={isUploading || isRecording || !connected}
-              />
+            <input
+              type="file"
+              id="chat-image-upload"
+              accept="image/*"
+              onChange={handleAttachFile}
+              className="hidden"
+              disabled={isUploading || isRecording || !connected}
+            />
 
             <div className="flex flex-col rounded-xl border border-slate-200 bg-white shadow-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 dark:border-slate-800 dark:bg-slate-900">
               <div className="flex items-end p-1.5 sm:p-2">
                 {isUploading ? (
                   <div className="min-w-0 flex-1 flex items-center gap-2.5 px-3 py-2 text-[13px] text-indigo-600 dark:text-indigo-400 font-semibold select-none">
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
-                    <span className="truncate">Uploading file... {uploadProgress}%</span>
+                    <span className="truncate">
+                      Uploading file... {uploadProgress}%
+                    </span>
                   </div>
                 ) : isRecording ? (
                   <div className="min-w-0 flex-1 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 px-2 py-2 text-[13px] text-red-500 font-semibold animate-pulse select-none">
                       <span className="h-2.5 w-2.5 rounded-full bg-red-500 animate-ping shrink-0" />
-                      <span className="truncate">Recording: {formatDuration(recordingDuration)}</span>
+                      <span className="truncate">
+                        Recording: {formatDuration(recordingDuration)}
+                      </span>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       <button
@@ -2312,7 +2817,11 @@ function Chat() {
                 ) : tempAudioBlob ? (
                   <div className="min-w-0 flex-1 flex items-center justify-between gap-2">
                     <div className="min-w-0 flex-1 flex items-center gap-2">
-                      <audio src={tempAudioUrl} controls className="h-9 min-w-0 flex-1 outline-none" />
+                      <audio
+                        src={tempAudioUrl}
+                        controls
+                        className="h-9 min-w-0 flex-1 outline-none"
+                      />
                       <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 shrink-0 hidden sm:inline">
                         Preview ({formatDuration(tempAudioDuration)})
                       </span>
@@ -2427,7 +2936,10 @@ function Chat() {
               const isOnline = onlineSet.has(String(memberUserId));
 
               return (
-                <div key={member._id || memberUserId} className="flex items-center gap-3">
+                <div
+                  key={member._id || memberUserId}
+                  className="flex items-center gap-3"
+                >
                   <div className="relative">
                     <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-[12px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                       {getInitials(memberName)}
