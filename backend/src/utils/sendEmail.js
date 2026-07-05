@@ -65,6 +65,8 @@ function buildHtmlLayout(options) {
     if (!resolvedTitle) resolvedTitle = emailType.title;
     if (!resolvedSubtitle) resolvedSubtitle = emailType.subtitle;
   }
+
+  const logoUrl = process.env.BRAND_LOGO_URL || `${(process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "")}/favicon.png`;
   
   // Determine the inner content HTML
   let bodyContent = "";
@@ -118,7 +120,7 @@ function buildHtmlLayout(options) {
             <!-- Header Banner -->
             <tr>
               <td style="background:linear-gradient(135deg,#171717,#292524); padding:32px 30px; text-align:center;">
-                <img src="${process.env.BRAND_LOGO_URL || 'https://task-flow-pro-project-management-cl.vercel.app/favicon.png'}" alt="TaskFlow Pro" width="52" height="52" style="display:inline-block; width:52px; height:52px; border-radius:12px; object-fit:contain; margin-bottom:12px; box-shadow:0 2px 4px rgba(0,0,0,0.15);" />
+                <img src="${logoUrl}" alt="TaskFlow Pro" width="60" height="60" style="display:inline-block; width:60px; height:60px; border-radius:14px; background-color:#ffffff; padding:8px; border:1px solid rgba(255,255,255,0.15); object-fit:contain; margin-bottom:12px; box-shadow:0 4px 6px rgba(0,0,0,0.15);" />
                 <h1 style="margin:0; font-size:26px; line-height:1.2; color:#ffffff; font-weight:800; letter-spacing:-0.5px;">
                   TaskFlow Pro
                 </h1>

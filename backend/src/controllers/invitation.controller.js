@@ -145,10 +145,6 @@ export const sendInvitation = asyncHandler(async (req, res) => {
                     Review Invitation
                 </a>
             </div>
-            <p style="font-size: 12px; color: #6b7280; margin: 24px 0 0; text-align: center; word-break: break-all;">
-                If the button does not work, copy and paste this link into your browser:<br />
-                <a href="${invitationLink}" target="_blank" style="color: #4f46e5; text-decoration: underline;">${invitationLink}</a>
-            </p>
             <p style="font-size: 13px; color: #6b7280; margin-top: 24px;">This invitation will expire in 7 days.</p>
         `,
         message: `Hello ${userToAdd.name},\n\nYou have been invited to join the workspace "${workspace.name}" as a ${role} in TaskFlow Pro.\n\nPlease open the link below to review and accept the invitation:\n${invitationLink}\n\nThis invitation will expire in 7 days.`
