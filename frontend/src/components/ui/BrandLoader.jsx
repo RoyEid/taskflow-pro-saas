@@ -5,10 +5,10 @@ export default function BrandLoader({
   className = "",
 }) {
   const dimensions = {
-    sm: "h-8 w-8",
-    md: "h-12 w-12",
-    lg: "h-16 w-16",
-    xl: "h-24 w-24",
+    sm: "h-10 w-10 p-2 rounded-xl",
+    md: "h-14 w-14 p-2.5 rounded-2xl",
+    lg: "h-18 w-18 p-3.5 rounded-2xl",
+    xl: "h-28 w-28 p-5 rounded-3xl",
   };
 
   const imgSize = dimensions[size] || dimensions.md;
@@ -29,20 +29,23 @@ export default function BrandLoader({
           className="absolute rounded-full border border-indigo-500/30 border-t-indigo-600 dark:border-indigo-500/20 dark:border-t-indigo-400 animate-spin"
           style={{
             animationDuration: "3s",
-            width: "calc(100% + 1.5rem)",
-            height: "calc(100% + 1.5rem)",
+            width: "calc(100% + 2rem)",
+            height: "calc(100% + 2rem)",
           }}
         />
 
         {/* Soft pulse background glow */}
         <div className="absolute inset-0 -z-10 rounded-full bg-indigo-500/10 blur-xl animate-pulse" />
 
-        {/* Branded Logo with soft pulse/scale animation */}
-        <img
-          src="/icon.png"
-          alt="TaskFlow Pro"
-          className={`${imgSize} animate-pulse object-contain`}
-        />
+        {/* Beautiful wrapped rounded brand logo with subtle borders and shadows */}
+        <div className={`flex shrink-0 items-center justify-center bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/80 shadow-md transition-all duration-300 animate-pulse ${imgSize}`}>
+          <img
+            src="/icon.png"
+            alt="TaskFlow Pro"
+            className="h-full w-full object-contain"
+            draggable={false}
+          />
+        </div>
       </div>
 
       {text && (
