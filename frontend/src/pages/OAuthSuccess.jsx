@@ -9,6 +9,8 @@ function OAuthSuccess() {
   const navigate = useNavigate();
 
   const token = searchParams.get("token");
+  const email = searchParams.get("email");
+  const provider = searchParams.get("provider");
 
   useEffect(() => {
     if (!token) {
@@ -18,10 +20,15 @@ function OAuthSuccess() {
 
     setToken(token, true);
 
+    if (email && provider) {
+      const prettyProvider = provider === "github" ? "GitHub" : provider === "google" ? "Google" : provider;
+      localStorage.setItem("oauth_success_message", `Signed in with ${prettyProvider} as ${email}`);
+    }
+
     window.history.replaceState({}, document.title, "/oauth-success");
 
     window.location.replace("/workspaces");
-  }, [token, navigate]);
+  }, [token, email, provider, navigate]);
 
   return (
     <BrandLoader

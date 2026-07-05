@@ -373,7 +373,8 @@ export const oauthSuccess = asyncHandler(async (req, res) => {
     }
 
     const token = generateToken(req.user._id);
+    const provider = req.oauthProvider || (req.user.githubId ? "github" : "google");
 
-    // Redirect to frontend with token
-    res.redirect(`${process.env.FRONTEND_URL || "http://localhost:5173"}/oauth-success?token=${token}`);
+    // Redirect to frontend with token, email, and provider details
+    res.redirect(`${process.env.FRONTEND_URL || "http://localhost:5173"}/oauth-success?token=${token}&email=${encodeURIComponent(req.user.email)}&provider=${encodeURIComponent(provider)}`);
 });

@@ -32,7 +32,20 @@ router.get(
 );
 router.get(
     "/google/callback",
-    passport.authenticate("google", { failureRedirect: `${process.env.FRONTEND_URL || "http://localhost:5173"}/login?error=oauth_failed`, session: false }),
+    (req, res, next) => {
+        passport.authenticate("google", { session: false }, (err, user, info) => {
+            if (err) {
+                console.error("[OAuth] Google strategy auth failed:", err.message);
+                return res.redirect(`${process.env.FRONTEND_URL || "http://localhost:5173"}/login?error=${encodeURIComponent(err.message)}`);
+            }
+            if (!user) {
+                return res.redirect(`${process.env.FRONTEND_URL || "http://localhost:5173"}/login?error=oauth_failed`);
+            }
+            req.user = user;
+            req.oauthProvider = "google";
+            next();
+        })(req, res, next);
+    },
     oauthSuccess
 );
 
@@ -42,7 +55,20 @@ router.get(
 );
 router.get(
     "/github/callback",
-    passport.authenticate("github", { failureRedirect: `${process.env.FRONTEND_URL || "http://localhost:5173"}/login?error=oauth_failed`, session: false }),
+    (req, res, next) => {
+        passport.authenticate("github", { session: false }, (err, user, info) => {
+            if (err) {
+                console.error("[OAuth] GitHub strategy auth failed:", err.message);
+                return res.redirect(`${process.env.FRONTEND_URL || "http://localhost:5173"}/login?error=${encodeURIComponent(err.message)}`);
+            }
+            if (!user) {
+                return res.redirect(`${process.env.FRONTEND_URL || "http://localhost:5173"}/login?error=oauth_failed`);
+            }
+            req.user = user;
+            req.oauthProvider = "github";
+            next();
+        })(req, res, next);
+    },
     oauthSuccess
 );
 

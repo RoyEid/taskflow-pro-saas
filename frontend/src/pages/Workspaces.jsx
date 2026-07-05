@@ -149,6 +149,14 @@ useEffect(() => {
   };
 }, [load]);
 
+useEffect(() => {
+  const oauthMessage = localStorage.getItem("oauth_success_message");
+  if (oauthMessage) {
+    showSuccess(oauthMessage);
+    localStorage.removeItem("oauth_success_message");
+  }
+}, []);
+
   const openCreateModal = () => {
     setForm(emptyWorkspaceForm);
     setFormError("");

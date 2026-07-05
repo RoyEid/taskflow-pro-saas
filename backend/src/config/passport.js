@@ -79,6 +79,14 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
             },
             async (accessToken, refreshToken, profile, done) => {
                 try {
+                    // 1. Search user by githubId first
+                    let user = await User.findOne({ githubId: profile.id });
+
+                    if (user) {
+                        // 2. If githubId exists, login that user
+                        return done(null, user);
+                    }
+
                     let emailRaw = profile.emails && profile.emails[0]?.value;
 
                     // GitHub might hide emails, fetch from API
@@ -101,28 +109,30 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
                     }
 
                     if (!emailRaw) {
-                        return done(new Error("No public email found from GitHub. Please make your GitHub email public or use another method."), null);
+                        return done(new Error("GitHub did not provide an email. Please make your GitHub email public or use email/password login."), null);
                     }
                     
                     const email = emailRaw.trim().toLowerCase();
 
-                    // Check if user already exists
-                    let user = await User.findOne({ email });
+                    // 3. If githubId does not exist but GitHub email matches an existing user:
+                    user = await User.findOne({ email });
 
                     if (user) {
-                        // Link GitHub ID if not linked
-                        if (!user.githubId) {
-                            user.githubId = profile.id;
-                            user.isEmailVerified = true;
-                            if (profile.photos && profile.photos[0]?.value && !user.avatar) {
-                                user.avatar = profile.photos[0].value;
-                            }
-                            await user.save();
+                        // Link the GitHub account to that existing user by saving githubId/provider info
+                        // do not create a duplicate user and do not overwrite password or important data
+                        user.githubId = profile.id;
+                        if (!user.provider || user.provider === "local") {
+                            user.provider = "github";
                         }
+                        user.isEmailVerified = true;
+                        if (profile.photos && profile.photos[0]?.value && !user.avatar) {
+                            user.avatar = profile.photos[0].value;
+                        }
+                        await user.save();
                         return done(null, user);
                     }
 
-                    // Create new user
+                    // 4. If no user exists with that email, create a new GitHub OAuth user.
                     user = await User.create({
                         name: profile.displayName || profile.username || "GitHub User",
                         email: email,

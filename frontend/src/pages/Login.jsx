@@ -43,10 +43,14 @@ function Login() {
     const messageParam = searchParams.get("message");
     const emailParam = searchParams.get("email");
 
-    if (errorParam === "oauth_failed") {
-      showError(
-        "Authentication with provider failed. Please try again or use email/password."
-      );
+    if (errorParam) {
+      if (errorParam === "oauth_failed") {
+        showError(
+          "Authentication with provider failed. Please try again or use email/password."
+        );
+      } else {
+        showError(errorParam);
+      }
     }
 
     if (messageParam) {
