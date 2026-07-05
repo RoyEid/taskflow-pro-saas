@@ -392,16 +392,22 @@ export function exportDashboardPdf({
   const dateStr = new Date().toISOString().split("T")[0];
   const filename = `taskflow-dashboard-report-${cleanWorkspace}-${cleanRange}-${dateStr}.pdf`;
 
-  // Save the PDF — explicit Blob + anchor download for mobile compatibility
-  const blob = doc.output("blob");
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.style.display = "none";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  // Revoke after a short delay to ensure download starts
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  // Save the PDF — explicit Blob + anchor download with target="_blank" to prevent current tab hijacking on mobile
+  try {
+    const blob = doc.output("blob");
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.target = "_blank"; // Force open in new window/tab if mobile browser handles it as navigation
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    // Revoke after a short delay to ensure download starts
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (err) {
+    console.error("[PDF Export] Anchor download failed, falling back to direct save:", err);
+    doc.save(filename);
+  }
 }

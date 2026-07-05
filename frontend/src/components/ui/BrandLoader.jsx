@@ -39,7 +39,7 @@ export default function BrandLoader({
 
         {/* Branded Logo with soft pulse/scale animation */}
         <img
-          src="/favicon.png"
+          src="/icon.png"
           alt="TaskFlow Pro"
           className={`${imgSize} animate-pulse object-contain`}
         />

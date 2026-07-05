@@ -15,8 +15,7 @@ function AuthLayout({ children, title, subtitle }) {
         <div className="mb-6 sm:mb-8 flex flex-col items-center text-center">
           <Link to="/" className="group flex flex-col items-center">
             <div className="flex items-center justify-center transition-transform duration-300 group-hover:scale-105">
-              <BrandLogo size="xl" className="hidden sm:block" />
-              <BrandLogo size="lg" className="block sm:hidden" />
+              <BrandLogo size="auth" />
             </div>
 
             <h1 className="mt-4 sm:mt-6 text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">

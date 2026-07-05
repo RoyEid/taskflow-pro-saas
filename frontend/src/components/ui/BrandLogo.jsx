@@ -8,6 +8,7 @@ export default function BrandLogo({ size = "md", className = "" }) {
     md: "h-11 w-11 p-1.5",
     lg: "h-14 w-14 p-2",
     xl: "h-16 w-16 p-2",
+    auth: "h-14 w-14 p-2 sm:h-16 sm:w-16 sm:p-2",
   };
 
   const imgSize = dimensions[size] || dimensions.md;

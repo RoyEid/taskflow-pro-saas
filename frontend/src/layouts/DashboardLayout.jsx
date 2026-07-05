@@ -290,10 +290,10 @@ function DashboardLayout({ children }) {
   /* ── Sidebar Content ─────────────────────────────────────────── */
 
   const sidebarContent = (
-    <div className="relative flex h-full min-h-full flex-col bg-slate-50 dark:bg-slate-950/50">
+    <div className="relative flex h-full flex-1 flex-col overflow-hidden bg-slate-50 dark:bg-slate-950/50">
       {/* Logo */}
       <div
-        className={`relative flex min-w-0 items-center justify-between gap-2 pb-4 pt-5 transition-all duration-300 ${
+        className={`relative flex min-w-0 shrink-0 items-center justify-between gap-2 pb-4 pt-5 transition-all duration-300 ${
           isCompact ? "px-2" : "px-4"
         }`}
       >
@@ -344,7 +344,7 @@ function DashboardLayout({ children }) {
 
       {/* Search */}
       <div
-        className={`pb-4 transition-all duration-300 ${
+        className={`pb-4 shrink-0 transition-all duration-300 ${
           isCompact ? "px-[16px]" : "px-4"
         }`}
       >
@@ -485,9 +485,10 @@ function DashboardLayout({ children }) {
 
       {/* Bottom section */}
       <div
-        className={`mt-auto border-t border-slate-200/60 transition-all duration-300 dark:border-slate-800/60 ${
+        className={`mt-auto shrink-0 border-t border-slate-200/60 transition-all duration-300 dark:border-slate-800/60 ${
           isCompact ? "p-[14px]" : "p-4"
         }`}
+        style={{ paddingBottom: isCompact ? undefined : 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
       >
         <AppDropdown
           align="left"

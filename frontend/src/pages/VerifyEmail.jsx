@@ -142,7 +142,7 @@ function VerifyEmail() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="flex justify-between gap-2">
+        <div className="flex justify-between gap-1 sm:gap-2.5">
           {code.map((digit, index) => (
             <input
               key={index}
@@ -154,7 +154,7 @@ function VerifyEmail() {
               onChange={(e) => handleChange(index, e)}
               onKeyDown={(e) => handleKeyDown(index, e)}
               onPaste={handlePaste}
-              className="h-12 w-12 rounded-xl border border-slate-200 bg-white/50 text-center text-xl font-bold text-slate-800 outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700/80 dark:bg-slate-900/50 dark:text-slate-200 dark:focus:border-indigo-500 dark:focus:bg-slate-900 sm:h-14 sm:w-14"
+              className="w-[14%] aspect-square max-w-[56px] min-w-[32px] rounded-lg sm:rounded-xl border border-slate-200 bg-white/50 text-center text-lg sm:text-xl font-bold text-slate-800 outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700/80 dark:bg-slate-900/50 dark:text-slate-200 dark:focus:border-indigo-500 dark:focus:bg-slate-900"
             />
           ))}
         </div>
