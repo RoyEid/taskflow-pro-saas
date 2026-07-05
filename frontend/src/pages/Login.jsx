@@ -29,6 +29,7 @@ function Login() {
   const [rememberMe, setRememberMe] = useState(true);
   const [emailReadOnly, setEmailReadOnly] = useState(true);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [unverifiedEmail, setUnverifiedEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
@@ -39,17 +40,32 @@ function Login() {
 
   useEffect(() => {
     const errorParam = searchParams.get("error");
+    const messageParam = searchParams.get("message");
+    const emailParam = searchParams.get("email");
 
     if (errorParam === "oauth_failed") {
       showError(
         "Authentication with provider failed. Please try again or use email/password."
       );
     }
+
+    if (messageParam) {
+      setSuccess(messageParam);
+      if (messageParam.toLowerCase().includes("could not be sent") && emailParam) {
+        setUnverifiedEmail(emailParam.trim().toLowerCase());
+      }
+    }
+
+    if (emailParam) {
+      setEmail(emailParam.trim().toLowerCase());
+      setEmailReadOnly(false);
+    }
   }, [searchParams]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
 
     if (!email.trim() || !password.trim()) {
       setError("Please fill in all fields.");
@@ -100,6 +116,29 @@ function Login() {
       title="Welcome back"
       subtitle="Sign in to your TaskFlow Pro account"
     >
+      {success && (
+        <div className={success.toLowerCase().includes("could not be sent")
+          ? "mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13.5px] text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-400"
+          : "mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[13.5px] text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-400"
+        }>
+          <div>{success}</div>
+
+          {unverifiedEmail && (
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={resending}
+              className={success.toLowerCase().includes("could not be sent")
+                ? "mt-2 font-semibold text-amber-800 underline hover:text-amber-950 disabled:opacity-50 dark:text-amber-300 dark:hover:text-amber-200 block"
+                : "mt-2 font-semibold text-emerald-800 underline hover:text-emerald-950 disabled:opacity-50 dark:text-emerald-300 dark:hover:text-emerald-200 block"
+              }
+            >
+              {resending ? "Resending..." : "Resend verification code"}
+            </button>
+          )}
+        </div>
+      )}
+
       {error && (
         <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13.5px] text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
           <div>{error}</div>
@@ -109,7 +148,7 @@ function Login() {
               type="button"
               onClick={handleResend}
               disabled={resending}
-              className="mt-2 font-semibold text-red-800 underline hover:text-red-900 disabled:opacity-50 dark:text-red-300 dark:hover:text-red-200"
+              className="mt-2 font-semibold text-red-800 underline hover:text-red-900 disabled:opacity-50 dark:text-red-300 dark:hover:text-red-200 block"
             >
               {resending ? "Resending..." : "Resend verification code"}
             </button>

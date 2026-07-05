@@ -10,19 +10,23 @@ function VerifyEmail() {
   const email = searchParams.get("email") || "";
   
   const navigate = useNavigate();
-  const { verifyEmail } = useAuth();
 
   const [code, setCode] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [error, setError] = useState("");
+  const [warning, setWarning] = useState("");
   const inputRefs = useRef([]);
 
   useEffect(() => {
     if (!email) {
       navigate("/register", { replace: true });
     }
-  }, [email, navigate]);
+    const warningParam = searchParams.get("warning");
+    if (warningParam) {
+      setWarning(warningParam);
+    }
+  }, [email, navigate, searchParams]);
 
   const handleChange = (index, e) => {
     const value = e.target.value;
@@ -69,6 +73,7 @@ function VerifyEmail() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setWarning("");
 
     const verificationCode = code.join("");
     
@@ -79,10 +84,9 @@ function VerifyEmail() {
 
     setLoading(true);
     try {
-      await verifyEmail(email.trim().toLowerCase(), verificationCode);
+      await api.post("/auth/verify-email", { email: email.trim().toLowerCase(), code: verificationCode });
       showSuccess("Email verified successfully!");
-      // Automatically redirect to workspaces since they likely just registered
-      navigate("/workspaces");
+      navigate(`/login?message=${encodeURIComponent("Email verified successfully. You can now log in.")}&email=${encodeURIComponent(email.trim().toLowerCase())}`);
     } catch (err) {
       if (!err.response) {
         setError("Cannot connect to server. Make sure the backend is running.");
@@ -97,6 +101,7 @@ function VerifyEmail() {
   const handleResend = async () => {
     if (resending) return;
     setError("");
+    setWarning("");
     setResending(true);
     try {
       await api.post("/auth/resend-verification", { email: email.trim().toLowerCase() });
@@ -122,6 +127,12 @@ function VerifyEmail() {
           {email}
         </div>
       </div>
+
+      {warning && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13.5px] text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-400">
+          {warning}
+        </div>
+      )}
 
       {error && (
         <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13.5px] text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">

@@ -19,6 +19,11 @@ export const registerUser = asyncHandler(async (req, res) => {
     const existingUser = await User.findOne({ email: normalizedEmail });
 
     if (existingUser) {
+        if (!existingUser.isEmailVerified) {
+            console.warn(`[Auth] Registration attempted for existing but unverified email: ${normalizedEmail}`);
+            throw new ApiError(400, "Account already exists but is not verified. Please verify your email or resend verification.");
+        }
+        console.warn(`[Auth] Registration attempted for already verified email: ${normalizedEmail}`);
         throw new ApiError(400, "User already exists with this email");
     }
 
@@ -26,6 +31,7 @@ export const registerUser = asyncHandler(async (req, res) => {
     console.log(`[Auth] Generated verification code for new user: ${normalizedEmail}`);
     
     const hashedCode = await bcrypt.hash(verificationCode, 10);
+    console.log(`[Auth] Verification code hashed successfully for new user: ${normalizedEmail}`);
 
     const user = await User.create({
         name,
@@ -35,17 +41,35 @@ export const registerUser = asyncHandler(async (req, res) => {
         emailVerificationCode: hashedCode,
         emailVerificationExpires: Date.now() + 15 * 60 * 1000, // 15 mins
     });
+    console.log(`[Auth] User document created successfully in DB for: ${user.email} (ID: ${user._id})`);
 
-    await sendEmail({
-        email: user.email,
-        subject: "Verify your email address",
-        message: `Your verification code is: ${verificationCode}\n\nThis code will expire in 15 minutes.`,
-        code: verificationCode,
-    });
+    try {
+        await sendEmail({
+            email: user.email,
+            subject: "Verify your email address",
+            message: `Your verification code is: ${verificationCode}\n\nThis code will expire in 15 minutes.`,
+            code: verificationCode,
+        });
+        console.log(`[Auth] Verification email sent successfully to ${user.email}`);
 
-    res.status(201).json(
-        new ApiResponse(201, "User registered. Please verify your email to continue.", {})
-    );
+        res.status(201).json(
+            new ApiResponse(201, "Account created. Please verify your email.", {
+                email: user.email,
+                emailSendFailed: false,
+                message: "Account created. Please verify your email."
+            })
+        );
+    } catch (error) {
+        console.error(`[Auth] Verification email sending failed for ${user.email}: ${error.message}`);
+        
+        res.status(201).json(
+            new ApiResponse(201, "Account created, but verification email could not be sent. Please use resend verification.", {
+                email: user.email,
+                emailSendFailed: true,
+                message: "Account created, but verification email could not be sent. Please use resend verification."
+            })
+        );
+    }
 });
 
 export const loginUser = asyncHandler(async (req, res) => {
@@ -98,13 +122,16 @@ export const resendVerificationCode = asyncHandler(async (req, res) => {
     if (!email) throw new ApiError(400, "Email is required");
 
     const normalizedEmail = email.trim().toLowerCase();
+    console.log(`[Auth] Resend verification code requested for: ${normalizedEmail}`);
     const user = await User.findOne({ email: normalizedEmail });
 
     if (!user) {
+        console.warn(`[Auth] Resend verification code failed: User not found for ${normalizedEmail}`);
         throw new ApiError(404, "User not found");
     }
 
     if (user.isEmailVerified) {
+        console.warn(`[Auth] Resend verification code failed: User ${normalizedEmail} is already verified`);
         throw new ApiError(400, "Email is already verified");
     }
 
@@ -112,19 +139,29 @@ export const resendVerificationCode = asyncHandler(async (req, res) => {
     console.log(`[Auth] Generated new verification code for existing user: ${normalizedEmail}`);
 
     const hashedCode = await bcrypt.hash(verificationCode, 10);
+    console.log(`[Auth] Verification code hashed successfully for existing user: ${normalizedEmail}`);
 
     user.emailVerificationCode = hashedCode;
     user.emailVerificationExpires = Date.now() + 15 * 60 * 1000;
     await user.save();
+    console.log(`[Auth] User document updated with new verification code in DB for: ${user.email}`);
 
-    await sendEmail({
-        email: user.email,
-        subject: "Verify your email address",
-        message: `Your new verification code is: ${verificationCode}\n\nThis code will expire in 15 minutes.`,
-        code: verificationCode,
-    });
+    try {
+        await sendEmail({
+            email: user.email,
+            subject: "Verify your email address",
+            message: `Your new verification code is: ${verificationCode}\n\nThis code will expire in 15 minutes.`,
+            code: verificationCode,
+        });
+        console.log(`[Auth] Resend verification email sent successfully to ${user.email}`);
+        console.log(`[Auth] Resend verification code process completed successfully for user ${user.email}`);
 
-    res.status(200).json(new ApiResponse(200, "Verification code sent to your email", {}));
+        res.status(200).json(new ApiResponse(200, "Verification code sent to your email", {}));
+    } catch (error) {
+        console.error(`[Auth] Resend verification email sending failed for ${user.email}: ${error.message}`);
+        console.error(`[Auth] Resend verification code process failed for user ${user.email}: ${error.message}`);
+        throw new ApiError(500, "Failed to send verification email. Please try again.");
+    }
 });
 
 export const verifyEmail = asyncHandler(async (req, res) => {

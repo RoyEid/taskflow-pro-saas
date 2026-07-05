@@ -75,13 +75,25 @@ function Register() {
     setLoading(true);
 
     try {
-      await register(name, email, password);
-      navigate(`/verify-email?email=${encodeURIComponent(email.trim().toLowerCase())}`);
+      const data = await register(name, email, password);
+      const normalizedEmail = email.trim().toLowerCase();
+      
+      if (data && data.emailSendFailed) {
+        navigate(`/verify-email?email=${encodeURIComponent(normalizedEmail)}&warning=${encodeURIComponent("Account created, but verification email could not be sent. Please click resend verification code.")}`);
+      } else {
+        navigate(`/verify-email?email=${encodeURIComponent(normalizedEmail)}`);
+      }
     } catch (err) {
       if (!err.response) {
         setError("Cannot connect to server. Make sure the backend is running.");
       } else {
-        setError(err.response.data?.message || "Registration failed. Please try again.");
+        const errorMsg = err.response.data?.message || "Registration failed. Please try again.";
+        
+        if (errorMsg.includes("Account already exists but is not verified")) {
+          navigate(`/verify-email?email=${encodeURIComponent(email.trim().toLowerCase())}&warning=${encodeURIComponent("This account already exists but is not verified. Please enter your code or resend verification.")}`);
+        } else {
+          setError(errorMsg);
+        }
       }
     } finally {
       setLoading(false);
