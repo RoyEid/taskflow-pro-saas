@@ -1172,16 +1172,17 @@ function Chat() {
     setError("");
     clearTypingTimer();
     emitTyping(false);
+    setDraft("");
 
     socketRef.current.emit("sendMessage", { workspaceId, content }, (response) => {
       setSending(false);
 
       if (!response?.success) {
+        setDraft(content);
         setError(response?.message || "Failed to send message.");
         return;
       }
 
-      setDraft("");
       appendMessage(response.message);
     });
   };
@@ -1852,7 +1853,7 @@ function Chat() {
       )}
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
-        <section className="flex min-h-[560px] max-h-[calc(100vh-180px)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
+        <section className="flex min-h-[560px] max-h-[calc(100vh-180px)] min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
           <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-4 dark:border-slate-800/70 sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <div className="flex min-w-0 items-center gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300">
@@ -1968,7 +1969,7 @@ function Chat() {
             </div>
           )}
 
-          <div ref={messageListRef} className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+          <div ref={messageListRef} className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-5 sm:px-6">
             {loading && messages.length === 0 ? (
               <LoadingState message="Loading chat..." />
             ) : messages.length === 0 ? (
@@ -2028,12 +2029,12 @@ function Chat() {
                     !messageDeleted &&
                     displayContentText.toLowerCase().includes(trimmedSearchTerm.toLowerCase());
                   const bubbleClassName = messageDeleted
-                    ? "whitespace-pre-wrap break-words rounded-2xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-[13px] italic leading-6 text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
+                    ? "whitespace-pre-wrap break-words break-anywhere rounded-2xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-[13px] italic leading-6 text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
                     : messageKind === "sticker"
                       ? `text-5xl select-none p-1 transition-transform hover:scale-110 active:scale-95 duration-200 ${
                           isActiveSearchResult ? "ring-2 ring-yellow-400 rounded-xl" : ""
                         }`
-                      : `whitespace-pre-wrap break-words rounded-2xl px-4 py-2.5 text-[13px] leading-6 shadow-sm ${
+                      : `whitespace-pre-wrap break-words break-anywhere rounded-2xl px-4 py-2.5 text-[13px] leading-6 shadow-sm ${
                           isOwnMessage
                             ? "rounded-br-md bg-indigo-600 text-white dark:bg-indigo-500"
                             : "rounded-bl-md border border-slate-200 bg-slate-50 text-slate-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
@@ -2070,7 +2071,7 @@ function Chat() {
                         </div>
                       )}
 
-                      <div className={`max-w-[82%] sm:max-w-[70%] ${isOwnMessage ? "items-end" : "items-start"} flex flex-col`}>
+                      <div className={`min-w-0 max-w-[82%] sm:max-w-[70%] ${isOwnMessage ? "items-end" : "items-start"} flex flex-col`}>
                         <div className="mb-1 flex max-w-full items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
                           <span className="truncate font-semibold">
                             {isOwnMessage ? "You" : senderName}
@@ -2139,7 +2140,7 @@ function Chat() {
                                 )}
                               </div>
                             ) : messageKind === "file" && mediaUrl ? (
-                              <div className="flex items-center gap-3 min-w-[200px] max-w-sm rounded-lg bg-slate-100/50 p-2.5 dark:bg-slate-900/50">
+                              <div className="flex items-center gap-3 min-w-0 max-w-full rounded-lg bg-slate-100/50 p-2.5 dark:bg-slate-900/50">
                                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400">
                                   <FileText size={20} />
                                 </div>
@@ -2163,7 +2164,7 @@ function Chat() {
                             ) : messageKind === "sticker" ? (
                               STICKER_MAP[message.stickerId] || "✨"
                             ) : messageKind === "audio" && mediaUrl ? (
-                              <div className="flex flex-col gap-1.5 min-w-[240px]">
+                              <div className="flex flex-col gap-1.5 min-w-0 w-full">
                                 <audio
                                   controls
                                   preload="metadata"
@@ -2243,7 +2244,7 @@ function Chat() {
             className="relative border-t border-slate-200 bg-slate-50/80 p-3 dark:border-slate-800/70 dark:bg-slate-950/30 sm:p-4"
           >
             {showStickerPicker && (
-              <div className="absolute bottom-20 left-4 z-50 grid grid-cols-4 gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-800 dark:bg-slate-950 sm:left-6">
+              <div className="absolute bottom-20 left-2 right-2 z-50 grid grid-cols-4 gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-800 dark:bg-slate-950 sm:left-6 sm:right-auto">
                 {Object.entries(STICKER_MAP).map(([id, emoji]) => (
                   <button
                     key={id}
@@ -2258,8 +2259,7 @@ function Chat() {
               </div>
             )}
 
-            <div className="flex items-end gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 dark:border-slate-800 dark:bg-slate-900">
-              <input
+            <input
                 type="file"
                 id="chat-file-upload"
                 accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
@@ -2277,95 +2277,66 @@ function Chat() {
                 disabled={isUploading || isRecording || !connected}
               />
 
-              {!isRecording && !isUploading && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setShowStickerPicker((prev) => !prev)}
-                    disabled={!connected}
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition dark:text-slate-400 dark:hover:bg-slate-800"
-                    title="Send sticker"
-                  >
-                    <Smile size={18} />
-                  </button>
-
-                  <label
-                    htmlFor="chat-image-upload"
-                    className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition dark:text-slate-400 dark:hover:bg-slate-800"
-                    title="Attach picture"
-                  >
-                    <Image size={18} />
-                  </label>
-
-                  <label
-                    htmlFor="chat-file-upload"
-                    className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition dark:text-slate-400 dark:hover:bg-slate-800"
-                    title="Attach document/file"
-                  >
-                    <Paperclip size={18} />
-                  </label>
-                </>
-              )}
-
-              {isUploading ? (
-                <div className="flex-1 flex items-center gap-2.5 px-3 py-2 text-[13px] text-indigo-600 dark:text-indigo-400 font-semibold select-none">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
-                  <span>Uploading file... {uploadProgress}%</span>
-                </div>
-              ) : isRecording ? (
-                <div className="flex-1 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 px-2 py-2 text-[13px] text-red-500 font-semibold animate-pulse select-none">
-                    <span className="h-2.5 w-2.5 rounded-full bg-red-500 animate-ping" />
-                    <span>Recording audio: {formatDuration(recordingDuration)}</span>
+            <div className="flex flex-col rounded-xl border border-slate-200 bg-white shadow-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-end p-1.5 sm:p-2">
+                {isUploading ? (
+                  <div className="min-w-0 flex-1 flex items-center gap-2.5 px-3 py-2 text-[13px] text-indigo-600 dark:text-indigo-400 font-semibold select-none">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
+                    <span className="truncate">Uploading file... {uploadProgress}%</span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={cancelVoiceRecording}
-                      className="flex h-10 w-10 items-center justify-center rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition active:scale-95"
-                      title="Cancel recording"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={stopVoiceRecording}
-                      className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 transition active:scale-95"
-                      title="Stop recording"
-                    >
-                      <Square size={16} />
-                    </button>
+                ) : isRecording ? (
+                  <div className="min-w-0 flex-1 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 px-2 py-2 text-[13px] text-red-500 font-semibold animate-pulse select-none">
+                      <span className="h-2.5 w-2.5 rounded-full bg-red-500 animate-ping shrink-0" />
+                      <span className="truncate">Recording: {formatDuration(recordingDuration)}</span>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={cancelVoiceRecording}
+                        className="flex h-9 w-9 items-center justify-center rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition active:scale-95 sm:h-10 sm:w-10"
+                        title="Cancel recording"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={stopVoiceRecording}
+                        className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 transition active:scale-95 sm:h-10 sm:w-10"
+                        title="Stop recording"
+                      >
+                        <Square size={16} />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ) : tempAudioBlob ? (
-                <div className="flex-1 flex items-center justify-between gap-3">
-                  <div className="flex-1 flex items-center gap-2">
-                    <audio src={tempAudioUrl} controls className="h-9 w-full outline-none" />
-                    <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 shrink-0">
-                      Preview ({formatDuration(tempAudioDuration)})
-                    </span>
+                ) : tempAudioBlob ? (
+                  <div className="min-w-0 flex-1 flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1 flex items-center gap-2">
+                      <audio src={tempAudioUrl} controls className="h-9 min-w-0 flex-1 outline-none" />
+                      <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 shrink-0 hidden sm:inline">
+                        Preview ({formatDuration(tempAudioDuration)})
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={cancelVoiceRecording}
+                        className="flex h-9 w-9 items-center justify-center rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition active:scale-95 sm:h-10 sm:w-10"
+                        title="Delete recording"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={sendRecordedVoiceNote}
+                        className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 transition active:scale-95 sm:h-10 sm:w-10"
+                        title="Send voice note"
+                      >
+                        <Send size={16} />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      type="button"
-                      onClick={cancelVoiceRecording}
-                      className="flex h-10 w-10 items-center justify-center rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition active:scale-95"
-                      title="Delete recording"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={sendRecordedVoiceNote}
-                      className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 transition active:scale-95"
-                      title="Send voice note"
-                    >
-                      <Send size={16} />
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <>
+                ) : (
                   <textarea
                     value={draft}
                     onChange={handleDraftChange}
@@ -2378,31 +2349,61 @@ function Chat() {
                     rows={1}
                     maxLength={2000}
                     placeholder="Write a message..."
-                    className="max-h-32 min-h-10 flex-1 resize-none bg-transparent px-2 py-2 text-[13px] text-slate-800 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
+                    className="max-h-32 min-h-[40px] min-w-0 flex-1 resize-none bg-transparent px-2.5 py-2 text-[13px] leading-snug text-slate-800 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
                   />
+                )}
+              </div>
 
-                  {!isRecording && !isUploading && (
+              {!isRecording && !isUploading && !tempAudioBlob && (
+                <div className="flex items-center justify-between border-t border-slate-100/60 bg-slate-50/30 px-2 py-1.5 dark:border-slate-800/50 dark:bg-slate-950/10 rounded-b-xl">
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowStickerPicker((prev) => !prev)}
+                      disabled={!connected}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition dark:text-slate-400 dark:hover:bg-slate-800"
+                      title="Send sticker"
+                    >
+                      <Smile size={17} />
+                    </button>
+
+                    <label
+                      htmlFor="chat-image-upload"
+                      className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition dark:text-slate-400 dark:hover:bg-slate-800"
+                      title="Attach picture"
+                    >
+                      <Image size={17} />
+                    </label>
+
+                    <label
+                      htmlFor="chat-file-upload"
+                      className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition dark:text-slate-400 dark:hover:bg-slate-800"
+                      title="Attach document/file"
+                    >
+                      <Paperclip size={17} />
+                    </label>
+
                     <button
                       type="button"
                       onClick={startVoiceRecording}
                       disabled={!connected}
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition dark:text-slate-400 dark:hover:bg-slate-800"
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition dark:text-slate-400 dark:hover:bg-slate-800"
                       title="Record voice note"
                     >
-                      <Mic size={18} />
+                      <Mic size={17} />
                     </button>
-                  )}
+                  </div>
 
                   <button
                     type="submit"
                     disabled={!draft.trim() || sending || !connected}
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm transition hover:bg-indigo-700 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm transition hover:bg-indigo-700 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
                     aria-label="Send message"
                     title="Send message"
                   >
-                    <Send size={16} />
+                    <Send size={14} />
                   </button>
-                </>
+                </div>
               )}
             </div>
           </form>

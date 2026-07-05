@@ -18,6 +18,7 @@ const sendAssistantResult = (res, result) => {
     if (result.missingFieldDetails) body.missingFieldDetails = result.missingFieldDetails;
     if (result.options) body.options = result.options;
     if (result.pendingAction) body.pendingAction = result.pendingAction;
+    if (result.proposal?.optionalFields) body.optionalFields = result.proposal.optionalFields;
 
     return res.status(200).json(body);
 };

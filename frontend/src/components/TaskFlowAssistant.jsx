@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  AlertTriangle,
   Bot,
   Check,
   CheckCircle2,
   FileText,
   Loader2,
-  RotateCcw,
+  MessageSquarePlus,
   Send,
+  SkipForward,
   Sparkles,
   X,
   XCircle,
@@ -122,7 +124,7 @@ function normalizeInputDate(value) {
 }
 
 function formatFieldValue(path, value) {
-  if (value === undefined || value === null || value === "") return "";
+  if (value === undefined || value === null || value === "") return "\u2014";
   if (String(path).toLowerCase().includes("date")) return normalizeInputDate(value);
   return String(value);
 }
@@ -153,6 +155,10 @@ function getCreatedLink(response) {
     href: created.link,
     label: `Open ${created.type || "item"}`,
   };
+}
+
+function isMultiStep(proposal) {
+  return Array.isArray(proposal?.steps) && proposal.steps.length > 1;
 }
 
 function FieldInput({ detail, value, onChange }) {
@@ -199,16 +205,53 @@ function FieldInput({ detail, value, onChange }) {
   );
 }
 
+function OptionalFieldRow({ detail, value, onChange, onSkip }) {
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300">
+          {detail.label || humanizeField(detail.field)}
+          <span className="ml-1 text-[10px] font-normal text-slate-400 dark:text-slate-500">(optional)</span>
+        </span>
+        <button
+          type="button"
+          onClick={onSkip}
+          className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+        >
+          <SkipForward size={10} />
+          Skip
+        </button>
+      </div>
+      <FieldInput
+        detail={detail}
+        value={value}
+        onChange={onChange}
+      />
+    </div>
+  );
+}
+
+function SimilarWarning({ warning }) {
+  if (!warning) return null;
+
+  return (
+    <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-200">
+      <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+      <span>{warning}</span>
+    </div>
+  );
+}
+
 function ProposalCard({ proposal, isConfirming, onConfirm, onCancel }) {
   const [fields, setFields] = useState(() => proposal?.fields || {});
+  const [skippedOptional, setSkippedOptional] = useState(new Set());
 
   useEffect(() => {
     queueMicrotask(() => {
       setFields(proposal?.fields || {});
+      setSkippedOptional(new Set());
     });
   }, [proposal]);
-
-
 
   const missingDetails = useMemo(() => {
     if (Array.isArray(proposal?.missingFieldDetails)) return proposal.missingFieldDetails;
@@ -219,15 +262,22 @@ function ProposalCard({ proposal, isConfirming, onConfirm, onCancel }) {
     }));
   }, [proposal]);
 
+  const activeOptionalFields = useMemo(() => {
+    if (!Array.isArray(proposal?.optionalFields)) return [];
+    return proposal.optionalFields.filter((detail) => !skippedOptional.has(detail.field));
+  }, [proposal, skippedOptional]);
+
   const visibleFields = useMemo(() => {
     const missingSet = new Set(missingDetails.map((detail) => detail.field));
+    const optionalSet = new Set(activeOptionalFields.map((detail) => detail.field));
 
-    return flattenFields(fields).filter(({ path, value }) => {
+    return flattenFields(fields).filter(({ path }) => {
       if (missingSet.has(path)) return false;
-      if (!hasFieldValue(value)) return false;
-      return !["workspaceId"].includes(path);
+      if (optionalSet.has(path)) return false;
+      if (path === "workspaceId") return false;
+      return true;
     });
-  }, [fields, missingDetails]);
+  }, [fields, missingDetails, activeOptionalFields]);
 
   const missingComplete = missingDetails.every((detail) => {
     return hasFieldValue(getNestedValue(fields, detail.field));
@@ -239,6 +289,20 @@ function ProposalCard({ proposal, isConfirming, onConfirm, onCancel }) {
     setFields((prev) => setNestedValue(prev, field, value));
   }, []);
 
+  const handleSkipOptional = useCallback((field) => {
+    setSkippedOptional((prev) => new Set(prev).add(field));
+  }, []);
+
+  const handleSkipAllOptional = useCallback(() => {
+    setSkippedOptional((prev) => {
+      const next = new Set(prev);
+      for (const detail of proposal?.optionalFields || []) {
+        next.add(detail.field);
+      }
+      return next;
+    });
+  }, [proposal]);
+
   const handleConfirm = useCallback(() => {
     if (!canConfirm) return;
     onConfirm({
@@ -246,6 +310,9 @@ function ProposalCard({ proposal, isConfirming, onConfirm, onCancel }) {
       payload: getConfirmPayloadFields(proposal, fields),
     });
   }, [canConfirm, fields, onConfirm, proposal]);
+
+  const multiStep = isMultiStep(proposal);
+  const similarWarning = proposal?.options?.similarWarning;
 
   return (
     <div className="w-full overflow-hidden rounded-2xl rounded-bl-md border border-indigo-200 bg-white shadow-sm dark:border-indigo-900/60 dark:bg-slate-900">
@@ -257,6 +324,12 @@ function ProposalCard({ proposal, isConfirming, onConfirm, onCancel }) {
       </div>
 
       <div className="space-y-3 px-3.5 py-3">
+        {multiStep && (
+          <div className="rounded-lg border border-indigo-100 bg-indigo-50/50 px-2.5 py-1.5 text-[11px] font-semibold text-indigo-700 dark:border-indigo-900/40 dark:bg-indigo-950/20 dark:text-indigo-300">
+            This will create multiple items
+          </div>
+        )}
+
         {Array.isArray(proposal?.steps) && proposal.steps.length > 0 && (
           <div className="space-y-1.5">
             {proposal.steps.map((step, index) => (
@@ -273,9 +346,11 @@ function ProposalCard({ proposal, isConfirming, onConfirm, onCancel }) {
           </div>
         )}
 
+        {similarWarning && <SimilarWarning warning={similarWarning} />}
+
         {visibleFields.length > 0 && (
           <div className="grid gap-2">
-            {visibleFields.slice(0, 8).map(({ path, value }) => (
+            {visibleFields.slice(0, 12).map(({ path, value }) => (
               <div
                 key={path}
                 className="rounded-lg border border-slate-200 px-2.5 py-2 dark:border-slate-800"
@@ -307,6 +382,35 @@ function ProposalCard({ proposal, isConfirming, onConfirm, onCancel }) {
             ))}
           </div>
         )}
+
+        {activeOptionalFields.length > 0 && missingComplete && (
+          <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-2.5 dark:border-slate-700 dark:bg-slate-800/50">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500">
+                Optional fields
+              </span>
+              {activeOptionalFields.length > 1 && (
+                <button
+                  type="button"
+                  onClick={handleSkipAllOptional}
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold text-slate-500 transition hover:bg-slate-200 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                >
+                  <SkipForward size={10} />
+                  Skip all
+                </button>
+              )}
+            </div>
+            {activeOptionalFields.map((detail) => (
+              <OptionalFieldRow
+                key={detail.field}
+                detail={detail}
+                value={getNestedValue(fields, detail.field)}
+                onChange={(value) => handleFieldChange(detail.field, value)}
+                onSkip={() => handleSkipOptional(detail.field)}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-2 border-t border-slate-200 px-3.5 py-2.5 dark:border-slate-800 sm:flex-row">
@@ -324,7 +428,7 @@ function ProposalCard({ proposal, isConfirming, onConfirm, onCancel }) {
           ) : (
             <>
               <Check size={13} />
-              {getActionButtonLabel(proposal?.actionType)}
+              {multiStep ? "Confirm and Create" : getActionButtonLabel(proposal?.actionType)}
             </>
           )}
         </button>
@@ -387,7 +491,7 @@ function TaskFlowAssistant() {
   const canSend = draft.trim().length > 0 && !loading && !isConfirming;
 
   const panelTitle = useMemo(() => {
-    return workspace?.name ? `TaskFlow Assistant - ${workspace.name}` : "TaskFlow Assistant";
+    return workspace?.name ? `TaskFlow Assistant` : "TaskFlow Assistant";
   }, [workspace?.name]);
 
   useEffect(() => {
@@ -541,7 +645,8 @@ function TaskFlowAssistant() {
 
       {open && (
         <div className="fixed inset-2 bottom-2 z-50 flex max-h-[calc(100dvh-1rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-950 sm:inset-auto sm:bottom-6 sm:right-6 sm:h-[min(720px,calc(100dvh-3rem))] sm:w-[420px]">
-          <div className="flex items-start justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+          {/* Header */}
+          <div className="flex items-start justify-between gap-2 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
             <div className="flex min-w-0 items-start gap-3">
               <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300">
                 <Bot size={18} />
@@ -560,12 +665,16 @@ function TaskFlowAssistant() {
               <button
                 type="button"
                 onClick={resetAssistantChat}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-100"
-                aria-label="New assistant chat"
-                title="New chat"
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12px] font-semibold text-slate-600 transition hover:bg-indigo-50 hover:text-indigo-700 dark:text-slate-400 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
+                aria-label="Start a new assistant conversation"
+                title="Start a new assistant conversation"
               >
-                <RotateCcw size={16} />
+                <MessageSquarePlus size={15} />
+                <span className="hidden min-[380px]:inline">New Chat</span>
               </button>
+
+              <div className="mx-0.5 h-5 w-px bg-slate-200 dark:bg-slate-700" />
+
               <button
                 type="button"
                 onClick={() => setOpen(false)}
@@ -578,7 +687,8 @@ function TaskFlowAssistant() {
             </div>
           </div>
 
-          <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+          {/* Message List */}
+          <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto overflow-x-hidden px-4 py-4">
             {messages.map((message, index) => (
               <MessageBubble key={`${message.role}-${index}`} message={message} />
             ))}

@@ -602,7 +602,15 @@ const makeMissingDetail = (field, label, type = "text", options = []) => ({
     options,
 });
 
-const createProposal = ({ actionType, title, answer, fields = {}, steps = [], missingFieldDetails = [], options = {} }) => {
+const makeOptionalDetail = (field, label, type = "text", options = []) => ({
+    field,
+    label,
+    type,
+    skippable: true,
+    options,
+});
+
+const createProposal = ({ actionType, title, answer, fields = {}, steps = [], missingFieldDetails = [], optionalFields = [], options = {} }) => {
     const missingFields = missingFieldDetails.map((item) => item.field);
 
     return {
@@ -615,6 +623,7 @@ const createProposal = ({ actionType, title, answer, fields = {}, steps = [], mi
             steps,
             missingFields,
             missingFieldDetails,
+            optionalFields: missingFields.length === 0 ? optionalFields : [],
             options,
             canConfirm: missingFields.length === 0,
         },
@@ -651,7 +660,7 @@ const getField = (fields, names, fallback = "") => {
     return fallback;
 };
 
-const buildWorkspaceProposal = (fields) => {
+const buildWorkspaceProposal = (fields, userId) => {
     const normalizedFields = {
         name: trimToLimit(getField(fields, ["name", "workspaceName"]), 80),
         description: trimToLimit(getField(fields, ["description"]), 500),
@@ -661,6 +670,11 @@ const buildWorkspaceProposal = (fields) => {
         missing.push(makeMissingDetail("name", "Workspace name", "text"));
     }
 
+    const optional = [];
+    if (!normalizedFields.description && missing.length === 0) {
+        optional.push(makeOptionalDetail("description", "Description", "textarea"));
+    }
+
     return createProposal({
         actionType: "create_workspace",
         title: "Create Workspace",
@@ -668,6 +682,7 @@ const buildWorkspaceProposal = (fields) => {
         fields: normalizedFields,
         steps: [{ label: `Workspace ${normalizedFields.name || "new workspace"}`, type: "workspace" }],
         missingFieldDetails: missing,
+        optionalFields: optional,
     });
 };
 
@@ -698,6 +713,20 @@ const buildClientProposal = (fields, workspaceContext) => {
     const clientFields = buildClientFields(fields, workspaceContext);
     const missing = getClientMissingDetails(clientFields);
 
+    const optional = [];
+    if (missing.length === 0) {
+        if (!clientFields.companyName) optional.push(makeOptionalDetail("companyName", "Company name", "text"));
+        if (!clientFields.phone) optional.push(makeOptionalDetail("phone", "Phone number", "text"));
+        if (!clientFields.notes) optional.push(makeOptionalDetail("notes", "Notes", "textarea"));
+    }
+
+    const similarClients = clientFields.name ? findNameMatches(workspaceContext?.clients || [], clientFields.name) : [];
+    const proposalOptions = {};
+    if (similarClients.length > 0) {
+        proposalOptions.similarClients = similarClients.map(formatOption);
+        proposalOptions.similarWarning = `A client with a similar name already exists: ${similarClients.map((c) => c.name).join(", ")}.`;
+    }
+
     return createProposal({
         actionType: "create_client",
         title: "Create Client",
@@ -705,6 +734,8 @@ const buildClientProposal = (fields, workspaceContext) => {
         fields: clientFields,
         steps: [{ label: `Client ${clientFields.name || "new client"}`, type: "client" }],
         missingFieldDetails: missing,
+        optionalFields: optional,
+        options: proposalOptions,
     });
 };
 
@@ -778,6 +809,13 @@ const buildProjectProposal = (fields, workspaceContext) => {
             })),
         ];
 
+        const nestedOptional = [];
+        if (missing.length === 0) {
+            if (!nestedFields.client.companyName) nestedOptional.push(makeOptionalDetail("client.companyName", "Client company name", "text"));
+            if (!nestedFields.client.phone) nestedOptional.push(makeOptionalDetail("client.phone", "Client phone", "text"));
+            if (!nestedFields.project.description) nestedOptional.push(makeOptionalDetail("project.description", "Project description", "textarea"));
+        }
+
         return createProposal({
             actionType: "create_client_and_project",
             title: "Create Client and Project",
@@ -788,6 +826,8 @@ const buildProjectProposal = (fields, workspaceContext) => {
                 { label: `Project ${nestedFields.project.name || "new project"}`, type: "project" },
             ],
             missingFieldDetails: missing,
+            optionalFields: nestedOptional,
+            options: { existingClients: (workspaceContext?.clients || []).map(formatOption) },
         });
     }
 
@@ -803,6 +843,12 @@ const buildProjectProposal = (fields, workspaceContext) => {
         missing.push(makeMissingDetail("clientId", "Client", "select", (workspaceContext?.clients || []).map(formatOption)));
     }
 
+    const optional = [];
+    if (missing.length === 0) {
+        if (!projectFields.description) optional.push(makeOptionalDetail("description", "Project description", "textarea"));
+        if (!projectFields.dueDate) optional.push(makeOptionalDetail("dueDate", "Deadline", "date"));
+    }
+
     return createProposal({
         actionType: "create_project",
         title: "Create Project",
@@ -810,6 +856,12 @@ const buildProjectProposal = (fields, workspaceContext) => {
         fields: projectFields,
         steps: [{ label: `Project ${projectFields.name || "new project"}`, type: "project" }],
         missingFieldDetails: missing,
+        optionalFields: optional,
+        options: {
+            existingClients: (workspaceContext?.clients || []).map(formatOption),
+            projectStatuses: PROJECT_STATUSES,
+            projectPriorities: PROJECT_PRIORITIES,
+        },
     });
 };
 
@@ -902,6 +954,12 @@ const buildTaskProposal = (fields, workspaceContext) => {
                 })),
             ];
 
+            const nestedOptional = [];
+            if (missing.length === 0) {
+                if (!nestedFields.task.description) nestedOptional.push(makeOptionalDetail("task.description", "Task description", "textarea"));
+                if (!nestedFields.task.dueDate) nestedOptional.push(makeOptionalDetail("task.dueDate", "Due date", "date"));
+            }
+
             return createProposal({
                 actionType: "create_project_and_task",
                 title: "Create Project and Task",
@@ -912,6 +970,13 @@ const buildTaskProposal = (fields, workspaceContext) => {
                     { label: `Task ${nestedFields.task.title || "new task"}`, type: "task" },
                 ],
                 missingFieldDetails: missing,
+                optionalFields: nestedOptional,
+                options: {
+                    existingProjects: (workspaceContext?.projects || []).map(formatOption),
+                    existingClients: (workspaceContext?.clients || []).map(formatOption),
+                    taskStatuses: TASK_STATUSES,
+                    taskPriorities: TASK_PRIORITIES,
+                },
             });
         }
 
@@ -944,6 +1009,10 @@ const buildTaskProposal = (fields, workspaceContext) => {
                     { label: `Task ${nestedFields.task.title || "new task"}`, type: "task" },
                 ],
                 missingFieldDetails: missing,
+                options: {
+                    existingClients: (workspaceContext?.clients || []).map(formatOption),
+                    existingProjects: (workspaceContext?.projects || []).map(formatOption),
+                },
             });
         }
     }
@@ -969,6 +1038,15 @@ const buildTaskProposal = (fields, workspaceContext) => {
         missing.push(makeMissingDetail("assigneeId", "Assignee", "select", (workspaceContext?.members || []).map(formatOption)));
     }
 
+    const optional = [];
+    if (missing.length === 0) {
+        if (!taskFields.description) optional.push(makeOptionalDetail("description", "Task description", "textarea"));
+        if (!taskFields.dueDate) optional.push(makeOptionalDetail("dueDate", "Due date", "date"));
+        if (!taskFields.assigneeId && assigneeResolution.status === "empty") {
+            optional.push(makeOptionalDetail("assigneeId", "Assignee", "select", (workspaceContext?.members || []).map(formatOption)));
+        }
+    }
+
     return createProposal({
         actionType: "create_task",
         title: "Create Task",
@@ -976,6 +1054,13 @@ const buildTaskProposal = (fields, workspaceContext) => {
         fields: taskFields,
         steps: [{ label: `Task ${taskFields.title || "new task"}`, type: "task" }],
         missingFieldDetails: missing,
+        optionalFields: optional,
+        options: {
+            existingProjects: (workspaceContext?.projects || []).map(formatOption),
+            existingMembers: (workspaceContext?.members || []).map(formatOption),
+            taskStatuses: TASK_STATUSES,
+            taskPriorities: TASK_PRIORITIES,
+        },
     });
 };
 
@@ -990,7 +1075,7 @@ const buildAssistantProposal = (proposal = {}, workspaceContext) => {
         };
     }
 
-    if (actionType === "create_workspace") return buildWorkspaceProposal(fields);
+    if (actionType === "create_workspace") return buildWorkspaceProposal(fields, null);
     if (actionType === "create_client") return buildClientProposal(fields, workspaceContext);
     if (actionType === "create_project") return buildProjectProposal(fields, workspaceContext);
     if (actionType === "create_task") return buildTaskProposal(fields, workspaceContext);
