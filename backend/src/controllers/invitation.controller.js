@@ -126,6 +126,9 @@ export const sendInvitation = asyncHandler(async (req, res) => {
     // Send email
     const inviterName = req.user.name || "A team member";
 
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const invitationLink = `${frontendUrl.replace(/\/$/, "")}/invitations/${rawToken}`;
+
     await sendEmail({
         email: userToAdd.email,
         subject: "You have a pending workspace invitation in TaskFlow Pro",
@@ -136,10 +139,19 @@ export const sendInvitation = asyncHandler(async (req, res) => {
             <p>Hello <strong>${userToAdd.name}</strong>,</p>
             <p>You have been invited to join the workspace <strong>${workspace.name}</strong> in TaskFlow Pro.</p>
             <p><strong>Role:</strong> <span style="text-transform: capitalize; font-weight: bold; color: #4f46e5;">${role}</span></p>
-            <p>This invitation is pending until you accept it. Please log in to your TaskFlow Pro dashboard to accept or decline the invitation.</p>
-            <p style="font-size: 13px; color: #6b7280; margin-top: 10px;">This invitation will expire in 7 days.</p>
+            <p>You can review and respond to this invitation by clicking the button below.</p>
+            <div style="margin: 28px 0; text-align: center;">
+                <a href="${invitationLink}" target="_blank" style="display: inline-block; background-color: #171717; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; font-weight: 700; text-decoration: none; padding: 14px 28px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: background-color 0.2s;">
+                    Review Invitation
+                </a>
+            </div>
+            <p style="font-size: 12px; color: #6b7280; margin: 24px 0 0; text-align: center; word-break: break-all;">
+                If the button does not work, copy and paste this link into your browser:<br />
+                <a href="${invitationLink}" target="_blank" style="color: #4f46e5; text-decoration: underline;">${invitationLink}</a>
+            </p>
+            <p style="font-size: 13px; color: #6b7280; margin-top: 24px;">This invitation will expire in 7 days.</p>
         `,
-        message: `Hello ${userToAdd.name},\n\nYou have been invited to join the workspace "${workspace.name}" in TaskFlow Pro.\n\nRole: ${role}\n\nThis invitation is pending until you accept it. Please log in to your TaskFlow Pro dashboard to accept or decline the invitation.\n\nThis invitation will expire in 7 days.\n\nIf you did not expect this invitation, you can safely ignore this email.`
+        message: `Hello ${userToAdd.name},\n\nYou have been invited to join the workspace "${workspace.name}" as a ${role} in TaskFlow Pro.\n\nPlease open the link below to review and accept the invitation:\n${invitationLink}\n\nThis invitation will expire in 7 days.`
     });
 
     // Send in-app notification

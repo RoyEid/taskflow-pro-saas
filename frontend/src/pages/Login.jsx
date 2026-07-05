@@ -35,8 +35,11 @@ function Login() {
   const [resending, setResending] = useState(false);
 
   useEffect(() => {
-    if (user) navigate("/dashboard", { replace: true });
-  }, [user, navigate]);
+    if (user) {
+      const redirectTo = searchParams.get("redirect");
+      navigate(redirectTo && redirectTo.startsWith("/") ? redirectTo : "/dashboard", { replace: true });
+    }
+  }, [user, navigate, searchParams]);
 
   useEffect(() => {
     const errorParam = searchParams.get("error");
