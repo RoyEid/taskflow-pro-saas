@@ -271,6 +271,12 @@ export const getCurrentUser = asyncHandler(async (req, res) => {
 });
 
 export const changePassword = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.user._id).select("+password");
+
+    if (user.provider !== "local" && !user.password) {
+        throw new ApiError(400, "Your account is managed through Google/GitHub sign-in. Password changes must be handled from your provider account.");
+    }
+
     const { currentPassword, newPassword } = req.body;
 
     if (!currentPassword || !newPassword) {
@@ -284,8 +290,6 @@ export const changePassword = asyncHandler(async (req, res) => {
     ) {
         throw new ApiError(400, "New password does not meet complexity requirements");
     }
-
-    const user = await User.findById(req.user._id).select("+password");
 
     const isPasswordCorrect = await user.comparePassword(currentPassword);
 

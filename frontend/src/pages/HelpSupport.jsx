@@ -4,7 +4,7 @@ import useWorkspace from "../context/useWorkspace";
 import { submitSupportRequest, getMySupportRequests, updateSupportRequest, deleteSupportRequest } from "../services/supportService";
 import { showSuccess, showWarning, showError } from "../utils/alerts";
 import AppSelect from "../components/ui/AppSelect";
-import { HelpCircle, ChevronDown, MessageSquare, BookOpen, Video, Play, LifeBuoy, Edit2, Trash2 } from "lucide-react";
+import { HelpCircle, ChevronDown, MessageSquare, BookOpen, Play, LifeBuoy, Edit2, Trash2 } from "lucide-react";
 import Modal from "../components/Modal";
 import ConfirmDialog from "../components/ConfirmDialog";
 
@@ -500,49 +500,6 @@ function HelpSupport() {
                     </div>
                   );
                 })}
-              </div>
-            </div>
-
-            {/* Resources - Coming Soon */}
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
-              <h3 className="text-[14px] font-semibold text-slate-900 dark:text-white mb-4">More Resources</h3>
-              
-              <div className="space-y-3">
-                <button
-                  disabled
-                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 opacity-70 cursor-not-allowed group"
-                  title="Coming Soon"
-                >
-                  <div className="flex items-center gap-3">
-                    <Video className="w-4 h-4 text-slate-400" />
-                    <span className="text-[13px] font-medium text-slate-700 dark:text-slate-300">Video Tutorials</span>
-                  </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full">Coming Soon</span>
-                </button>
-                
-                <button
-                  disabled
-                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 opacity-70 cursor-not-allowed group"
-                  title="Coming Soon"
-                >
-                  <div className="flex items-center gap-3">
-                    <BookOpen className="w-4 h-4 text-slate-400" />
-                    <span className="text-[13px] font-medium text-slate-700 dark:text-slate-300">Documentation</span>
-                  </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full">Coming Soon</span>
-                </button>
-
-                <button
-                  disabled
-                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 opacity-70 cursor-not-allowed group"
-                  title="Coming Soon"
-                >
-                  <div className="flex items-center gap-3">
-                    <MessageSquare className="w-4 h-4 text-slate-400" />
-                    <span className="text-[13px] font-medium text-slate-700 dark:text-slate-300">Live Chat</span>
-                  </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full">Coming Soon</span>
-                </button>
               </div>
             </div>
 

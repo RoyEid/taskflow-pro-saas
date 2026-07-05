@@ -58,23 +58,27 @@ export const createFeedback = asyncHandler(async (req, res) => {
         try {
             const displayCategory = category === "Other" ? `Other: ${otherCategory}` : category;
             const htmlMessage = `
-                <h3>New TaskFlow Pro Feedback</h3>
                 <p><strong>Category:</strong> ${displayCategory}</p>
-                <p><strong>Rating:</strong> ${rating ? rating + '/5' : 'None'}</p>
+                <p><strong>Rating:</strong> <span style="font-weight: bold; color: #4f46e5;">${rating ? rating + '/5' : 'None'}</span></p>
                 <p><strong>Message:</strong></p>
-                <blockquote style="border-left: 4px solid #ccc; padding-left: 10px; margin-left: 0;">
+                <blockquote style="border-left: 4px solid #4f46e5; padding-left: 12px; margin-left: 0; font-style: italic; color: #4b5563;">
                     ${message}
                 </blockquote>
-                <hr />
-                <p><strong>User:</strong> ${req.user.name} (${req.user.email})</p>
-                <p><strong>Workspace Role:</strong> ${role || 'None'}</p>
-                <p><strong>Page URL:</strong> ${pageUrl || 'None'}</p>
+                <hr style="border: 0; border-top: 1px solid #edf2f7; margin: 20px 0;" />
+                <p style="font-size: 13px; color: #6b7280; margin: 4px 0;"><strong>User:</strong> ${req.user.name} (${req.user.email})</p>
+                <p style="font-size: 13px; color: #6b7280; margin: 4px 0;"><strong>Workspace Role:</strong> ${role || 'None'}</p>
+                <p style="font-size: 13px; color: #6b7280; margin: 4px 0;"><strong>Page URL:</strong> ${pageUrl || 'None'}</p>
             `;
+            const plainMessage = `New Feedback:\nCategory: ${displayCategory}\nRating: ${rating || 'None'}\nMessage: ${message}\nUser: ${req.user.name}`;
 
             sendEmail({
                 email: process.env.FEEDBACK_NOTIFY_EMAIL,
                 subject: `New TaskFlow Pro Feedback: ${category}`,
-                message: htmlMessage,
+                badge: "Feedback Admin",
+                title: "New User Feedback",
+                subtitle: `Feedback submitted by ${req.user.name}`,
+                contentHtml: htmlMessage,
+                message: plainMessage,
             }).catch((err) => {
                 console.error("Failed to send feedback email notification:", err);
             });
@@ -86,24 +90,28 @@ export const createFeedback = asyncHandler(async (req, res) => {
     try {
         const displayCategory = category === "Other" ? `Other: ${otherCategory}` : category;
         const autoReplyHtml = `
-            <h3>Thank you for your feedback!</h3>
-            <p>Hi ${req.user.name},</p>
+            <p>Hi <strong>${req.user.name}</strong>,</p>
             <p>We have successfully received your feedback regarding <strong>${displayCategory}</strong>.</p>
             <p>Our team reads every piece of feedback to help improve TaskFlow Pro. While we may not be able to respond to every submission individually, we sincerely appreciate you taking the time to share your thoughts.</p>
-            <hr />
-            <h4>Your Submission Summary:</h4>
+            <hr style="border: 0; border-top: 1px solid #edf2f7; margin: 20px 0;" />
+            <h3 style="font-size: 15px; margin: 0 0 10px; color: #111827; font-weight: bold;">Your Submission Summary:</h3>
             <p><strong>Category:</strong> ${displayCategory}</p>
             ${rating ? `<p><strong>Rating:</strong> ${rating}/5</p>` : ''}
             <p><strong>Message:</strong></p>
-            <blockquote style="border-left: 4px solid #ccc; padding-left: 10px; margin-left: 0;">
+            <blockquote style="border-left: 4px solid #4f46e5; padding-left: 12px; margin-left: 0; font-style: italic; color: #4b5563;">
                 ${message}
             </blockquote>
         `;
+        const plainAutoReply = `Hi ${req.user.name},\n\nThank you for your feedback regarding ${displayCategory}. We appreciate it!`;
 
         sendEmail({
             email: req.user.email,
             subject: "Thank you for your feedback — TaskFlow Pro",
-            message: autoReplyHtml,
+            badge: "Feedback Auto-Reply",
+            title: "Thank You for Your Feedback",
+            subtitle: "We appreciate your input!",
+            contentHtml: autoReplyHtml,
+            message: plainAutoReply,
         }).catch((err) => {
             console.error("Failed to send auto-reply email:", err);
         });

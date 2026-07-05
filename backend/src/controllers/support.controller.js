@@ -74,26 +74,30 @@ export const createSupportRequest = asyncHandler(async (req, res) => {
             }
 
             const htmlMessage = `
-                <h3>New TaskFlow Pro Support Request</h3>
                 <p><strong>Subject:</strong> ${subject}</p>
-                <p><strong>Priority:</strong> ${priority || "Medium"}</p>
+                <p><strong>Priority:</strong> <span style="text-transform: capitalize; font-weight: bold;">${priority || "Medium"}</span></p>
                 <p><strong>Category:</strong> ${displayCategory}</p>
                 <p><strong>Message:</strong></p>
-                <blockquote style="border-left: 4px solid #ccc; padding-left: 10px; margin-left: 0;">
+                <blockquote style="border-left: 4px solid #4f46e5; padding-left: 12px; margin-left: 0; font-style: italic; color: #4b5563;">
                     ${message}
                 </blockquote>
-                <hr />
-                <p><strong>User:</strong> ${req.user.name} (${req.user.email})</p>
-                <p><strong>Workspace:</strong> ${workspaceName}</p>
-                <p><strong>Workspace Role:</strong> ${role || 'None'}</p>
-                <p><strong>Page URL:</strong> ${pageUrl || 'None'}</p>
-                <p><strong>Date:</strong> ${new Date().toISOString()}</p>
+                <hr style="border: 0; border-top: 1px solid #edf2f7; margin: 20px 0;" />
+                <p style="font-size: 13px; color: #6b7280; margin: 4px 0;"><strong>User:</strong> ${req.user.name} (${req.user.email})</p>
+                <p style="font-size: 13px; color: #6b7280; margin: 4px 0;"><strong>Workspace:</strong> ${workspaceName}</p>
+                <p style="font-size: 13px; color: #6b7280; margin: 4px 0;"><strong>Workspace Role:</strong> ${role || 'None'}</p>
+                <p style="font-size: 13px; color: #6b7280; margin: 4px 0;"><strong>Page URL:</strong> ${pageUrl || 'None'}</p>
+                <p style="font-size: 13px; color: #6b7280; margin: 4px 0;"><strong>Date:</strong> ${new Date().toLocaleString()}</p>
             `;
+            const plainMessage = `New Support Request:\nSubject: ${subject}\nPriority: ${priority || "Medium"}\nCategory: ${displayCategory}\nMessage: ${message}\n\nUser: ${req.user.name} (${req.user.email})`;
 
             sendEmail({
                 email: process.env.SUPPORT_NOTIFY_EMAIL,
                 subject: `New TaskFlow Pro Support Request: ${subject}`,
-                message: htmlMessage,
+                badge: "Support Admin",
+                title: "New Support Request",
+                subtitle: `A support ticket has been submitted by ${req.user.name}`,
+                contentHtml: htmlMessage,
+                message: plainMessage,
             }).catch((err) => {
                 console.error("Failed to send support email notification:", err);
             });
@@ -105,25 +109,29 @@ export const createSupportRequest = asyncHandler(async (req, res) => {
     try {
         const displayCategory = category === "Other" ? `Other: ${otherCategory}` : category;
         const autoReplyHtml = `
-            <h3>We received your support request!</h3>
-            <p>Hi ${req.user.name},</p>
+            <p>Hi <strong>${req.user.name}</strong>,</p>
             <p>Thank you for reaching out to TaskFlow Pro support. We have successfully received your request regarding <strong>${subject}</strong>.</p>
             <p>Our team will review your request and get back to you as soon as possible. In the meantime, you can review the details of your submission below.</p>
-            <hr />
-            <h4>Your Request Summary:</h4>
+            <hr style="border: 0; border-top: 1px solid #edf2f7; margin: 20px 0;" />
+            <h3 style="font-size: 15px; margin: 0 0 10px; color: #111827; font-weight: bold;">Your Request Summary:</h3>
             <p><strong>Subject:</strong> ${subject}</p>
             <p><strong>Category:</strong> ${displayCategory}</p>
-            <p><strong>Priority:</strong> ${priority || "Medium"}</p>
+            <p><strong>Priority:</strong> <span style="text-transform: capitalize; font-weight: bold;">${priority || "Medium"}</span></p>
             <p><strong>Message:</strong></p>
-            <blockquote style="border-left: 4px solid #ccc; padding-left: 10px; margin-left: 0;">
+            <blockquote style="border-left: 4px solid #4f46e5; padding-left: 12px; margin-left: 0; font-style: italic; color: #4b5563;">
                 ${message}
             </blockquote>
         `;
+        const plainAutoReply = `Hi ${req.user.name},\n\nWe received your support request: "${subject}". We will get back to you as soon as possible.`;
 
         sendEmail({
             email: req.user.email,
             subject: "We received your support request — TaskFlow Pro",
-            message: autoReplyHtml,
+            badge: "Support Request",
+            title: "Support Request Received",
+            subtitle: "We're looking into it",
+            contentHtml: autoReplyHtml,
+            message: plainAutoReply,
         }).catch((err) => {
             console.error("Failed to send support auto-reply email:", err);
         });

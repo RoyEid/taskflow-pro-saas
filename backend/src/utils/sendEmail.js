@@ -51,102 +51,124 @@ function getEmailType(subject = "") {
   };
 }
 
-function buildHtmlEmail(options) {
-  const emailType = getEmailType(options.subject);
-  const code = options.code;
+function buildHtmlLayout(options) {
+  const { subject, code, badge, title, subtitle, contentHtml, html } = options;
+  
+  // Resolve badge, title, subtitle
+  let resolvedBadge = badge;
+  let resolvedTitle = title;
+  let resolvedSubtitle = subtitle;
+  
+  if (!resolvedBadge || !resolvedTitle) {
+    const emailType = getEmailType(subject);
+    if (!resolvedBadge) resolvedBadge = emailType.badge;
+    if (!resolvedTitle) resolvedTitle = emailType.title;
+    if (!resolvedSubtitle) resolvedSubtitle = emailType.subtitle;
+  }
+  
+  // Determine the inner content HTML
+  let bodyContent = "";
+  if (contentHtml) {
+    bodyContent = contentHtml;
+  } else if (html) {
+    bodyContent = html;
+  } else if (options.message) {
+    // If message contains html-like elements, don't double wrap it with simple <p> or escape it.
+    const hasHtmlTags = /<[a-z][\s\S]*>/i.test(options.message);
+    if (hasHtmlTags) {
+      bodyContent = options.message;
+    } else {
+      bodyContent = `<p style="margin:0; font-size:15px; line-height:1.7; color:#374151; white-space:pre-line;">${options.message}</p>`;
+    }
+  } else {
+    bodyContent = `<p style="margin:0; font-size:15px; line-height:1.7; color:#374151;">You have a new notification from TaskFlow Pro.</p>`;
+  }
 
-  return `
-<!DOCTYPE html>
+  // Handle Code Section
+  let codeSection = "";
+  if (code) {
+    codeSection = `
+      <div style="background-color:#f8fafc; border:1px solid #e5e7eb; border-radius:12px; padding:20px; text-align:center; margin-top:20px;">
+        <p style="margin:0 0 8px; font-size:12px; color:#6b7280; font-weight:700; text-transform:uppercase; letter-spacing:1px;">
+          Your verification code
+        </p>
+        <div style="font-size:36px; line-height:1; font-weight:800; letter-spacing:6px; color:#4f46e5; margin:8px 0;">
+          ${code}
+        </div>
+        <p style="margin:8px 0 0; font-size:12px; color:#6b7280;">
+          This code will expire in <strong style="color:#111827;">15 minutes</strong>.
+        </p>
+      </div>
+    `;
+  }
+
+  return `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${emailType.title}</title>
+    <title>${resolvedTitle}</title>
   </head>
-  <body style="margin:0; padding:0; background-color:#f4f6fb; font-family:Arial, Helvetica, sans-serif; color:#111827;">
+  <body style="margin:0; padding:0; background-color:#f4f6fb; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color:#111827;-webkit-font-smoothing:antialiased;">
     <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6fb; padding:40px 16px;">
       <tr>
         <td align="center">
-          <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px; background-color:#ffffff; border-radius:20px; overflow:hidden; box-shadow:0 12px 35px rgba(17, 24, 39, 0.10);">
+          <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px; background-color:#ffffff; border-radius:16px; overflow:hidden; border:1px solid #e2e8f0; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);">
             
+            <!-- Header Banner -->
             <tr>
-              <td style="background:linear-gradient(135deg,#4f46e5,#7c3aed); padding:34px 30px; text-align:center;">
-                <div style="display:inline-block; width:58px; height:58px; line-height:58px; border-radius:16px; background-color:#ffffff; color:#4f46e5; font-size:22px; font-weight:800; margin-bottom:16px;">
+              <td style="background:linear-gradient(135deg,#4f46e5,#7c3aed); padding:32px 30px; text-align:center;">
+                <div style="display:inline-block; width:52px; height:52px; line-height:52px; border-radius:12px; background-color:#ffffff; color:#4f46e5; font-size:20px; font-weight:800; margin-bottom:12px; text-align:center; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
                   TF
                 </div>
-                <h1 style="margin:0; font-size:28px; line-height:1.3; color:#ffffff; font-weight:800;">
+                <h1 style="margin:0; font-size:26px; line-height:1.2; color:#ffffff; font-weight:800; letter-spacing:-0.5px;">
                   TaskFlow Pro
                 </h1>
-                <p style="margin:8px 0 0; color:#e0e7ff; font-size:14px;">
+                <p style="margin:6px 0 0; color:#e0e7ff; font-size:13px; font-weight:500;">
                   Project management made simple
                 </p>
               </td>
             </tr>
 
+            <!-- Content Area -->
             <tr>
-              <td style="padding:34px 34px 10px;">
-                <div style="display:inline-block; padding:7px 12px; border-radius:999px; background-color:#eef2ff; color:#4f46e5; font-size:12px; font-weight:700; margin-bottom:18px;">
-                  ${emailType.badge}
+              <td style="padding:32px 32px 24px;">
+                <div style="display:inline-block; padding:5px 10px; border-radius:999px; background-color:#eef2ff; color:#4f46e5; font-size:11px; font-weight:700; margin-bottom:16px; text-transform:uppercase; letter-spacing:0.5px;">
+                  ${resolvedBadge}
                 </div>
 
-                <h2 style="margin:0 0 10px; font-size:24px; line-height:1.35; color:#111827; font-weight:800;">
-                  ${emailType.title}
+                <h2 style="margin:0 0 12px; font-size:22px; line-height:1.3; color:#111827; font-weight:700; letter-spacing:-0.3px;">
+                  ${resolvedTitle}
                 </h2>
 
-                <p style="margin:0; font-size:15px; line-height:1.7; color:#4b5563;">
-                  ${emailType.subtitle}
-                </p>
-              </td>
-            </tr>
+                ${resolvedSubtitle ? `<p style="margin:0 0 20px; font-size:14px; line-height:1.5; color:#6b7280;">${resolvedSubtitle}</p>` : ''}
 
-            ${
-              code
-                ? `
-            <tr>
-              <td style="padding:22px 34px 12px;">
-                <div style="background-color:#f8fafc; border:1px solid #e5e7eb; border-radius:18px; padding:24px; text-align:center;">
-                  <p style="margin:0 0 12px; font-size:13px; color:#6b7280; font-weight:700; text-transform:uppercase; letter-spacing:1px;">
-                    Your verification code
-                  </p>
-
-                  <div style="font-size:38px; line-height:1; font-weight:900; letter-spacing:8px; color:#4f46e5; margin:12px 0;">
-                    ${code}
-                  </div>
-
-                  <p style="margin:14px 0 0; font-size:13px; color:#6b7280;">
-                    This code will expire in <strong style="color:#111827;">15 minutes</strong>.
-                  </p>
+                <div style="font-size:15px; line-height:1.6; color:#374151;">
+                  ${bodyContent}
                 </div>
-              </td>
-            </tr>
-            `
-                : `
-            <tr>
-              <td style="padding:22px 34px 12px;">
-                <div style="background-color:#f8fafc; border:1px solid #e5e7eb; border-radius:18px; padding:22px;">
-                  <p style="margin:0; font-size:15px; line-height:1.7; color:#374151;">
-                    ${options.message || "You have a new notification from TaskFlow Pro."}
-                  </p>
-                </div>
-              </td>
-            </tr>
-            `
-            }
 
+                ${codeSection}
+              </td>
+            </tr>
+
+            <!-- Footer Note -->
             <tr>
-              <td style="padding:12px 34px 30px;">
-                <p style="margin:0; font-size:14px; line-height:1.7; color:#6b7280;">
-                  If you did not request this email, you can safely ignore it.
+              <td style="padding:0 32px 24px;">
+                <p style="margin:0; font-size:13px; line-height:1.5; color:#9ca3af;">
+                  ${!code 
+                    ? "This is an automated notification. Please do not reply directly to this email." 
+                    : "If you did not request this email, you can safely ignore it."}
                 </p>
               </td>
             </tr>
 
+            <!-- Footer -->
             <tr>
-              <td style="background-color:#f9fafb; padding:22px 34px; border-top:1px solid #e5e7eb; text-align:center;">
-                <p style="margin:0 0 6px; font-size:13px; color:#6b7280;">
-                  Sent by <strong style="color:#111827;">TaskFlow Pro</strong>
+              <td style="background-color:#f9fafb; padding:20px 32px; border-top:1px solid #edf2f7; text-align:center;">
+                <p style="margin:0 0 4px; font-size:12px; color:#4b5563; font-weight:600;">
+                  Sent by <span style="color:#111827;">TaskFlow Pro</span>
                 </p>
-                <p style="margin:0; font-size:12px; color:#9ca3af;">
+                <p style="margin:0; font-size:11px; color:#9ca3af;">
                   Manage projects, clients, tasks, and teams in one place.
                 </p>
               </td>
@@ -157,8 +179,7 @@ function buildHtmlEmail(options) {
       </tr>
     </table>
   </body>
-</html>
-`;
+</html>`;
 }
 
 function logCodeFallback(options, reason = "Email env variables missing") {
@@ -204,7 +225,7 @@ const sendEmail = async (options) => {
       to: options.email,
       subject: options.subject,
       text: options.message,
-      html: options.html || buildHtmlEmail(options),
+      html: buildHtmlLayout(options),
     };
 
     const result = await transporter.sendMail(mailOptions);

@@ -4,6 +4,7 @@ import { getInviteByToken, acceptInvite, declineInvite } from "../services/membe
 import useAuth from "../context/useAuth";
 import { showSuccess, showError } from "../utils/alerts";
 import { Mail, Check, X, Building, Loader2, Clock, Ban, CheckCircle, XCircle } from "lucide-react";
+import BrandLoader from "../components/ui/BrandLoader";
 
 function getUserId(u) {
   return u?._id || u?.id || null;
@@ -64,12 +65,11 @@ function InviteAccept() {
   // Loading state
   if (authLoading || loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="text-center">
-          <Loader2 className="mx-auto h-8 w-8 animate-spin text-indigo-600 dark:text-indigo-500" />
-          <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">Loading invitation...</p>
-        </div>
-      </div>
+      <BrandLoader
+        text="Loading invitation..."
+        fullScreen={true}
+        size="lg"
+      />
     );
   }
 

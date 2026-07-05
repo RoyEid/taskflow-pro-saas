@@ -4,7 +4,7 @@ import useAuth from "../context/useAuth";
 import useWorkspace from "../context/useWorkspace";
 import { showSuccess, showError, confirmAction } from "../utils/alerts";
 import { changePassword, updateProfile } from "../services/authService";
-import { Sun, Moon, LogOut, Mail } from "lucide-react";
+import { Sun, Moon, LogOut, Mail, Info } from "lucide-react";
 import { checkPasswordRules } from "../utils/passwordValidation";
 import PasswordStrengthIndicator from "../components/PasswordStrengthIndicator";
 import PasswordInput from "../components/ui/PasswordInput";
@@ -270,88 +270,106 @@ function Settings() {
               <p className="mt-1.5 text-[13px] text-slate-500 dark:text-slate-400">
                 Update your password to keep your account secure.
               </p>
-            </div>
-
-            <div className="px-4 py-5 sm:px-7 sm:py-7">
-              {passwordError && (
-                <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
-                  {passwordError}
-                </div>
-              )}
-
-              <form onSubmit={handleChangePassword} className="space-y-6" autoComplete="off">
-                <PasswordInput
-                  label="Current Password *"
-                  value={passwords.currentPassword}
-                  onChange={(e) =>
-                    setPasswords((prev) => ({
-                      ...prev,
-                      currentPassword: e.target.value,
-                    }))
-                  }
-                  placeholder="••••••••"
-                  required
-                  autoComplete="current-password"
-                  inputClassName="h-10 w-full rounded-lg border border-slate-200 bg-white pl-3.5 pr-11 text-[13px] text-slate-850 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                />
-
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                  <PasswordInput
-                    label="New Password *"
-                    value={passwords.newPassword}
-                    onChange={(e) =>
-                      setPasswords((prev) => ({
-                        ...prev,
-                        newPassword: e.target.value,
-                      }))
-                    }
-                    placeholder="••••••••"
-                    required
-                    autoComplete="new-password"
-                    inputClassName="h-10 w-full rounded-lg border border-slate-200 bg-white pl-3.5 pr-11 text-[13px] text-slate-855 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                  />
-
-                  <PasswordInput
-                    label="Confirm Password *"
-                    value={passwords.confirmPassword}
-                    onChange={(e) =>
-                      setPasswords((prev) => ({
-                        ...prev,
-                        confirmPassword: e.target.value,
-                      }))
-                    }
-                    placeholder="••••••••"
-                    required
-                    autoComplete="new-password"
-                    inputClassName="h-10 w-full rounded-lg border border-slate-200 bg-white pl-3.5 pr-11 text-[13px] text-slate-855 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                  />
-                </div>
-
-                {passwords.newPassword && (
-                  <div className="mb-4">
-                    <PasswordStrengthIndicator
-                      password={passwords.newPassword}
-                      confirmPassword={passwords.confirmPassword}
-                    />
+            </div>            <div className="px-4 py-5 sm:px-7 sm:py-7">
+              {user?.provider && user.provider !== "local" ? (
+                <div className="rounded-xl border border-indigo-100/80 bg-indigo-50/20 p-5 dark:border-indigo-900/30 dark:bg-indigo-950/10">
+                  <div className="flex items-start space-x-3.5">
+                    <div className="mt-0.5 rounded-lg bg-indigo-50 p-2 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-400">
+                      <Info className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-[14px] font-bold text-slate-900 dark:text-white">
+                        Account Managed by Provider
+                      </h4>
+                      <p className="mt-1 text-[13px] leading-relaxed text-slate-500 dark:text-slate-400">
+                        Your account is managed through {user.provider === "github" ? "GitHub" : "Google"} sign-in. Password changes must be handled from your provider account.
+                      </p>
+                    </div>
                   </div>
-                )}
-
-                <div className="pt-2">
-                  <button
-                    type="submit"
-                    disabled={
-                      changingPassword ||
-                      !passwords.currentPassword ||
-                      !passwords.newPassword ||
-                      !checkPasswordRules(passwords.newPassword).allPassed ||
-                      passwords.newPassword !== passwords.confirmPassword
-                    }
-                    className="h-10 rounded-lg bg-indigo-600 px-5 py-2.5 text-[13px] font-semibold text-white shadow-sm transition-all duration-300 hover:bg-indigo-700 hover:shadow-md active:scale-[0.98] disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
-                  >
-                    {changingPassword ? "Updating..." : "Update Password"}
-                  </button>
                 </div>
-              </form>
+              ) : (
+                <>
+                  {passwordError && (
+                    <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
+                      {passwordError}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleChangePassword} className="space-y-6" autoComplete="off">
+                    <PasswordInput
+                      label="Current Password *"
+                      value={passwords.currentPassword}
+                      onChange={(e) =>
+                        setPasswords((prev) => ({
+                          ...prev,
+                          currentPassword: e.target.value,
+                        }))
+                      }
+                      placeholder="••••••••"
+                      required
+                      autoComplete="current-password"
+                      inputClassName="h-10 w-full rounded-lg border border-slate-200 bg-white pl-3.5 pr-11 text-[13px] text-slate-850 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                    />
+
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                      <PasswordInput
+                        label="New Password *"
+                        value={passwords.newPassword}
+                        onChange={(e) =>
+                          setPasswords((prev) => ({
+                            ...prev,
+                            newPassword: e.target.value,
+                          }))
+                        }
+                        placeholder="••••••••"
+                        required
+                        autoComplete="new-password"
+                        inputClassName="h-10 w-full rounded-lg border border-slate-200 bg-white pl-3.5 pr-11 text-[13px] text-slate-855 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                      />
+
+                      <PasswordInput
+                        label="Confirm Password *"
+                        value={passwords.confirmPassword}
+                        onChange={(e) =>
+                          setPasswords((prev) => ({
+                            ...prev,
+                            confirmPassword: e.target.value,
+                          }))
+                        }
+                        placeholder="••••••••"
+                        required
+                        autoComplete="new-password"
+                        inputClassName="h-10 w-full rounded-lg border border-slate-200 bg-white pl-3.5 pr-11 text-[13px] text-slate-855 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                      />
+                    </div>
+
+                    {passwords.newPassword && (
+                      <div className="mb-4">
+                        <PasswordStrengthIndicator
+                          password={passwords.newPassword}
+                          confirmPassword={passwords.confirmPassword}
+                        />
+                      </div>
+                    )}
+
+                    <div className="pt-2">
+                      <button
+                        type="submit"
+                        disabled={
+                          changingPassword ||
+                          !passwords.currentPassword ||
+                          !passwords.newPassword ||
+                          !checkPasswordRules(passwords.newPassword).allPassed ||
+                          passwords.newPassword !== passwords.confirmPassword
+                        }
+                        className="h-10 rounded-lg bg-indigo-600 px-5 py-2.5 text-[13px] font-semibold text-white shadow-sm transition-all duration-300 hover:bg-indigo-700 hover:shadow-md active:scale-[0.98] disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                      >
+                        {changingPassword ? "Updating..." : "Update Password"}
+                      </button>
+                    </div>
+                  </form>
+                </>
+              )}
             </div>
           </div>
 

@@ -1,16 +1,32 @@
-
-import LoadingSpinner from "./LoadingSpinner";
+import { useEffect } from "react";
+import BrandLoader from "./BrandLoader";
 
 export default function PageLoader({ message = "Loading..." }) {
+  useEffect(() => {
+    const frames = [
+      "⏳ Loading TaskFlow",
+      "⌛ Loading TaskFlow.",
+      "⏳ Loading TaskFlow..",
+      "⌛ Loading TaskFlow...",
+    ];
+    let currentFrame = 0;
+
+    const intervalId = setInterval(() => {
+      document.title = frames[currentFrame];
+      currentFrame = (currentFrame + 1) % frames.length;
+    }, 400);
+
+    return () => {
+      clearInterval(intervalId);
+      document.title = "TaskFlow Pro — Project Management";
+    };
+  }, []);
+
   return (
-    <div className="flex min-h-[60vh] w-full flex-col items-center justify-center gap-4 px-4 py-12 transition-all duration-300">
-      <div className="relative flex items-center justify-center">
-        <LoadingSpinner size="lg" />
-        <div className="absolute h-3 w-3 rounded-full bg-indigo-500 animate-pulse" />
-      </div>
-      <p className="animate-pulse text-[14px] font-medium tracking-wide text-slate-500 dark:text-slate-400">
-        {message}
-      </p>
-    </div>
+    <BrandLoader
+      text={message}
+      fullScreen={true}
+      size="lg"
+    />
   );
 }

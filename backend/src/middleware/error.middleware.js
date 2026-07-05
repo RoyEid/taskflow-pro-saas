@@ -1,9 +1,3 @@
-/*
-ApiError creates the error.
-asyncHandler catches the error.
-errorMiddleware sends the error response.
-*/
-
 const errorHandler = (err, req, res, next) => {
     let statusCode = err.statusCode || 500;
     let message = err.message || "Something went wrong. Please try again.";
