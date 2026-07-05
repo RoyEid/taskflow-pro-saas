@@ -3,6 +3,44 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ── Neutral Theme Override ───────────────────────────────────────────
+   Remap indigo/violet from purple tones to professional neutral tones.
+   This catches all Tailwind indigo-* and violet-* classes globally.
+   ──────────────────────────────────────────────────────────────────── */
+@theme {
+  /* Indigo → Neutral (primary UI color) */
+  --color-indigo-50: #F5F5F4;
+  --color-indigo-100: #E7E5E4;
+  --color-indigo-200: #D6D3D1;
+  --color-indigo-300: #A8A29E;
+  --color-indigo-400: #78716C;
+  --color-indigo-500: #57534E;
+  --color-indigo-600: #292524;
+  --color-indigo-700: #1C1917;
+  --color-indigo-800: #171412;
+  --color-indigo-900: #0C0A09;
+  --color-indigo-950: #0A0908;
+
+  /* Violet → Neutral (accent, role badges) */
+  --color-violet-50: #FAFAF9;
+  --color-violet-100: #F5F5F4;
+  --color-violet-200: #E7E5E4;
+  --color-violet-300: #D6D3D1;
+  --color-violet-400: #A8A29E;
+  --color-violet-500: #78716C;
+  --color-violet-600: #57534E;
+  --color-violet-700: #44403C;
+  --color-violet-800: #292524;
+  --color-violet-900: #1C1917;
+  --color-violet-950: #0C0A09;
+
+  /* Slate overrides for true-black dark mode */
+  --color-slate-950: #0B0B0B;
+  --color-slate-900: #111111;
+  --color-slate-800: #1A1A1A;
+  --color-slate-700: #2A2A2A;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -45,15 +83,15 @@ body {
   margin: 0;
   min-height: 100%;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: #f8fafc; /* slate-50 */
-  color: #0f172a; /* slate-900 */
+  background-color: #F4F4F2;
+  color: #111111;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 .dark body {
-  background-color: #020617; /* slate-950 */
-  color: #f1f5f9; /* slate-100 */
+  background-color: #0B0B0B;
+  color: #F5F5F5;
 }
 
 /* Custom scrollbar */
@@ -67,20 +105,20 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1; /* slate-300 */
+  background: #D6D3D1;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8; /* slate-400 */
+  background: #A8A29E;
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: #334155; /* slate-700 */
+  background: #2A2A2A;
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: #475569; /* slate-600 */
+  background: #3A3A3A;
 }
 
 /* Sidebar scrollbar */
@@ -89,12 +127,12 @@ body {
 }
 
 .sidebar-scroll::-webkit-scrollbar-thumb {
-  background: #e2e8f0; /* slate-200 */
+  background: #D6D3D1;
   border-radius: 2px;
 }
 
 .dark .sidebar-scroll::-webkit-scrollbar-thumb {
-  background: #0f172a; /* slate-900 */
+  background: #1A1A1A;
 }
 
 /* Kanban board custom scrollbar */
@@ -105,17 +143,17 @@ body {
   background: transparent;
 }
 .kanban-board-scroll::-webkit-scrollbar-thumb {
-  background: #cbd5e1; /* slate-300 */
+  background: #D6D3D1;
   border-radius: 9999px;
 }
 .dark .kanban-board-scroll::-webkit-scrollbar-thumb {
-  background: #334155; /* slate-700 */
+  background: #2A2A2A;
 }
 .kanban-board-scroll::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8; /* slate-400 */
+  background: #A8A29E;
 }
 .dark .kanban-board-scroll::-webkit-scrollbar-thumb:hover {
-  background: #475569; /* slate-600 */
+  background: #3A3A3A;
 }
 
 /* DatePicker Styles */
@@ -124,59 +162,59 @@ body {
 }
 .react-datepicker {
   font-family: inherit !important;
-  border-color: #e2e8f0 !important; /* slate-200 */
+  border-color: #E5E5E0 !important;
 }
 .react-datepicker__header {
-  background-color: #f8fafc !important; /* slate-50 */
-  border-bottom-color: #e2e8f0 !important;
+  background-color: #F4F4F2 !important;
+  border-bottom-color: #E5E5E0 !important;
 }
 .react-datepicker__current-month, .react-datepicker-time__header, .react-datepicker-year-header {
-  color: #0f172a !important; /* slate-900 */
+  color: #111111 !important;
   font-weight: 600 !important;
   font-size: 0.9rem !important;
 }
 .react-datepicker__day-name, .react-datepicker__day, .react-datepicker__time-name {
-  color: #64748b !important; /* slate-500 */
+  color: #6B7280 !important;
 }
 .react-datepicker__day:hover {
-  background-color: #f1f5f9 !important; /* slate-100 */
+  background-color: #EBEBEA !important;
 }
 .react-datepicker__day--selected, .react-datepicker__day--keyboard-selected {
-  background-color: #0f172a !important; /* slate-900 */
+  background-color: #171717 !important;
   color: #fff !important;
 }
 
 /* Dark mode overwrites for DatePicker */
 .dark .react-datepicker {
-  background-color: #0f172a !important; /* slate-900 */
-  border-color: #1e293b !important; /* slate-800 */
+  background-color: #141414 !important;
+  border-color: #2A2A2A !important;
 }
 .dark .react-datepicker__header {
-  background-color: #0f172a !important; /* slate-900 */
-  border-bottom-color: #1e293b !important; /* slate-800 */
+  background-color: #141414 !important;
+  border-bottom-color: #2A2A2A !important;
 }
 .dark .react-datepicker__current-month {
-  color: #f1f5f9 !important; /* slate-100 */
+  color: #F5F5F5 !important;
 }
 .dark .react-datepicker__day-name, .dark .react-datepicker__day {
-  color: #94a3b8 !important; /* slate-400 */
+  color: #A3A3A3 !important;
 }
 .dark .react-datepicker__day:hover {
-  background-color: #1e293b !important; /* slate-800 */
-  color: #f8fafc !important; /* slate-50 */
+  background-color: #222222 !important;
+  color: #F5F5F5 !important;
 }
 .dark .react-datepicker__day--selected, .dark .react-datepicker__day--keyboard-selected {
   background-color: #fff !important;
-  color: #0f172a !important; /* slate-900 */
+  color: #111111 !important;
 }
 .react-datepicker-popper[data-placement^=bottom] .react-datepicker__triangle::before, .react-datepicker-popper[data-placement^=bottom] .react-datepicker__triangle::after {
-  border-bottom-color: #f8fafc !important;
+  border-bottom-color: #F4F4F2 !important;
 }
 .dark .react-datepicker-popper[data-placement^=bottom] .react-datepicker__triangle::before {
-  border-bottom-color: #1e293b !important; /* slate-800 */
+  border-bottom-color: #2A2A2A !important;
 }
 .dark .react-datepicker-popper[data-placement^=bottom] .react-datepicker__triangle::after {
-  border-bottom-color: #0f172a !important; /* slate-900 */
+  border-bottom-color: #141414 !important;
 }
 
 /* Custom Animations */
@@ -227,9 +265,9 @@ body {
 }
 
 @keyframes nav-item-active-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
-  70% { box-shadow: 0 0 0 6px rgba(99, 102, 241, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(120, 113, 108, 0.3); }
+  70% { box-shadow: 0 0 0 6px rgba(120, 113, 108, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(120, 113, 108, 0); }
 }
 
 .animate-nav-pulse {

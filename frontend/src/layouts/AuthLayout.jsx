@@ -6,15 +6,15 @@ function AuthLayout({ children, title, subtitle }) {
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-50 px-4 dark:bg-slate-950 sm:px-6 lg:px-8">
       {/* Decorative gradient background */}
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-        <div className="absolute -left-[10%] -top-[30%] h-[70%] w-[70%] rounded-full bg-indigo-400/20 blur-[120px] dark:bg-indigo-600/20" />
-        <div className="absolute -right-[10%] top-[20%] h-[60%] w-[60%] rounded-full bg-violet-400/20 blur-[120px] dark:bg-violet-600/20" />
+        <div className="absolute -left-[10%] -top-[30%] h-[70%] w-[70%] rounded-full bg-stone-300/20 blur-[120px] dark:bg-stone-700/10" />
+        <div className="absolute -right-[10%] top-[20%] h-[60%] w-[60%] rounded-full bg-stone-200/20 blur-[120px] dark:bg-stone-800/10" />
       </div>
 
       <div className="relative z-10 w-full max-w-md">
         {/* Header / Logo */}
         <div className="mb-8 flex flex-col items-center text-center">
           <Link to="/" className="group flex flex-col items-center">
-            <div className="flex items-center justify-center rounded-2xl shadow-lg transition-transform duration-300 group-hover:scale-105 group-hover:shadow-indigo-500/25">
+            <div className="flex items-center justify-center rounded-2xl shadow-lg transition-transform duration-300 group-hover:scale-105 group-hover:shadow-black/10">
               <BrandLogo size="xl" className="hidden sm:block" />
               <BrandLogo size="lg" className="block sm:hidden" />
             </div>

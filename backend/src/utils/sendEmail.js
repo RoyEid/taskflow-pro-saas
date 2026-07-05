@@ -92,7 +92,7 @@ function buildHtmlLayout(options) {
         <p style="margin:0 0 8px; font-size:12px; color:#6b7280; font-weight:700; text-transform:uppercase; letter-spacing:1px;">
           Your verification code
         </p>
-        <div style="font-size:36px; line-height:1; font-weight:800; letter-spacing:6px; color:#4f46e5; margin:8px 0;">
+        <div style="font-size:36px; line-height:1; font-weight:800; letter-spacing:6px; color:#171717; margin:8px 0;">
           ${code}
         </div>
         <p style="margin:8px 0 0; font-size:12px; color:#6b7280;">
@@ -117,12 +117,12 @@ function buildHtmlLayout(options) {
             
             <!-- Header Banner -->
             <tr>
-              <td style="background:linear-gradient(135deg,#4f46e5,#7c3aed); padding:32px 30px; text-align:center;">
-                <img src="${process.env.BRAND_LOGO_URL || 'https://task-flow-pro-project-management-cl.vercel.app/favicon.png'}" alt="TaskFlow Pro" width="52" height="52" style="display:inline-block; width:52px; height:52px; border-radius:12px; object-fit:contain; margin-bottom:12px; box-shadow:0 2px 4px rgba(0,0,0,0.1);" />
+              <td style="background:linear-gradient(135deg,#171717,#292524); padding:32px 30px; text-align:center;">
+                <img src="${process.env.BRAND_LOGO_URL || 'https://task-flow-pro-project-management-cl.vercel.app/favicon.png'}" alt="TaskFlow Pro" width="52" height="52" style="display:inline-block; width:52px; height:52px; border-radius:12px; object-fit:contain; margin-bottom:12px; box-shadow:0 2px 4px rgba(0,0,0,0.15);" />
                 <h1 style="margin:0; font-size:26px; line-height:1.2; color:#ffffff; font-weight:800; letter-spacing:-0.5px;">
                   TaskFlow Pro
                 </h1>
-                <p style="margin:6px 0 0; color:#e0e7ff; font-size:13px; font-weight:500;">
+                <p style="margin:6px 0 0; color:#A8A29E; font-size:13px; font-weight:500;">
                   Project management made simple
                 </p>
               </td>
@@ -131,7 +131,7 @@ function buildHtmlLayout(options) {
             <!-- Content Area -->
             <tr>
               <td style="padding:32px 32px 24px;">
-                <div style="display:inline-block; padding:5px 10px; border-radius:999px; background-color:#eef2ff; color:#4f46e5; font-size:11px; font-weight:700; margin-bottom:16px; text-transform:uppercase; letter-spacing:0.5px;">
+                <div style="display:inline-block; padding:5px 10px; border-radius:999px; background-color:#F5F5F4; color:#292524; font-size:11px; font-weight:700; margin-bottom:16px; text-transform:uppercase; letter-spacing:0.5px;">
                   ${resolvedBadge}
                 </div>
 

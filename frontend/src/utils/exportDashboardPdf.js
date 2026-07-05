@@ -43,7 +43,7 @@ export function exportDashboardPdf({
 
   // --- 1. Header Section ---
   // Top purple accent bar
-  doc.setFillColor(79, 70, 229); // indigo-600
+  doc.setFillColor(41, 37, 36); // neutral-800 dark
   doc.rect(0, 0, pageWidth, 4, "F");
 
   // Logo / Title area
@@ -53,7 +53,7 @@ export function exportDashboardPdf({
   doc.text("TaskFlow Pro", margin, 22);
 
   doc.setFontSize(14);
-  doc.setTextColor(99, 102, 241); // indigo-500
+  doc.setTextColor(87, 83, 78); // neutral-600
   doc.setFont("helvetica", "normal");
   doc.text("Dashboard Report", margin, 30);
 
@@ -133,7 +133,7 @@ export function exportDashboardPdf({
     doc.text(value.toString(), x + 8, y + 17);
   };
 
-  drawCard(margin, startY, "Total Projects", totalProjects, [139, 92, 246]); // violet-500
+  drawCard(margin, startY, "Total Projects", totalProjects, [87, 83, 78]); // neutral-600
   drawCard(margin + cardWidth + 6, startY, "Active Tasks", activeTasks, [59, 130, 246]); // blue-500
   drawCard(margin, startY + cardHeight + 6, "Completed Tasks", completedTasks, [16, 185, 129]); // emerald-500
   drawCard(margin + cardWidth + 6, startY + cardHeight + 6, "Overdue Tasks", overdueTasks, [239, 68, 68]); // red-500
@@ -373,7 +373,7 @@ export function exportDashboardPdf({
       styles: { fontSize: 9, cellPadding: 4, lineColor: [226, 232, 240], lineWidth: 0.1, overflow: 'linebreak' },
       margin: { left: margin, right: margin },
       columnStyles: {
-        0: { fontStyle: 'bold', textColor: [99, 102, 241] }, // Type
+        0: { fontStyle: 'bold', textColor: [87, 83, 78] }, // Type
         1: { fontStyle: 'bold' }, // Title
         2: { }, // Description (auto wrapped)
         3: { textColor: [100, 116, 139] }, // Time
