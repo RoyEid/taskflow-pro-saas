@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import BrandLogo from "../components/ui/BrandLogo";
 
 function AuthLayout({ children, title, subtitle }) {
   return (
@@ -13,8 +14,9 @@ function AuthLayout({ children, title, subtitle }) {
         {/* Header / Logo */}
         <div className="mb-8 flex flex-col items-center text-center">
           <Link to="/" className="group flex flex-col items-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-xl font-bold text-white shadow-lg transition-transform duration-300 group-hover:scale-105 group-hover:shadow-indigo-500/25">
-              TF
+            <div className="flex items-center justify-center rounded-2xl shadow-lg transition-transform duration-300 group-hover:scale-105 group-hover:shadow-indigo-500/25">
+              <BrandLogo size="xl" className="hidden sm:block" />
+              <BrandLogo size="lg" className="block sm:hidden" />
             </div>
 
             <h1 className="mt-6 text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">

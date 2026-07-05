@@ -5,6 +5,7 @@ import useWorkspace from "../context/useWorkspace";
 import { getChatUnreadCount } from "../services/chatService";
 
 import AppDropdown from "../components/ui/AppDropdown";
+import BrandLogo from "../components/ui/BrandLogo";
 import ComingSoonModal from "../components/ComingSoonModal";
 import GlobalSearchModal from "../components/GlobalSearchModal";
 import TaskFlowAssistant from "../components/TaskFlowAssistant";
@@ -639,9 +640,7 @@ function DashboardLayout({ children }) {
               <Menu size={20} />
             </button>
 
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-xs font-bold text-white dark:bg-indigo-500">
-              TF
-            </div>
+            <BrandLogo size="sm" />
 
             <span className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">
               TaskFlow Pro

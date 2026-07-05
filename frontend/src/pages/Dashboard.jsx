@@ -619,7 +619,7 @@ function Dashboard() {
         dueSoonTasks,
       });
 
-      showSuccess("Dashboard PDF report exported");
+      showSuccess("Dashboard report downloaded.");
     } catch {
       showError("Failed to export dashboard report");
     }

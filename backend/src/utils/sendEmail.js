@@ -118,9 +118,7 @@ function buildHtmlLayout(options) {
             <!-- Header Banner -->
             <tr>
               <td style="background:linear-gradient(135deg,#4f46e5,#7c3aed); padding:32px 30px; text-align:center;">
-                <div style="display:inline-block; width:52px; height:52px; line-height:52px; border-radius:12px; background-color:#ffffff; color:#4f46e5; font-size:20px; font-weight:800; margin-bottom:12px; text-align:center; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
-                  TF
-                </div>
+                <img src="${process.env.BRAND_LOGO_URL || 'https://task-flow-pro-project-management-cl.vercel.app/favicon.png'}" alt="TaskFlow Pro" width="52" height="52" style="display:inline-block; width:52px; height:52px; border-radius:12px; object-fit:contain; margin-bottom:12px; box-shadow:0 2px 4px rgba(0,0,0,0.1);" />
                 <h1 style="margin:0; font-size:26px; line-height:1.2; color:#ffffff; font-weight:800; letter-spacing:-0.5px;">
                   TaskFlow Pro
                 </h1>

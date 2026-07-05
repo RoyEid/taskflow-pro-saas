@@ -392,6 +392,16 @@ export function exportDashboardPdf({
   const dateStr = new Date().toISOString().split("T")[0];
   const filename = `taskflow-dashboard-report-${cleanWorkspace}-${cleanRange}-${dateStr}.pdf`;
 
-  // Save the PDF
-  doc.save(filename);
+  // Save the PDF — explicit Blob + anchor download for mobile compatibility
+  const blob = doc.output("blob");
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  // Revoke after a short delay to ensure download starts
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
