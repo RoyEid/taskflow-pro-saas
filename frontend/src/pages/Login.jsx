@@ -124,17 +124,29 @@ function Login() {
           <div>{success}</div>
 
           {unverifiedEmail && (
-            <button
-              type="button"
-              onClick={handleResend}
-              disabled={resending}
-              className={success.toLowerCase().includes("could not be sent")
-                ? "mt-2 font-semibold text-amber-800 underline hover:text-amber-950 disabled:opacity-50 dark:text-amber-300 dark:hover:text-amber-200 block"
-                : "mt-2 font-semibold text-emerald-800 underline hover:text-emerald-950 disabled:opacity-50 dark:text-emerald-300 dark:hover:text-emerald-200 block"
-              }
-            >
-              {resending ? "Resending..." : "Resend verification code"}
-            </button>
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={resending}
+                className={success.toLowerCase().includes("could not be sent")
+                  ? "font-semibold text-amber-800 underline hover:text-amber-950 disabled:opacity-50 dark:text-amber-300 dark:hover:text-amber-200 text-[13px]"
+                  : "font-semibold text-emerald-800 underline hover:text-emerald-950 disabled:opacity-50 dark:text-emerald-300 dark:hover:text-emerald-200 text-[13px]"
+                }
+              >
+                {resending ? "Resending..." : "Resend verification code"}
+              </button>
+              <span className={success.toLowerCase().includes("could not be sent") ? "text-amber-600 dark:text-amber-500" : "text-emerald-600 dark:text-emerald-500"}>•</span>
+              <Link
+                to={`/verify-email?email=${encodeURIComponent(unverifiedEmail)}`}
+                className={success.toLowerCase().includes("could not be sent")
+                  ? "font-semibold text-amber-800 underline hover:text-amber-950 dark:text-amber-300 dark:hover:text-amber-200 text-[13px]"
+                  : "font-semibold text-emerald-800 underline hover:text-emerald-950 dark:text-emerald-300 dark:hover:text-emerald-200 text-[13px]"
+                }
+              >
+                Enter code
+              </Link>
+            </div>
           )}
         </div>
       )}
@@ -144,21 +156,30 @@ function Login() {
           <div>{error}</div>
 
           {unverifiedEmail && (
-            <button
-              type="button"
-              onClick={handleResend}
-              disabled={resending}
-              className="mt-2 font-semibold text-red-800 underline hover:text-red-900 disabled:opacity-50 dark:text-red-300 dark:hover:text-red-200 block"
-            >
-              {resending ? "Resending..." : "Resend verification code"}
-            </button>
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={resending}
+                className="font-semibold text-red-800 underline hover:text-red-900 disabled:opacity-50 dark:text-red-300 dark:hover:text-red-200 text-[13px]"
+              >
+                {resending ? "Resending..." : "Resend verification code"}
+              </button>
+              <span className="text-red-500/50 dark:text-red-400/50">•</span>
+              <Link
+                to={`/verify-email?email=${encodeURIComponent(unverifiedEmail)}`}
+                className="font-semibold text-red-800 underline hover:text-red-900 dark:text-red-300 dark:hover:text-red-200 text-[13px]"
+              >
+                Enter code
+              </Link>
+            </div>
           )}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
         <div>
-          <label htmlFor="email" className="mb-2 block text-[13px] font-semibold text-slate-700 dark:text-slate-300">
+          <label htmlFor="email" className="mb-1.5 sm:mb-2 block text-[13px] font-semibold text-slate-700 dark:text-slate-300">
             Email address
           </label>
 
@@ -172,12 +193,12 @@ function Login() {
             autoComplete="username"
             readOnly={emailReadOnly}
             onFocus={() => setEmailReadOnly(false)}
-            className="h-11 w-full rounded-xl border border-slate-200 bg-white/50 px-4 text-[14px] text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700/80 dark:bg-slate-900/50 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-indigo-500 dark:focus:bg-slate-900"
+            className="h-10 sm:h-11 w-full rounded-lg sm:rounded-xl border border-slate-200 bg-white/50 px-3.5 sm:px-4 text-[13.5px] sm:text-[14px] text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700/80 dark:bg-slate-900/50 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-indigo-500 dark:focus:bg-slate-900"
           />
         </div>
 
         <div>
-          <div className="mb-2 flex items-center justify-between">
+          <div className="mb-1.5 sm:mb-2 flex items-center justify-between">
             <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300">
               Password
             </label>
@@ -196,6 +217,7 @@ function Login() {
             placeholder="Enter your password"
             required
             autoComplete="current-password"
+            inputClassName="h-10 sm:h-11 w-full rounded-lg sm:rounded-xl border border-slate-200 bg-white/50 pl-3.5 pr-11 text-[13.5px] sm:text-[14px] text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700/80 dark:bg-slate-900/50 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-indigo-500 dark:focus:bg-slate-900"
           />
         </div>
 
@@ -219,7 +241,7 @@ function Login() {
         <button
           type="submit"
           disabled={loading}
-          className="mt-6 flex h-11 w-full items-center justify-center rounded-xl bg-indigo-600 text-[14px] font-semibold text-white transition-all hover:bg-indigo-700 hover:shadow-md hover:shadow-indigo-500/20 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+          className="mt-4 sm:mt-6 flex h-10 sm:h-11 w-full items-center justify-center rounded-lg sm:rounded-xl bg-indigo-600 text-[13.5px] sm:text-[14px] font-semibold text-white transition-all hover:bg-indigo-700 hover:shadow-md hover:shadow-indigo-500/20 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
         >
           {loading ? (
             <span className="flex items-center gap-2">

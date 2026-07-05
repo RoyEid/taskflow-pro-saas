@@ -111,9 +111,9 @@ function Register() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-3.5 sm:space-y-4">
         <div>
-          <label className="mb-2 block text-[13px] font-semibold text-slate-700 dark:text-slate-300">
+          <label className="mb-1.5 sm:mb-2 block text-[13px] font-semibold text-slate-700 dark:text-slate-300">
             Full Name
           </label>
 
@@ -122,12 +122,12 @@ function Register() {
             placeholder="John Doe"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="h-11 w-full rounded-xl border border-slate-200 bg-white/50 px-4 text-[14px] text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700/80 dark:bg-slate-900/50 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-indigo-500 dark:focus:bg-slate-900"
+            className="h-10 sm:h-11 w-full rounded-lg sm:rounded-xl border border-slate-200 bg-white/50 px-3.5 sm:px-4 text-[13.5px] sm:text-[14px] text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700/80 dark:bg-slate-900/50 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-indigo-500 dark:focus:bg-slate-900"
           />
         </div>
 
         <div>
-          <label className="mb-2 block text-[13px] font-semibold text-slate-700 dark:text-slate-300">
+          <label className="mb-1.5 sm:mb-2 block text-[13px] font-semibold text-slate-700 dark:text-slate-300">
             Email address
           </label>
 
@@ -136,7 +136,7 @@ function Register() {
             placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="h-11 w-full rounded-xl border border-slate-200 bg-white/50 px-4 text-[14px] text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700/80 dark:bg-slate-900/50 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-indigo-500 dark:focus:bg-slate-900"
+            className="h-10 sm:h-11 w-full rounded-lg sm:rounded-xl border border-slate-200 bg-white/50 px-3.5 sm:px-4 text-[13.5px] sm:text-[14px] text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700/80 dark:bg-slate-900/50 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-indigo-500 dark:focus:bg-slate-900"
           />
         </div>
 
@@ -147,6 +147,7 @@ function Register() {
           placeholder="Create a password"
           required
           autoComplete="new-password"
+          inputClassName="h-10 sm:h-11 w-full rounded-lg sm:rounded-xl border border-slate-200 bg-white/50 pl-3.5 pr-11 text-[13.5px] sm:text-[14px] text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700/80 dark:bg-slate-900/50 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-indigo-500 dark:focus:bg-slate-900"
         />
 
         <PasswordStrengthIndicator password={password} confirmPassword={confirmPassword} />
@@ -158,6 +159,7 @@ function Register() {
           placeholder="Confirm your password"
           required
           autoComplete="new-password"
+          inputClassName="h-10 sm:h-11 w-full rounded-lg sm:rounded-xl border border-slate-200 bg-white/50 pl-3.5 pr-11 text-[13.5px] sm:text-[14px] text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700/80 dark:bg-slate-900/50 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-indigo-500 dark:focus:bg-slate-900"
         />
 
         <button
@@ -167,7 +169,7 @@ function Register() {
             !allPassed ||
             (password && confirmPassword && password !== confirmPassword)
           }
-          className="mt-6 flex h-11 w-full items-center justify-center rounded-xl bg-indigo-600 text-[14px] font-semibold text-white transition-all hover:bg-indigo-700 hover:shadow-md hover:shadow-indigo-500/20 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+          className="mt-4 sm:mt-6 flex h-10 sm:h-11 w-full items-center justify-center rounded-lg sm:rounded-xl bg-indigo-600 text-[13.5px] sm:text-[14px] font-semibold text-white transition-all hover:bg-indigo-700 hover:shadow-md hover:shadow-indigo-500/20 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
         >
           {loading ? (
             <span className="flex items-center gap-2">
@@ -180,7 +182,7 @@ function Register() {
         </button>
       </form>
 
-      <div className="mt-8">
+      <div className="mt-6 sm:mt-8">
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-slate-200 dark:border-slate-700/80" />
@@ -193,10 +195,10 @@ function Register() {
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-2 gap-3">
+        <div className="mt-4 sm:mt-6 grid grid-cols-2 gap-3">
           <a
             href={`${API_URL}/auth/google`}
-            className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white text-[13px] font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700/50"
+            className="flex h-9 sm:h-10 w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white text-[13px] font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700/50"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
               <path
@@ -221,7 +223,7 @@ function Register() {
 
           <a
             href={`${API_URL}/auth/github`}
-            className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white text-[13px] font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700/50"
+            className="flex h-9 sm:h-10 w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white text-[13px] font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700/50"
           >
             <GitHubIcon />
             GitHub
@@ -229,7 +231,7 @@ function Register() {
         </div>
       </div>
 
-      <p className="mt-8 text-center text-[13px] text-slate-500 dark:text-slate-400">
+      <p className="mt-6 sm:mt-8 text-center text-[13px] text-slate-500 dark:text-slate-400">
         Already have an account?{" "}
         <Link
           to="/login"

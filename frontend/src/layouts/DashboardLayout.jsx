@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router";
 import useAuth from "../context/useAuth";
 import useWorkspace from "../context/useWorkspace";
@@ -121,6 +121,33 @@ function DashboardLayout({ children }) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [comingSoonFeature, setComingSoonFeature] = useState(null);
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
+
+  const touchStart = useRef({ x: 0, y: 0 });
+  const touchDelta = useRef({ x: 0, y: 0 });
+
+  const handleTouchStart = (e) => {
+    touchStart.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+    };
+    touchDelta.current = { x: 0, y: 0 };
+  };
+
+  const handleTouchMove = (e) => {
+    touchDelta.current = {
+      x: e.touches[0].clientX - touchStart.current.x,
+      y: e.touches[0].clientY - touchStart.current.y,
+    };
+  };
+
+  const handleTouchEnd = () => {
+    const { x, y } = touchDelta.current;
+    // Check if swipe is horizontal enough and to the left (X is negative and below -50px)
+    // Using a ratio of 2.5 ensures vertical scrolling won't accidentally close the sidebar
+    if (x < -50 && Math.abs(x) > Math.abs(y) * 2.5) {
+      setMobileOpen(false);
+    }
+  };
 
   const userWorkspaces = workspaces;
 
@@ -266,7 +293,7 @@ function DashboardLayout({ children }) {
     <div className="relative flex h-full min-h-full flex-col bg-slate-50 dark:bg-slate-950/50">
       {/* Logo */}
       <div
-        className={`flex min-w-0 items-start justify-between gap-2 pb-4 pt-5 transition-all duration-300 ${
+        className={`relative flex min-w-0 items-center justify-between gap-2 pb-4 pt-5 transition-all duration-300 ${
           isCompact ? "px-2" : "px-4"
         }`}
       >
@@ -308,7 +335,7 @@ function DashboardLayout({ children }) {
         <button
           type="button"
           onClick={() => setMobileOpen(false)}
-          className="absolute top-5 right-4 z-50 rounded-md p-1 text-slate-400 hover:bg-slate-200/50 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300 lg:hidden"
+          className="shrink-0 rounded-md p-1.5 text-slate-400 hover:bg-slate-200/50 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300 lg:hidden z-50"
           aria-label="Close sidebar"
         >
           <X size={18} />
@@ -351,7 +378,7 @@ function DashboardLayout({ children }) {
           </div>
 
           <span
-            className={`pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md border border-slate-100 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 shadow-sm transition-opacity duration-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500 ${
+            className={`pointer-events-none hidden lg:absolute lg:inline-flex right-1.5 top-1/2 -translate-y-1/2 rounded-md border border-slate-100 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 shadow-sm transition-opacity duration-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500 ${
               isCompact ? "hidden opacity-0" : "opacity-100"
             }`}
           >
@@ -621,7 +648,12 @@ function DashboardLayout({ children }) {
               onClick={() => setMobileOpen(false)}
             />
 
-            <aside className="fixed inset-y-0 left-0 z-50 w-[280px] h-screen h-[100dvh] bg-slate-50 shadow-2xl dark:bg-slate-950 lg:hidden flex flex-col">
+            <aside
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              className="fixed inset-y-0 left-0 z-50 w-[280px] h-screen h-[100dvh] bg-slate-50 shadow-2xl dark:bg-slate-950 lg:hidden flex flex-col"
+            >
               {sidebarContent}
             </aside>
           </>

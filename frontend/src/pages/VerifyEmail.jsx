@@ -6,6 +6,7 @@ import { showSuccess } from "../utils/alerts";
 import api from "../services/api";
 
 function VerifyEmail() {
+  const { verifyEmail } = useAuth();
   const [searchParams] = useSearchParams();
   const email = searchParams.get("email") || "";
   
@@ -84,9 +85,9 @@ function VerifyEmail() {
 
     setLoading(true);
     try {
-      await api.post("/auth/verify-email", { email: email.trim().toLowerCase(), code: verificationCode });
-      showSuccess("Email verified successfully!");
-      navigate(`/login?message=${encodeURIComponent("Email verified successfully. You can now log in.")}&email=${encodeURIComponent(email.trim().toLowerCase())}`);
+      await verifyEmail(email.trim().toLowerCase(), verificationCode);
+      showSuccess("Email verified successfully! Logging you in...");
+      navigate("/dashboard", { replace: true });
     } catch (err) {
       if (!err.response) {
         setError("Cannot connect to server. Make sure the backend is running.");
