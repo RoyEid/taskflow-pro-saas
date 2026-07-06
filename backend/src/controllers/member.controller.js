@@ -114,19 +114,12 @@ export const updateMemberRole = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Workspace member not found");
     }
 
-    console.log("ROLE UPDATE DEBUG", {
-        workspaceId,
-        requesterId: req.user._id,
-        targetUserId: memberId,
-        newRole: normalizedRole,
-        requesterMembership: currentMembership,
-        targetMembership
-    });
-
+    // Owners' roles cannot be changed (a workspace must always have at least one active owner)
     if (String(targetMembership.role).toLowerCase() === "owner") {
         throw new ApiError(403, "Owner role cannot be changed");
     }
 
+    // A user cannot change their own role to prevent lockout or privilege self-demotion
     if (String(targetMembership.user?._id || targetMembership.user) === String(req.user._id)) {
         throw new ApiError(403, "You cannot change your own role");
     }

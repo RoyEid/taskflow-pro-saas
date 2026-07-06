@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from "react-router";
 import { getInviteByToken, acceptInvite, declineInvite } from "../services/memberService";
 import useAuth from "../context/useAuth";
 import { showSuccess, showError } from "../utils/alerts";
-import { Mail, Check, X, Building, Loader2, Clock, Ban, CheckCircle, XCircle } from "lucide-react";
+import { Mail, Check, X, Building, Clock, Ban, CheckCircle, XCircle } from "lucide-react";
 import BrandLoader from "../components/ui/BrandLoader";
 
 function getUserId(u) {

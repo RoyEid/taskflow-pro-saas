@@ -14,8 +14,10 @@ export default function useCountUp(endValue, duration = 800) {
     let startTime = null;
     let animationFrame;
 
+    // Quartic easing out function (slows down the count towards the end of the duration)
     const easeOutQuart = (t) => 1 - Math.pow(1 - t, 4);
 
+    // Math progression step executed on each animation frame
     const step = (currentTime) => {
       if (!startTime) startTime = currentTime;
       const progress = currentTime - startTime;
@@ -29,10 +31,11 @@ export default function useCountUp(endValue, duration = 800) {
       if (progress < duration) {
         animationFrame = requestAnimationFrame(step);
       } else {
-        setCount(endValue);
+        setCount(endValue); // Ensure we land exactly on the target value
       }
     };
 
+    // Start requestAnimationFrame loop
     animationFrame = requestAnimationFrame(step);
 
     return () => {

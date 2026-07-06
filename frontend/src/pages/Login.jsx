@@ -57,14 +57,18 @@ function Login() {
     }
 
     if (messageParam) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSuccess(messageParam);
       if (messageParam.toLowerCase().includes("could not be sent") && emailParam) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setUnverifiedEmail(emailParam.trim().toLowerCase());
       }
     }
 
     if (emailParam) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEmail(emailParam.trim().toLowerCase());
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEmailReadOnly(false);
     }
   }, [searchParams]);

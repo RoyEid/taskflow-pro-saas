@@ -17,7 +17,9 @@ export default function PasswordInput({
   onFocus,
   ...props
 }) {
+  // Controls password visibility state (text vs. password input type)
   const [showPassword, setShowPassword] = useState(false);
+  // Starts as readOnly to prevent aggressive browser autofills on page load
   const [isReadOnly, setIsReadOnly] = useState(true);
 
   const defaultInputStyle =
@@ -45,9 +47,10 @@ export default function PasswordInput({
           required={required}
           autoComplete={autoComplete}
           disabled={disabled}
+          // Starts as readOnly to block autofill, then switches on initial user interaction
           readOnly={props.readOnly !== undefined ? props.readOnly : isReadOnly}
           onFocus={(e) => {
-            setIsReadOnly(false);
+            setIsReadOnly(false); // Enable editing once focused
             if (onFocus) onFocus(e);
           }}
           className={`${inputClassName || defaultInputStyle} ${

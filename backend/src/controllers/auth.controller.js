@@ -224,35 +224,33 @@ export const forgotPassword = asyncHandler(async (req, res) => {
     if (!email) throw new ApiError(400, "Email is required");
 
     const normalizedEmail = email.trim().toLowerCase();
-    console.log("FORGOT PASSWORD EMAIL:", normalizedEmail);
 
     const user = await User.findOne({ email: normalizedEmail });
-    console.log("USER FOUND:", !!user);
 
     if (!user) {
-        // Return 200 to prevent email enumeration
+        // Return 200 to prevent email enumeration (security best practice)
         return res.status(200).json(new ApiResponse(200, "If an account exists, a reset code was sent", {}));
     }
 
+    // Generate a new verification code for password reset
     const resetCode = generateCode();
     
+    // Hash the code before saving to database for security
     const hashedCode = await bcrypt.hash(resetCode, 10);
 
     user.passwordResetCode = hashedCode;
-    user.passwordResetExpires = Date.now() + 15 * 60 * 1000;
+    user.passwordResetExpires = Date.now() + 15 * 60 * 1000; // 15 minutes expiry
     await user.save();
-    console.log("RESET CODE SAVED:", !!user.resetPasswordCode);
 
     try {
+        // Dispatch reset code via email
         await sendEmail({
             email: user.email,
             subject: "Your TaskFlow Pro password reset code",
             message: `Your password reset code is: ${resetCode}\n\nThis code will expire in 15 minutes.`,
             code: resetCode,
         });
-        console.log("RESET EMAIL SENT");
     } catch (error) {
-        console.log("RESET EMAIL ERROR:", error.message);
         throw new ApiError(500, "Failed to send reset email. Please try again.");
     }
 

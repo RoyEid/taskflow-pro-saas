@@ -243,12 +243,6 @@ function Members() {
       return;
     }
 
-    console.log("ROLE UPDATE TO ADMIN", {
-      workspaceId,
-      targetUserId: memberId,
-      role: newRole
-    });
-
     setRoleUpdating(true);
     try {
       await updateMemberRole(workspaceId, memberId, { role: newRole });

@@ -25,6 +25,7 @@ function VerifyEmail() {
     }
     const warningParam = searchParams.get("warning");
     if (warningParam) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setWarning(warningParam);
     }
   }, [email, navigate, searchParams]);

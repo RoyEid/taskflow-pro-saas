@@ -20,7 +20,7 @@ export const sendInvitation = asyncHandler(async (req, res) => {
 
     const normalizedEmail = String(email || "").trim().toLowerCase();
 
-    // 1 & 2. Check if current logged-in user is a member and has permissions
+    // Verify if the current requester is a member of the workspace and has permission to invite others
     const requesterMembership = await WorkspaceMember.findOne({
         workspace: workspaceId,
         user: req.user._id,
@@ -28,11 +28,6 @@ export const sendInvitation = asyncHandler(async (req, res) => {
     });
 
     if (!requesterMembership) {
-        console.log("INVITE DEBUG FAIL: Requester not a member", {
-            workspaceId,
-            requesterId: req.user._id,
-            invitedEmail: normalizedEmail
-        });
         return res.status(403).json({
             message: "You are not a member of this workspace"
         });
@@ -40,16 +35,14 @@ export const sendInvitation = asyncHandler(async (req, res) => {
 
     const requesterRole = String(requesterMembership.role || "").toLowerCase();
 
+    // Only owners and admins are permitted to issue new workspace invitations
     if (!["owner", "admin"].includes(requesterRole)) {
-        console.log("INVITE DEBUG FAIL: Requester lacks permission", {
-            requesterRole
-        });
         return res.status(403).json({
             message: "You do not have permission to invite members"
         });
     }
     
-    // Verify user exists
+    // Verify the user being invited exists in the system database
     const userToAdd = await User.findOne({
         email: { $regex: new RegExp(`^${normalizedEmail.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") }
     }).select("_id name email status");
@@ -59,16 +52,6 @@ export const sendInvitation = asyncHandler(async (req, res) => {
             message: "User not found. The user must register first."
         });
     }
-
-    // Temporary backend log
-    console.log("INVITE DEBUG", {
-        workspaceId,
-        requesterId: req.user._id,
-        invitedEmail: normalizedEmail,
-        requesterMembership: !!requesterMembership,
-        requesterRole,
-        invitedUserId: userToAdd._id
-    });
 
     if (userToAdd.status === "disabled") {
         return res.status(403).json({
