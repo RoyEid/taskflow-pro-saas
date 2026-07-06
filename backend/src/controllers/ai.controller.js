@@ -1,9 +1,5 @@
-import {
-    confirmAssistantAction,
-    getTaskFlowAssistantAnswer,
-} from "../services/ai.service.js";
+import { getTaskFlowAssistantAnswer } from "../services/ai.service.js";
 import ApiError from "../utils/ApiError.js";
-import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
 const sendAssistantResult = (res, result) => {
@@ -13,12 +9,7 @@ const sendAssistantResult = (res, result) => {
         answer: result.answer,
     };
 
-    if (result.proposal) body.proposal = result.proposal;
-    if (result.missingFields) body.missingFields = result.missingFields;
-    if (result.missingFieldDetails) body.missingFieldDetails = result.missingFieldDetails;
-    if (result.options) body.options = result.options;
-    if (result.pendingAction) body.pendingAction = result.pendingAction;
-    if (result.proposal?.optionalFields) body.optionalFields = result.proposal.optionalFields;
+    if (result.metadata) body.metadata = result.metadata;
 
     return res.status(200).json(body);
 };
@@ -28,9 +19,8 @@ export const askTaskFlowAssistant = asyncHandler(async (req, res) => {
         const result = await getTaskFlowAssistantAnswer({
             message: req.body.message,
             history: req.body.history,
-            workspaceId: req.body.workspaceId,
-            userId: req.user._id,
-            pendingAction: req.body.pendingAction,
+            context: req.body.context,
+            user: req.user,
         });
 
         return sendAssistantResult(res, result);
@@ -45,18 +35,3 @@ export const askTaskFlowAssistant = asyncHandler(async (req, res) => {
     }
 });
 
-export const confirmAssistantActionController = asyncHandler(async (req, res) => {
-    const result = await confirmAssistantAction({
-        actionType: req.body.actionType,
-        workspaceId: req.body.workspaceId,
-        payload: req.body.payload,
-        user: req.user,
-    });
-
-    res.status(201).json(
-        new ApiResponse(201, result.message || "Assistant action completed successfully.", {
-            created: result.created,
-            createdItems: result.createdItems || [],
-        })
-    );
-});

@@ -1,21 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  AlertTriangle,
-  Bot,
-  Check,
-  CheckCircle2,
-  FileText,
-  Loader2,
-  MessageSquarePlus,
-  Send,
-  SkipForward,
-  Sparkles,
-  X,
-  XCircle,
-} from "lucide-react";
+import { Bot, Loader2, MessageSquarePlus, Send, Sparkles, X } from "lucide-react";
+import { useLocation } from "react-router";
 
+import useAuth from "../context/useAuth";
 import useWorkspace from "../context/useWorkspace";
-import { askAssistant, confirmAssistantAction } from "../services/aiService";
+import { askAssistant } from "../services/aiService";
 
 const MAX_MESSAGE_LENGTH = 1000;
 const MAX_HISTORY_ITEMS = 8;
@@ -23,22 +12,56 @@ const MAX_HISTORY_ITEMS = 8;
 const initialMessages = [
   {
     role: "assistant",
-    content: "Hi, I'm TaskFlow Assistant. What can I help with in TaskFlow Pro?",
+    content: "Hi, I'm TaskFlow Assistant. I can explain how to use TaskFlow Pro, but I cannot perform actions for you.",
   },
 ];
 
-const ACTION_LABELS = {
-  create_workspace: "Create Workspace",
-  create_client: "Create Client",
-  create_project: "Create Project",
-  create_task: "Create Task",
-  create_client_and_project: "Create Client and Project",
-  create_project_and_task: "Create Project and Task",
-  create_client_project_and_task: "Create Client, Project, and Task",
-};
+const STRING_KEYS = ["answer", "message", "content", "value", "label", "name", "title"];
 
-function getWorkspaceId(workspace) {
-  return workspace?._id || workspace?.id || null;
+function safeText(value) {
+  if (value === undefined || value === null) return "";
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
+    return String(value).trim();
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => safeText(item)).filter(Boolean).join(", ");
+  }
+  if (typeof value === "object") {
+    for (const key of STRING_KEYS) {
+      const text = safeText(value[key]);
+      if (text) return text;
+    }
+    return "";
+  }
+
+  return String(value || "").trim();
+}
+
+function getPageName(pathname = "") {
+  const path = String(pathname || "").split("?")[0].split("#")[0].toLowerCase();
+
+  if (path === "/dashboard" || path === "/") return "Dashboard";
+  if (path === "/workspaces") return "Workspaces";
+  if (path === "/clients") return "Clients";
+  if (path === "/projects") return "Projects";
+  if (/^\/projects\/[^/]+/.test(path)) return "Project Details";
+  if (path === "/tasks") return "Tasks";
+  if (/^\/tasks\/[^/]+/.test(path)) return "Task Details";
+  if (path === "/chat") return "Chat";
+  if (path === "/members") return "Members";
+  if (path === "/settings") return "Settings";
+  if (path === "/notifications") return "Notifications";
+  if (path === "/profile") return "Profile";
+  if (path === "/feedback") return "Feedback";
+  if (path === "/help") return "Help";
+
+  return "TaskFlow Pro";
+}
+
+function getThemeMode() {
+  if (typeof document === "undefined") return "";
+  return document.documentElement.classList.contains("dark") ? "dark" : "light";
 }
 
 function getErrorMessage(error) {
@@ -48,13 +71,10 @@ function getErrorMessage(error) {
       const minutes = Math.ceil(data.retryAfter / 60);
       return `AI Assistant limit reached. Try again in ${minutes} ${minutes === 1 ? "minute" : "minutes"}.`;
     }
-    return data?.message || "AI Assistant limit reached. Please try again later.";
+    return "AI Assistant limit reached. Please try again later.";
   }
-  return (
-    data?.message ||
-    error?.message ||
-    "Assistant is temporarily unavailable."
-  );
+
+  return "Assistant is temporarily unavailable. Please try again.";
 }
 
 function getConversationHistory(messages) {
@@ -63,419 +83,34 @@ function getConversationHistory(messages) {
     .slice(-MAX_HISTORY_ITEMS)
     .map((message) => ({
       role: message.role,
-      content: String(message.content || "").slice(0, MAX_MESSAGE_LENGTH),
-    }));
-}
-
-function isPlainObject(value) {
-  return Boolean(value && typeof value === "object" && !Array.isArray(value));
-}
-
-function getNestedValue(source, path) {
-  return String(path)
-    .split(".")
-    .reduce((value, key) => (isPlainObject(value) ? value[key] : undefined), source);
-}
-
-function setNestedValue(source, path, value) {
-  const parts = String(path).split(".");
-  const next = { ...source };
-  let cursor = next;
-
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    cursor[key] = isPlainObject(cursor[key]) ? { ...cursor[key] } : {};
-    cursor = cursor[key];
-  }
-
-  cursor[parts[parts.length - 1]] = value;
-  return next;
-}
-
-function flattenFields(value, prefix = "") {
-  if (!isPlainObject(value)) return [];
-
-  return Object.entries(value).flatMap(([key, nestedValue]) => {
-    const path = prefix ? `${prefix}.${key}` : key;
-
-    if (isPlainObject(nestedValue)) {
-      return flattenFields(nestedValue, path);
-    }
-
-    return [{ path, value: nestedValue }];
-  });
-}
-
-function humanizeField(path) {
-  const key = String(path || "").split(".").pop() || "";
-  return key
-    .replace(/Id$/, "")
-    .replace(/([A-Z])/g, " $1")
-    .replace(/[_-]+/g, " ")
-    .trim()
-    .replace(/^./, (char) => char.toUpperCase());
-}
-
-function normalizeInputDate(value) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value).slice(0, 10);
-  return date.toISOString().slice(0, 10);
-}
-
-function formatFieldValue(path, value) {
-  if (value === undefined || value === null || value === "") return "\u2014";
-  if (String(path).toLowerCase().includes("date")) return normalizeInputDate(value);
-  return String(value);
-}
-
-function hasFieldValue(value) {
-  return value !== undefined && value !== null && String(value).trim() !== "";
-}
-
-function getProposalTitle(proposal) {
-  return proposal?.title || ACTION_LABELS[proposal?.actionType] || "Assistant Action";
-}
-
-function getActionButtonLabel(actionType) {
-  return ACTION_LABELS[actionType] || "Confirm";
-}
-
-function getConfirmPayloadFields(proposal, fields) {
-  return isPlainObject(fields) ? fields : proposal?.fields || {};
-}
-
-function getCreatedLink(response) {
-  const data = response?.data || response || {};
-  const created = data.created || {};
-
-  if (!created?.link) return null;
-
-  return {
-    href: created.link,
-    label: `Open ${created.type || "item"}`,
-  };
-}
-
-function isMultiStep(proposal) {
-  return Array.isArray(proposal?.steps) && proposal.steps.length > 1;
-}
-
-function FieldInput({ detail, value, onChange }) {
-  const type = detail.type || "text";
-  const options = Array.isArray(detail.options) ? detail.options : [];
-  const commonClass =
-    "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-[12px] text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100";
-
-  if (type === "select" || options.length > 0) {
-    return (
-      <select
-        value={value || ""}
-        onChange={(event) => onChange(event.target.value)}
-        className={commonClass}
-      >
-        <option value="">Select...</option>
-        {options.map((option) => (
-          <option key={option.value || option.id} value={option.value || option.id}>
-            {option.label || option.name || option.email || option.value || option.id}
-          </option>
-        ))}
-      </select>
-    );
-  }
-
-  if (type === "textarea") {
-    return (
-      <textarea
-        value={value || ""}
-        onChange={(event) => onChange(event.target.value)}
-        rows={3}
-        className={`${commonClass} resize-none`}
-      />
-    );
-  }
-
-  return (
-    <input
-      type={type === "date" ? "date" : type === "email" ? "email" : "text"}
-      value={type === "date" ? normalizeInputDate(value) : value || ""}
-      onChange={(event) => onChange(event.target.value)}
-      className={commonClass}
-    />
-  );
-}
-
-function OptionalFieldRow({ detail, value, onChange, onSkip }) {
-  return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300">
-          {detail.label || humanizeField(detail.field)}
-          <span className="ml-1 text-[10px] font-normal text-slate-400 dark:text-slate-500">(optional)</span>
-        </span>
-        <button
-          type="button"
-          onClick={onSkip}
-          className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-        >
-          <SkipForward size={10} />
-          Skip
-        </button>
-      </div>
-      <FieldInput
-        detail={detail}
-        value={value}
-        onChange={onChange}
-      />
-    </div>
-  );
-}
-
-function SimilarWarning({ warning }) {
-  if (!warning) return null;
-
-  return (
-    <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-200">
-      <AlertTriangle size={13} className="mt-0.5 shrink-0" />
-      <span>{warning}</span>
-    </div>
-  );
-}
-
-function ProposalCard({ proposal, isConfirming, onConfirm, onCancel }) {
-  const [fields, setFields] = useState(() => proposal?.fields || {});
-  const [skippedOptional, setSkippedOptional] = useState(new Set());
-
-  useEffect(() => {
-    queueMicrotask(() => {
-      setFields(proposal?.fields || {});
-      setSkippedOptional(new Set());
-    });
-  }, [proposal]);
-
-  const missingDetails = useMemo(() => {
-    if (Array.isArray(proposal?.missingFieldDetails)) return proposal.missingFieldDetails;
-    return (proposal?.missingFields || []).map((field) => ({
-      field,
-      label: humanizeField(field),
-      type: "text",
-    }));
-  }, [proposal]);
-
-  const activeOptionalFields = useMemo(() => {
-    if (!Array.isArray(proposal?.optionalFields)) return [];
-    return proposal.optionalFields.filter((detail) => !skippedOptional.has(detail.field));
-  }, [proposal, skippedOptional]);
-
-  const visibleFields = useMemo(() => {
-    const missingSet = new Set(missingDetails.map((detail) => detail.field));
-    const optionalSet = new Set(activeOptionalFields.map((detail) => detail.field));
-
-    return flattenFields(fields).filter(({ path }) => {
-      if (missingSet.has(path)) return false;
-      if (optionalSet.has(path)) return false;
-      if (path === "workspaceId") return false;
-      return true;
-    });
-  }, [fields, missingDetails, activeOptionalFields]);
-
-  const missingComplete = missingDetails.every((detail) => {
-    return hasFieldValue(getNestedValue(fields, detail.field));
-  });
-
-  const canConfirm = missingComplete && !isConfirming;
-
-  const handleFieldChange = useCallback((field, value) => {
-    setFields((prev) => setNestedValue(prev, field, value));
-  }, []);
-
-  const handleSkipOptional = useCallback((field) => {
-    setSkippedOptional((prev) => new Set(prev).add(field));
-  }, []);
-
-  const handleSkipAllOptional = useCallback(() => {
-    setSkippedOptional((prev) => {
-      const next = new Set(prev);
-      for (const detail of proposal?.optionalFields || []) {
-        next.add(detail.field);
-      }
-      return next;
-    });
-  }, [proposal]);
-
-  const handleConfirm = useCallback(() => {
-    if (!canConfirm) return;
-    onConfirm({
-      actionType: proposal.actionType,
-      payload: getConfirmPayloadFields(proposal, fields),
-    });
-  }, [canConfirm, fields, onConfirm, proposal]);
-
-  const multiStep = isMultiStep(proposal);
-  const similarWarning = proposal?.options?.similarWarning;
-
-  return (
-    <div className="w-full overflow-hidden rounded-2xl rounded-bl-md border border-indigo-200 bg-white shadow-sm dark:border-indigo-900/60 dark:bg-slate-900">
-      <div className="flex items-center gap-2 border-b border-indigo-100 bg-indigo-50 px-3.5 py-2 dark:border-indigo-900/40 dark:bg-indigo-950/30">
-        <CheckCircle2 size={14} className="text-indigo-600 dark:text-indigo-300" />
-        <span className="min-w-0 truncate text-[12px] font-bold text-indigo-700 dark:text-indigo-200">
-          {getProposalTitle(proposal)}
-        </span>
-      </div>
-
-      <div className="space-y-3 px-3.5 py-3">
-        {multiStep && (
-          <div className="rounded-lg border border-indigo-100 bg-indigo-50/50 px-2.5 py-1.5 text-[11px] font-semibold text-indigo-700 dark:border-indigo-900/40 dark:bg-indigo-950/20 dark:text-indigo-300">
-            This will create multiple items
-          </div>
-        )}
-
-        {Array.isArray(proposal?.steps) && proposal.steps.length > 0 && (
-          <div className="space-y-1.5">
-            {proposal.steps.map((step, index) => (
-              <div
-                key={`${step.type || "step"}-${index}`}
-                className="flex items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-2 text-[12px] font-medium text-slate-700 dark:bg-slate-800/70 dark:text-slate-200"
-              >
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-bold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200">
-                  {index + 1}
-                </span>
-                <span className="min-w-0 truncate">{step.label}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {similarWarning && <SimilarWarning warning={similarWarning} />}
-
-        {visibleFields.length > 0 && (
-          <div className="grid gap-2">
-            {visibleFields.slice(0, 12).map(({ path, value }) => (
-              <div
-                key={path}
-                className="rounded-lg border border-slate-200 px-2.5 py-2 dark:border-slate-800"
-              >
-                <div className="text-[10px] font-semibold uppercase text-slate-400 dark:text-slate-500">
-                  {humanizeField(path)}
-                </div>
-                <div className="mt-0.5 break-words text-[12px] font-medium text-slate-800 dark:text-slate-100">
-                  {formatFieldValue(path, value)}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {missingDetails.length > 0 && (
-          <div className="space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-2.5 dark:border-amber-900/60 dark:bg-amber-950/20">
-            {missingDetails.map((detail) => (
-              <label key={detail.field} className="block space-y-1">
-                <span className="text-[11px] font-bold text-amber-800 dark:text-amber-200">
-                  {detail.label || humanizeField(detail.field)}
-                </span>
-                <FieldInput
-                  detail={detail}
-                  value={getNestedValue(fields, detail.field)}
-                  onChange={(value) => handleFieldChange(detail.field, value)}
-                />
-              </label>
-            ))}
-          </div>
-        )}
-
-        {activeOptionalFields.length > 0 && missingComplete && (
-          <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-2.5 dark:border-slate-700 dark:bg-slate-800/50">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500">
-                Optional fields
-              </span>
-              {activeOptionalFields.length > 1 && (
-                <button
-                  type="button"
-                  onClick={handleSkipAllOptional}
-                  className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold text-slate-500 transition hover:bg-slate-200 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
-                >
-                  <SkipForward size={10} />
-                  Skip all
-                </button>
-              )}
-            </div>
-            {activeOptionalFields.map((detail) => (
-              <OptionalFieldRow
-                key={detail.field}
-                detail={detail}
-                value={getNestedValue(fields, detail.field)}
-                onChange={(value) => handleFieldChange(detail.field, value)}
-                onSkip={() => handleSkipOptional(detail.field)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="flex flex-col gap-2 border-t border-slate-200 px-3.5 py-2.5 dark:border-slate-800 sm:flex-row">
-        <button
-          type="button"
-          onClick={handleConfirm}
-          disabled={!canConfirm}
-          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-[12px] font-bold text-white shadow-sm transition hover:bg-indigo-700 disabled:pointer-events-none disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-400"
-        >
-          {isConfirming ? (
-            <>
-              <Loader2 size={13} className="animate-spin" />
-              Creating...
-            </>
-          ) : (
-            <>
-              <Check size={13} />
-              {multiStep ? "Confirm and Create" : getActionButtonLabel(proposal?.actionType)}
-            </>
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={isConfirming}
-          className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-[12px] font-semibold text-slate-600 transition hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-        >
-          <XCircle size={13} />
-          Cancel
-        </button>
-      </div>
-    </div>
-  );
+      content: safeText(message.content).slice(0, MAX_MESSAGE_LENGTH),
+    }))
+    .filter((message) => message.content);
 }
 
 function MessageBubble({ message }) {
   const isUser = message.role === "user";
+  const content = safeText(message.content) || "I could not produce an answer right now.";
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
         className={`max-w-[88%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2.5 text-[13px] leading-5 ${
           isUser
-            ? "rounded-br-md bg-indigo-600 text-white dark:bg-indigo-500"
+            ? "rounded-br-md bg-indigo-600 text-white shadow-sm"
             : "rounded-bl-md border border-slate-200 bg-slate-50 text-slate-800 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
         }`}
       >
-        {message.content}
-        {message.link && (
-          <a
-            href={message.link.href}
-            className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-white px-2.5 py-1.5 text-[12px] font-bold text-indigo-700 transition hover:bg-indigo-50 dark:border-indigo-800 dark:bg-slate-950 dark:text-indigo-300 dark:hover:bg-indigo-950/30"
-          >
-            <FileText size={12} />
-            {message.link.label}
-          </a>
-        )}
+        {content}
       </div>
     </div>
   );
 }
 
 function TaskFlowAssistant() {
-  const { workspace } = useWorkspace();
-  const workspaceId = getWorkspaceId(workspace);
+  const { user } = useAuth();
+  const { workspace, memberRole } = useWorkspace();
+  const location = useLocation();
   const listRef = useRef(null);
 
   const [open, setOpen] = useState(false);
@@ -483,16 +118,21 @@ function TaskFlowAssistant() {
   const [messages, setMessages] = useState(initialMessages);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [activeProposal, setActiveProposal] = useState(null);
-  const [isConfirming, setIsConfirming] = useState(false);
-  const [pendingAction, setPendingAction] = useState(null);
 
+  const pageName = useMemo(() => getPageName(location.pathname), [location.pathname]);
   const remainingCharacters = MAX_MESSAGE_LENGTH - draft.length;
-  const canSend = draft.trim().length > 0 && !loading && !isConfirming;
+  const canSend = draft.trim().length > 0 && !loading;
 
-  const panelTitle = useMemo(() => {
-    return workspace?.name ? `TaskFlow Assistant` : "TaskFlow Assistant";
-  }, [workspace?.name]);
+  const assistantContext = useMemo(() => ({
+    pathname: location.pathname,
+    pageName,
+    moduleName: pageName,
+    userRole: safeText(user?.role),
+    workspaceRole: safeText(memberRole),
+    themeMode: getThemeMode(),
+  }), [location.pathname, memberRole, pageName, user?.role]);
+
+  const panelTitle = "TaskFlow Assistant";
 
   useEffect(() => {
     if (!open) return undefined;
@@ -515,16 +155,13 @@ function TaskFlowAssistant() {
     queueMicrotask(() => {
       element.scrollTo({ top: element.scrollHeight, behavior: "smooth" });
     });
-  }, [activeProposal, messages, open]);
+  }, [loading, messages, open]);
 
   const resetAssistantChat = useCallback(() => {
     setMessages(initialMessages);
     setDraft("");
     setError("");
-    setActiveProposal(null);
-    setPendingAction(null);
     setLoading(false);
-    setIsConfirming(false);
   }, []);
 
   const handleSubmit = useCallback(
@@ -532,7 +169,7 @@ function TaskFlowAssistant() {
       event.preventDefault();
 
       const message = draft.trim();
-      if (!message || loading || isConfirming) return;
+      if (!message || loading) return;
 
       const userMessage = { role: "user", content: message };
       const history = getConversationHistory(messages);
@@ -540,100 +177,30 @@ function TaskFlowAssistant() {
       setMessages((prev) => [...prev, userMessage]);
       setDraft("");
       setError("");
-      setActiveProposal(null);
       setLoading(true);
 
       try {
         const response = await askAssistant({
           message,
-          workspaceId,
           history,
-          pendingAction,
+          context: assistantContext,
         });
 
         setMessages((prev) => [
           ...prev,
           {
             role: "assistant",
-            content: response?.answer || "I could not produce an answer right now.",
+            content: safeText(response?.answer) || "I can help explain how to use TaskFlow Pro.",
           },
         ]);
-
-        if (response?.type === "action_proposal" && response?.proposal) {
-          setActiveProposal(response.proposal);
-          if (!response.proposal.canConfirm) {
-            setPendingAction({
-              actionType: response.proposal.actionType,
-              collectedFields: response.proposal.fields || {},
-            });
-          } else {
-            setPendingAction(null);
-          }
-        } else if (response?.type === "missing_fields") {
-          if (response?.pendingAction) {
-            setPendingAction(response.pendingAction);
-          } else {
-            setPendingAction({
-              actionType: response.actionType || "create_task",
-              collectedFields: {},
-            });
-          }
-        } else {
-          setPendingAction(null);
-        }
       } catch (err) {
         setError(getErrorMessage(err));
       } finally {
         setLoading(false);
       }
     },
-    [draft, isConfirming, loading, messages, pendingAction, workspaceId]
+    [assistantContext, draft, loading, messages]
   );
-
-  const handleConfirmAction = useCallback(
-    async ({ actionType, payload }) => {
-      setIsConfirming(true);
-      setError("");
-
-      try {
-        const response = await confirmAssistantAction({
-          actionType,
-          workspaceId: payload?.workspaceId || workspaceId,
-          payload,
-        });
-        const createdLink = getCreatedLink(response);
-
-        setActiveProposal(null);
-        setPendingAction(null);
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: response?.message || "Created successfully.",
-            link: createdLink,
-          },
-        ]);
-      } catch (err) {
-        setError(getErrorMessage(err));
-      } finally {
-        setIsConfirming(false);
-      }
-    },
-    [workspaceId]
-  );
-
-  const handleCancelProposal = useCallback(() => {
-    setActiveProposal(null);
-    setPendingAction(null);
-    setError("");
-    setMessages((prev) => [
-      ...prev,
-      {
-        role: "assistant",
-        content: "Cancelled. Nothing was created.",
-      },
-    ]);
-  }, []);
 
   return (
     <>
@@ -652,7 +219,6 @@ function TaskFlowAssistant() {
 
       {open && (
         <div className="fixed inset-2 bottom-2 z-50 flex max-h-[calc(100dvh-1rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-950 sm:inset-auto sm:bottom-6 sm:right-6 sm:h-[min(720px,calc(100dvh-3rem))] sm:w-[420px]">
-          {/* Header */}
           <div className="flex items-start justify-between gap-2 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
             <div className="flex min-w-0 items-start gap-3">
               <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300">
@@ -663,7 +229,7 @@ function TaskFlowAssistant() {
                   {panelTitle}
                 </h2>
                 <p className="mt-0.5 truncate text-[12px] text-slate-500 dark:text-slate-400">
-                  {workspace?.name || "No workspace selected"}
+                  {workspace?.name || pageName}
                 </p>
               </div>
             </div>
@@ -672,48 +238,36 @@ function TaskFlowAssistant() {
               <button
                 type="button"
                 onClick={resetAssistantChat}
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12px] font-semibold text-slate-600 transition hover:bg-indigo-50 hover:text-indigo-700 dark:text-slate-400 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
+                className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-[12px] font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-200"
                 aria-label="Start a new assistant conversation"
                 title="Start a new assistant conversation"
               >
-                <MessageSquarePlus size={15} />
-                <span className="hidden min-[380px]:inline">New Chat</span>
+                <MessageSquarePlus size={14} />
+                <span className="hidden sm:inline">New Chat</span>
               </button>
-
-              <div className="mx-0.5 h-5 w-px bg-slate-200 dark:bg-slate-700" />
-
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-100"
-                aria-label="Close TaskFlow Assistant"
-                title="Close"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-200"
+                aria-label="Close assistant"
+                title="Close assistant"
               >
                 <X size={17} />
               </button>
             </div>
           </div>
 
-          {/* Message List */}
-          <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto overflow-x-hidden px-4 py-4">
+          <div
+            ref={listRef}
+            className="flex-1 space-y-3 overflow-y-auto bg-slate-50/60 px-4 py-4 dark:bg-slate-950"
+          >
             {messages.map((message, index) => (
               <MessageBubble key={`${message.role}-${index}`} message={message} />
             ))}
 
-            {activeProposal && !loading && (
-              <div className="flex justify-start">
-                <ProposalCard
-                  proposal={activeProposal}
-                  onConfirm={handleConfirmAction}
-                  onCancel={handleCancelProposal}
-                  isConfirming={isConfirming}
-                />
-              </div>
-            )}
-
             {loading && (
               <div className="flex justify-start">
-                <div className="inline-flex items-center gap-2 rounded-2xl rounded-bl-md border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[13px] font-medium text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
+                <div className="inline-flex items-center gap-2 rounded-2xl rounded-bl-md border border-slate-200 bg-white px-3.5 py-2.5 text-[13px] text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
                   <Loader2 size={14} className="animate-spin" />
                   Thinking...
                 </div>
@@ -722,40 +276,44 @@ function TaskFlowAssistant() {
           </div>
 
           {error && (
-            <div className="border-t border-red-100 bg-red-50 px-4 py-2 text-[12px] font-medium text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
+            <div className="border-t border-red-100 bg-red-50 px-4 py-2 text-[12px] font-medium text-red-700 dark:border-red-950/50 dark:bg-red-950/20 dark:text-red-300">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="border-t border-slate-200 p-3 dark:border-slate-800">
-            <div className="flex items-end gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 dark:border-slate-800 dark:bg-slate-900">
+          <form
+            onSubmit={handleSubmit}
+            className="border-t border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950"
+          >
+            <div className="flex items-end gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm transition focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 dark:border-slate-800 dark:bg-slate-900 dark:focus-within:border-indigo-500 dark:focus-within:ring-indigo-950">
               <textarea
                 value={draft}
                 onChange={(event) => setDraft(event.target.value.slice(0, MAX_MESSAGE_LENGTH))}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && !event.shiftKey) {
                     event.preventDefault();
-                    handleSubmit(event);
+                    if (canSend) {
+                      event.currentTarget.form?.requestSubmit();
+                    }
                   }
                 }}
                 rows={1}
-                maxLength={MAX_MESSAGE_LENGTH}
-                placeholder="Ask TaskFlow Assistant..."
-                className="max-h-24 min-h-10 flex-1 resize-none bg-transparent px-2 py-2 text-[13px] text-slate-800 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
+                placeholder="Ask how to use TaskFlow Pro..."
+                className="max-h-24 min-h-[38px] flex-1 resize-none bg-transparent px-2 py-2 text-[13px] text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500"
+                aria-label="Ask TaskFlow Assistant"
               />
-
               <button
                 type="submit"
                 disabled={!canSend}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm transition hover:bg-indigo-700 disabled:pointer-events-none disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm transition hover:bg-indigo-700 disabled:pointer-events-none disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-400"
                 aria-label="Send assistant message"
                 title="Send"
               >
                 {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
               </button>
             </div>
-            <div className="mt-1 flex justify-end text-[10px] font-medium text-slate-400 dark:text-slate-500">
-              <span>{remainingCharacters}</span>
+            <div className="mt-1 text-right text-[10px] font-semibold text-slate-400">
+              {remainingCharacters}
             </div>
           </form>
         </div>
