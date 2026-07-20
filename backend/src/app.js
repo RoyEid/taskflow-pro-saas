@@ -29,7 +29,6 @@ const app = express();
 
 app.use(express.json());
 export const allowedOrigins = [
-    process.env.CLIENT_URL,
     process.env.FRONTEND_URL,
     "http://localhost:5173"
 ].filter(Boolean);

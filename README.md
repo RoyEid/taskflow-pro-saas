@@ -173,11 +173,6 @@ CLOUDFLARE_API_TOKEN=your_workers_ai_token
 CLOUDFLARE_AI_MODEL=@cf/meta/llama-3.1-8b-instruct
 CLOUDFLARE_AI_URL=https://api.cloudflare.com/client/v4/accounts
 
-# Gemini AI Alternate Provider
-GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-2.5-flash
-GEMINI_API_URL=https://generativelanguage.googleapis.com/v1beta/openai/chat/completions
-
 # Rate Limiting
 AI_DAILY_MESSAGE_LIMIT=20
 AI_HOURLY_ACTION_LIMIT=5
