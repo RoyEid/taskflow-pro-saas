@@ -135,47 +135,45 @@ taskflow-pro/
 Create a `.env` file in the `backend/` directory using these placeholder patterns:
 ```env
 # Server settings
+# General
 PORT=5000
 NODE_ENV=development
 MONGO_URI=mongodb://localhost:27017/taskflow-pro
-JWT_SECRET=your_jwt_secret_token_here
+JWT_SECRET=your_jwt_secret_here
 JWT_EXPIRES_IN=7d
 
-# App Domain Mappings
+# Frontend
 FRONTEND_URL=http://localhost:5173
-CLIENT_URL=http://localhost:5173
-BACKEND_URL=http://localhost:5000
 
-# Nodemailer / Brevo SMTP
+# Email Integration (e.g. Brevo/SendGrid/SMTP)
 EMAIL_HOST=smtp-relay.brevo.com
 EMAIL_PORT=587
-EMAIL_USER=your_smtp_username_here
-EMAIL_PASS=your_smtp_password_here
-EMAIL_FROM=noreply@yourdomain.com
+EMAIL_USER=your_email_user_here
+EMAIL_PASS=your_email_pass_here
 EMAIL_FROM_NAME=TaskFlow Pro
+EMAIL_FROM=noreply@yourdomain.com
 FEEDBACK_NOTIFY_EMAIL=admin@yourdomain.com
 SUPPORT_NOTIFY_EMAIL=admin@yourdomain.com
 
-# Google OAuth Credentials
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
+# Google Auth
+GOOGLE_CLIENT_ID=your_google_client_id_here
+GOOGLE_CLIENT_SECRET=your_google_client_secret_here
 GOOGLE_CALLBACK_URL=http://localhost:5000/api/auth/google/callback
 
-# GitHub OAuth Credentials
-GITHUB_CLIENT_ID=your_github_client_id
-GITHUB_CLIENT_SECRET=your_github_client_secret
+# GitHub Auth
+GITHUB_CLIENT_ID=your_github_client_id_here
+GITHUB_CLIENT_SECRET=your_github_client_secret_here
 GITHUB_CALLBACK_URL=http://localhost:5000/api/auth/github/callback
 
-# Cloudflare Workers AI Assistant
+# AI Assistant
 AI_PROVIDER=cloudflare
-CLOUDFLARE_ACCOUNT_ID=your_account_id
-CLOUDFLARE_API_TOKEN=your_workers_ai_token
+CLOUDFLARE_ACCOUNT_ID=your_cloudflare_account_id_here
+CLOUDFLARE_API_TOKEN=your_cloudflare_workers_ai_token_here
 CLOUDFLARE_AI_MODEL=@cf/meta/llama-3.1-8b-instruct
 CLOUDFLARE_AI_URL=https://api.cloudflare.com/client/v4/accounts
 
-# Rate Limiting
-AI_DAILY_MESSAGE_LIMIT=20
-AI_HOURLY_ACTION_LIMIT=5
+AI_DAILY_MESSAGE_LIMIT=100
+AI_HOURLY_ACTION_LIMIT=20
 ```
 
 ### Frontend Configuration (`frontend/.env`)
