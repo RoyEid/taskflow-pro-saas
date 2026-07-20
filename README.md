@@ -134,7 +134,6 @@ taskflow-pro/
 ### Backend Configuration (`backend/.env`)
 Create a `.env` file in the `backend/` directory using these placeholder patterns:
 ```env
-# Server settings
 # General
 PORT=5000
 NODE_ENV=development
