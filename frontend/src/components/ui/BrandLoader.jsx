@@ -14,7 +14,7 @@ export default function BrandLoader({
   const imgSize = dimensions[size] || dimensions.md;
 
   const containerClasses = fullScreen
-    ? "fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-50/95 dark:bg-slate-950/95 transition-colors duration-300"
+    ? "fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-50/80 backdrop-blur-xl dark:bg-slate-950/80 transition-colors duration-300"
     : "flex flex-col items-center justify-center p-8 transition-colors duration-300";
 
   return (
@@ -26,7 +26,7 @@ export default function BrandLoader({
       <div className="relative flex items-center justify-center">
         {/* Slow rotating glow ring around the icon */}
         <div
-          className="absolute rounded-full border border-indigo-500/30 border-t-indigo-600 dark:border-indigo-500/20 dark:border-t-indigo-400 animate-spin"
+          className="absolute rounded-full border border-amber-500/25 border-t-amber-500 dark:border-amber-400/20 dark:border-t-amber-400 animate-spin"
           style={{
             animationDuration: "3s",
             width: "calc(100% + 2rem)",
@@ -35,10 +35,10 @@ export default function BrandLoader({
         />
 
         {/* Soft pulse background glow */}
-        <div className="absolute inset-0 -z-10 rounded-full bg-indigo-500/10 blur-xl animate-pulse" />
+        <div className="absolute inset-0 -z-10 rounded-full bg-amber-500/15 blur-xl animate-pulse" />
 
         {/* Beautiful wrapped rounded brand logo with subtle borders and shadows */}
-        <div className={`flex shrink-0 items-center justify-center bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/80 shadow-md transition-all duration-300 animate-pulse ${imgSize}`}>
+        <div className={`tf-card flex shrink-0 items-center justify-center transition-all duration-300 animate-pulse ${imgSize}`}>
           <img
             src="/icon.png"
             alt="TaskFlow Pro"
@@ -49,7 +49,7 @@ export default function BrandLoader({
       </div>
 
       {text && (
-        <p className="mt-6 text-sm font-semibold tracking-wide text-slate-600 dark:text-slate-300 animate-pulse">
+        <p className="mt-6 text-sm font-semibold tracking-wide tf-text-secondary animate-pulse">
           {text}
         </p>
       )}

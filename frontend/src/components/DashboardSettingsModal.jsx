@@ -58,19 +58,19 @@ export default function DashboardSettingsModal({ open, onClose, onSave }) {
                 
                 {/* Default Date Range */}
                 <div>
-                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">
-                        Default Date Range
-                    </h3>
                     <AppSelect 
+                        label="Default date range"
+                        inputId="dashboard-default-date-range"
                         value={settings.dateRange}
                         onChange={(val) => setSettings(prev => ({ ...prev, dateRange: val }))}
                         options={dateRangeOptions}
+                        helpText="Used when the dashboard opens."
                     />
                 </div>
 
                 {/* Card Visibility */}
                 <div>
-                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">
+                    <h3 className="tf-title-card mb-3">
                         Widget Visibility
                     </h3>
                     <div className="space-y-3">
@@ -114,7 +114,7 @@ export default function DashboardSettingsModal({ open, onClose, onSave }) {
 
                 {/* Activity Display Limit */}
                 <div>
-                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">
+                    <h3 className="tf-title-card mb-3">
                         Activity Display
                     </h3>
                     <div className="flex gap-3">
@@ -122,10 +122,12 @@ export default function DashboardSettingsModal({ open, onClose, onSave }) {
                             <button
                                 key={num}
                                 onClick={() => setSettings(prev => ({ ...prev, activityCount: num }))}
-                                className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-colors ${
+                                type="button"
+                                aria-pressed={settings.activityCount === num}
+                                className={`tf-btn-base flex-1 ${
                                     settings.activityCount === num
-                                        ? "border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400"
-                                        : "border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
+                                        ? "tf-btn-secondary tf-text-accent border-[var(--tf-accent)]"
+                                        : "tf-btn-outline"
                                 }`}
                             >
                                 Latest {num}
@@ -135,18 +137,20 @@ export default function DashboardSettingsModal({ open, onClose, onSave }) {
                 </div>
 
                 {/* Actions */}
-                <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-100 dark:border-slate-800">
+                <div className="tf-bd flex items-center justify-end gap-2 border-t pt-4">
                     <button
+                        type="button"
                         onClick={onClose}
-                        className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
+                        className="tf-btn-base tf-btn-ghost"
                     >
                         Cancel
                     </button>
                     <button
+                        type="button"
                         onClick={handleSave}
-                        className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors"
+                        className="tf-btn-base tf-btn-primary"
                     >
-                        Save Settings
+                        Save settings
                     </button>
                 </div>
 
@@ -155,22 +159,30 @@ export default function DashboardSettingsModal({ open, onClose, onSave }) {
     );
 }
 
+/*
+ * A real checkbox stays in the markup and carries the state, so the
+ * control keeps its label association, keyboard behaviour and screen
+ * reader semantics. `.tf-switch` only draws it.
+ */
 function Toggle({ label, checked, onChange }) {
     return (
-        <label className="flex items-center justify-between cursor-pointer group">
-            <span className="text-sm text-slate-700 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
+        <label className="group flex cursor-pointer items-center justify-between gap-4">
+            <span className="tf-body-sm group-hover:tf-text transition-colors">
                 {label}
             </span>
-            <div className="relative">
-                <input 
-                    type="checkbox" 
-                    className="sr-only" 
-                    checked={checked} 
-                    onChange={onChange} 
-                />
-                <div className={`block w-10 h-6 rounded-full transition-colors ${checked ? 'bg-indigo-500' : 'bg-slate-200 dark:bg-slate-700'}`}></div>
-                <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${checked ? 'transform translate-x-4' : ''}`}></div>
-            </div>
+
+            <input
+                type="checkbox"
+                className="tf-sr-only peer"
+                checked={checked}
+                onChange={onChange}
+            />
+
+            <span
+                aria-hidden="true"
+                data-checked={checked ? "true" : "false"}
+                className="tf-switch peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--tf-accent)]"
+            />
         </label>
     );
 }

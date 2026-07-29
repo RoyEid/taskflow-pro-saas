@@ -14,7 +14,7 @@ import {
 import PageHeader from "../components/PageHeader";
 import Badge from "../components/Badge";
 import EmptyState from "../components/EmptyState";
-import LoadingState from "../components/LoadingState";
+import TableSkeleton from "../components/ui/TableSkeleton";
 import Modal from "../components/Modal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import AppSelect from "../components/ui/AppSelect";
@@ -294,46 +294,29 @@ function Members() {
 
   return (
     <DashboardLayout>
-      <header className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-            Workspace Members
-          </h2>
-
-          <p className="mt-1 text-[14px] text-slate-500 dark:text-slate-400">
-            Manage who has access to this workspace and their permissions.
-          </p>
-        </div>
-
-        {canManageRoles && (
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={openInviteModal}
-              className="flex h-10 items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-[13px] font-semibold text-white shadow-sm transition hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
-            >
-              <Plus size={16} />
-              Invite Member
-            </button>
-          </div>
-        )}
-      </header>
+      <PageHeader
+        title="Workspace Members"
+        subtitle="Manage who has access to this workspace and their permissions."
+        action={canManageRoles ? openInviteModal : undefined}
+        actionLabel={canManageRoles ? "Invite Member" : undefined}
+        actionIcon={canManageRoles ? <Plus size={16} /> : undefined}
+      />
 
       {error && (
-        <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
+        <div className="tf-alert tf-alert-error mb-5" role="alert">
           {error}
         </div>
       )}
 
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
-        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5 dark:border-slate-800/60">
-          <h3 className="flex items-center gap-2 text-[15px] font-bold text-slate-900 dark:text-white">
-            <Users size={18} className="text-slate-400" />
+      <div className="rounded-2xl tf-card-base overflow-hidden">
+        <div className="flex items-center justify-between tf-bd border-b px-6 py-5">
+          <h3 className="flex items-center gap-2 text-[15px] font-bold tf-text">
+            <Users size={18} className="tf-text-subtle" />
             People ({members.length})
           </h3>
         </div>
         {loading ? (
-          <LoadingState message="Loading members..." />
+          <TableSkeleton rows={6} cols={5} className="mx-4 my-4 w-[calc(100%-2rem)]" />
         ) : members.length === 0 ? (
           <div className="py-10">
             <EmptyState title="No members found" />
@@ -341,7 +324,7 @@ function Members() {
         ) : (
           <div>
             {/* Mobile Card Layout */}
-            <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+            <div className="md:hidden tf-bd divide-y">
               {members.map((member) => {
                 const memberId = getMemberId(member);
                 const memberUser = getMemberUser(member);
@@ -361,19 +344,19 @@ function Members() {
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-[13px] font-bold text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl tf-bg-3 text-[13px] font-bold tf-text-accent">
                           {memberName.charAt(0).toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[13px] font-semibold text-slate-900 dark:text-slate-100 truncate">
+                          <p className="text-[13px] font-semibold tf-text truncate">
                             {memberName}
                             {isCurrentUser && (
-                              <span className="ml-1 text-[11px] font-normal text-slate-500">
+                              <span className="ml-1 text-[11px] font-normal tf-text-subtle">
                                 (You)
                               </span>
                             )}
                           </p>
-                          <p className="text-[12px] text-slate-500 dark:text-slate-400 truncate">
+                          <p className="text-[12px] tf-text-muted truncate">
                             {memberEmail}
                           </p>
                         </div>
@@ -381,7 +364,7 @@ function Members() {
                       <Badge variant={member?.role || "member"} />
                     </div>
 
-                    <div className="flex items-center justify-between text-[12px] text-slate-500 dark:text-slate-400">
+                    <div className="flex items-center justify-between text-[12px] tf-text-muted">
                       <span>Joined {joinedLabel}</span>
                       {canManageRoles && member?.role !== "owner" && (
                         <button
@@ -389,7 +372,7 @@ function Members() {
                             e.stopPropagation();
                             setManageMember(member);
                           }}
-                          className="rounded-lg border border-slate-200 px-3 py-1.5 text-[12px] font-medium text-slate-650 dark:border-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                          className="tf-btn-base tf-btn-secondary tf-size-sm"
                         >
                           Manage
                         </button>
@@ -401,27 +384,14 @@ function Members() {
             </div>
 
             {/* Desktop Table Layout */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full min-w-[600px] border-collapse text-left">
+            <div className="tf-scroll-x hidden md:block">
+              <table className="tf-table min-w-[600px]">
                 <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50/50 dark:border-slate-800/60 dark:bg-slate-900/50">
-                    <th className="px-6 py-3.5 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
-                      User
-                    </th>
-
-                    <th className="px-6 py-3.5 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
-                      Role
-                    </th>
-
-                    <th className="px-6 py-3.5 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
-                      Joined
-                    </th>
-
-                    {canManageRoles && (
-                      <th className="px-6 py-3.5 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
-                        Actions
-                      </th>
-                    )}
+                  <tr>
+                    <th>User</th>
+                    <th>Role</th>
+                    <th>Joined</th>
+                    {canManageRoles && <th>Actions</th>}
                   </tr>
                 </thead>
 
@@ -441,25 +411,25 @@ function Members() {
                     return (
                       <tr
                         key={memberId || memberUserId || memberEmail}
-                        className="group/row border-b border-slate-100 transition-colors duration-300 last:border-b-0 hover:bg-slate-50 dark:border-slate-800/60 dark:hover:bg-slate-800/40"
+                        className="group/row"
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-[13px] font-bold text-indigo-600 transition-transform duration-300 group-hover/row:scale-110 dark:bg-indigo-500/20 dark:text-indigo-400">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl tf-bg-3 text-[13px] font-bold tf-text-accent transition-transform duration-300 group-hover/row:scale-110">
                               {memberName.charAt(0).toUpperCase()}
                             </div>
 
                             <div>
-                              <p className="text-[13px] font-semibold leading-tight text-slate-900 dark:text-slate-100">
+                              <p className="text-[13px] font-semibold leading-tight tf-text">
                                 {memberName}
                                 {isCurrentUser && (
-                                  <span className="ml-1 text-[11px] font-normal text-slate-500">
+                                  <span className="ml-1 text-[11px] font-normal tf-text-subtle">
                                     (You)
                                   </span>
                                 )}
                               </p>
 
-                              <p className="mt-0.5 flex items-center gap-1 text-[12px] text-slate-500 dark:text-slate-400">
+                              <p className="mt-0.5 flex items-center gap-1 text-[12px] tf-text-muted">
                                 <Mail size={10} />
                                 {memberEmail}
                               </p>
@@ -471,7 +441,7 @@ function Members() {
                           <Badge variant={member?.role || "member"} />
                         </td>
 
-                        <td className="px-6 py-4 text-[13px] text-slate-500 dark:text-slate-400">
+                        <td className="px-6 py-4 text-[13px] tf-text-muted">
                           {joinedLabel}
                         </td>
 
@@ -483,12 +453,12 @@ function Members() {
                                   e.stopPropagation();
                                   setManageMember(member);
                                 }}
-                                className="rounded-lg border border-slate-200 px-3 py-1.5 text-[12px] font-medium text-slate-650 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                                className="rounded-lg border border-slate-200 px-3 py-1.5 text-[12px] font-medium tf-text-secondary transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                               >
                                 Manage
                               </button>
                             ) : (
-                              <span className="text-[13px] font-medium text-slate-500 dark:text-slate-400">
+                              <span className="text-[13px] font-medium tf-text-muted">
                                 Owner
                               </span>
                             )}
@@ -507,7 +477,7 @@ function Members() {
       {canManageRoles && invitations.length > 0 && (
         <div className="mt-12">
           <div className="mb-6 flex items-center justify-between">
-            <h3 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
+            <h3 className="text-lg font-bold tracking-tight tf-text">
               Pending Invitations
             </h3>
             <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">
@@ -515,24 +485,24 @@ function Members() {
             </span>
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
-            <div className="overflow-x-auto">
-            <table className="w-full min-w-[600px] text-left">
+          <div className="overflow-hidden rounded-2xl tf-card">
+            <div className="tf-scroll-x">
+            <table className="tf-table min-w-[600px]">
               <thead className="bg-slate-50/50 dark:bg-slate-800/50">
                 <tr>
-                  <th className="px-6 py-4 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <th className="px-6 py-4 text-[11px] font-semibold uppercase tracking-wider tf-text-muted">
                     User
                   </th>
-                  <th className="px-6 py-4 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <th className="px-6 py-4 text-[11px] font-semibold uppercase tracking-wider tf-text-muted">
                     Role
                   </th>
-                  <th className="px-6 py-4 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <th className="px-6 py-4 text-[11px] font-semibold uppercase tracking-wider tf-text-muted">
                     Invited By
                   </th>
-                  <th className="px-6 py-4 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <th className="px-6 py-4 text-[11px] font-semibold uppercase tracking-wider tf-text-muted">
                     Sent
                   </th>
-                  <th className="px-6 py-4 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <th className="px-6 py-4 text-[11px] font-semibold uppercase tracking-wider tf-text-muted">
                     Actions
                   </th>
                 </tr>
@@ -555,10 +525,10 @@ function Members() {
                             {name.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <p className="text-[13px] font-semibold leading-tight text-slate-900 dark:text-slate-100">
+                            <p className="text-[13px] font-semibold leading-tight tf-text">
                               {name}
                             </p>
-                            <p className="mt-0.5 flex items-center gap-1 text-[12px] text-slate-500 dark:text-slate-400">
+                            <p className="mt-0.5 flex items-center gap-1 text-[12px] tf-text-muted">
                               <Mail size={10} />
                               {invite.invitedEmail}
                             </p>
@@ -568,10 +538,10 @@ function Members() {
                       <td className="px-6 py-4">
                         <Badge variant={invite.role || "member"} />
                       </td>
-                      <td className="px-6 py-4 text-[13px] text-slate-500 dark:text-slate-400">
+                      <td className="px-6 py-4 text-[13px] tf-text-muted">
                         {inviterName}
                       </td>
-                      <td className="px-6 py-4 text-[13px] text-slate-500 dark:text-slate-400">
+                      <td className="px-6 py-4 text-[13px] tf-text-muted">
                         {sentLabel}
                       </td>
                       <td className="px-6 py-4 text-[13px]">
@@ -615,25 +585,26 @@ function Members() {
 
       <Modal open={showModal} onClose={closeInviteModal} title="Send Invitation">
         {formError && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
+          <div className="tf-alert tf-alert-error mb-4" role="alert">
             {formError}
           </div>
         )}
 
         <form onSubmit={handleSave} className="space-y-5">
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-slate-700 dark:text-slate-300">
+            <label className="tf-label" htmlFor="invite-member-email">
               User Email *
             </label>
 
             <input
+              id="invite-member-email"
               type="email"
               value={form.email}
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, email: e.target.value }))
               }
               placeholder="user@example.com"
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] text-slate-800 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+              className="tf-field w-full"
               required
             />
 
@@ -664,7 +635,7 @@ function Members() {
               type="button"
               onClick={closeInviteModal}
               disabled={saving}
-              className="h-10 rounded-lg border border-slate-200 px-4 py-2 text-[13px] font-medium text-slate-600 transition-all duration-300 hover:bg-slate-50 active:scale-[0.98] dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
+              className="tf-btn-base tf-btn-secondary"
             >
               Cancel
             </button>
@@ -672,7 +643,7 @@ function Members() {
             <button
               type="submit"
               disabled={saving}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-70 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+              className="tf-btn-base tf-btn-primary disabled:opacity-70"
             >
               {saving ? "Sending..." : "Send Invitation"}
             </button>
@@ -688,10 +659,10 @@ function Members() {
                 {(getMemberUser(manageMember)?.name || "U").charAt(0).toUpperCase()}
               </div>
               <div>
-                <p className="text-[15px] font-semibold text-slate-900 dark:text-white">
+                <p className="text-[15px] font-semibold tf-text">
                   {getMemberUser(manageMember)?.name || "Unknown User"}
                 </p>
-                <p className="text-[13px] text-slate-500 dark:text-slate-400">
+                <p className="text-[13px] tf-text-muted">
                   {getMemberUser(manageMember)?.email || "No email"}
                 </p>
               </div>
@@ -701,25 +672,25 @@ function Members() {
             </div>
 
             <div>
-              <h4 className="mb-3 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <h4 className="mb-3 text-[12px] font-bold uppercase tracking-wider tf-text-muted">
                 Change Role
               </h4>
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => handleRoleChange(getMemberUserId(manageMember), "admin")}
                   disabled={roleUpdating || manageMember.role === "admin"}
-                  className="flex flex-col items-center justify-center rounded-xl border border-slate-200 bg-white p-4 transition-colors hover:border-indigo-500 hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-indigo-500 dark:hover:bg-indigo-900/20"
+                  className="flex flex-col items-center justify-center tf-card tf-card-hover rounded-xl p-4 hover:border-amber-500/40 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:border-amber-400/35"
                 >
                   <ShieldAlert size={20} className="mb-2 text-indigo-600 dark:text-indigo-400" />
-                  <span className="text-[13px] font-semibold text-slate-900 dark:text-white">Admin</span>
+                  <span className="text-[13px] font-semibold tf-text">Admin</span>
                 </button>
                 <button
                   onClick={() => handleRoleChange(getMemberUserId(manageMember), "member")}
                   disabled={roleUpdating || manageMember.role === "member"}
-                  className="flex flex-col items-center justify-center rounded-xl border border-slate-200 bg-white p-4 transition-colors hover:border-indigo-500 hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-indigo-500 dark:hover:bg-indigo-900/20"
+                  className="flex flex-col items-center justify-center tf-card tf-card-hover rounded-xl p-4 hover:border-amber-500/40 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:border-amber-400/35"
                 >
                   <Shield size={20} className="mb-2 text-indigo-600 dark:text-indigo-400" />
-                  <span className="text-[13px] font-semibold text-slate-900 dark:text-white">Member</span>
+                  <span className="text-[13px] font-semibold tf-text">Member</span>
                 </button>
               </div>
             </div>

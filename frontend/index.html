@@ -6,6 +6,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TaskFlow Pro — Project Management & Client Portal</title>
     <meta name="description" content="TaskFlow Pro is a modern project management and client portal SaaS. Manage projects, tasks, clients, and teams all in one place." />
+    <script>
+      // Apply the saved theme before first paint to avoid a flash of the wrong
+      // theme. Must stay in sync with getInitialIsDarkMode in ThemeProvider.
+      (function () {
+        var savedTheme = localStorage.getItem("theme");
+        var isDark =
+          savedTheme === "dark" ||
+          (savedTheme !== "light" &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+        if (isDark) {
+          document.documentElement.classList.add("dark");
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

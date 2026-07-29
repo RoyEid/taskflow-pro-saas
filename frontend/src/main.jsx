@@ -3,17 +3,26 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router";
 import "./index.css";
 import App from "./App.jsx";
+import MotionRoot from "./components/ui3d/MotionRoot.jsx";
+import ThemeProvider from "./context/ThemeProvider.jsx";
 import AuthProvider from "./context/AuthProvider.jsx";
 import WorkspaceProvider from "./context/WorkspaceProvider.jsx";
+import AssistantProvider from "./context/AssistantProvider.jsx";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
-      <AuthProvider>
-        <WorkspaceProvider>
-          <App />
-        </WorkspaceProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <MotionRoot>
+          <AuthProvider>
+            <WorkspaceProvider>
+              <AssistantProvider>
+                <App />
+              </AssistantProvider>
+            </WorkspaceProvider>
+          </AuthProvider>
+        </MotionRoot>
+      </ThemeProvider>
     </BrowserRouter>
   </StrictMode>
 );

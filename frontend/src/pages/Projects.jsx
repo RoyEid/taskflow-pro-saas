@@ -12,7 +12,7 @@ import { getClients } from "../services/clientService";
 import PageHeader from "../components/PageHeader";
 import Badge from "../components/Badge";
 import EmptyState from "../components/EmptyState";
-import LoadingState from "../components/LoadingState";
+import CardSkeleton from "../components/ui/CardSkeleton";
 import Modal from "../components/Modal";
 import AppSelect from "../components/ui/AppSelect";
 import AppDatePicker from "../components/ui/AppDatePicker";
@@ -353,59 +353,46 @@ function Projects() {
 
   return (
     <DashboardLayout>
-      <header className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-            Projects
-          </h2>
-
-          <p className="mt-1 text-[14px] text-slate-500 dark:text-slate-400">
-            Manage all active projects and initiatives in this workspace.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {!isMemberRole && (
-            <button
-              type="button"
-              onClick={openCreateModal}
-              className="flex h-10 items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-[13px] font-semibold text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-md active:translate-y-0 active:scale-[0.98] dark:bg-indigo-500 dark:hover:bg-indigo-600"
-            >
-              <Plus size={16} />
-              New Project
-            </button>
-          )}
-        </div>
-      </header>
+      <PageHeader
+        title="Projects"
+        subtitle="Manage all active projects and initiatives in this workspace."
+        action={!isMemberRole ? openCreateModal : undefined}
+        actionLabel={!isMemberRole ? "New Project" : undefined}
+        actionIcon={!isMemberRole ? <Plus size={16} /> : undefined}
+      />
 
       {error && (
-        <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
+        <div className="tf-alert tf-alert-error mb-5" role="alert">
           {error}
         </div>
       )}
 
       <div>
-        <div className="relative mb-6 w-full sm:max-w-sm transition-transform duration-300 hover:scale-[1.02] focus-within:scale-[1.02]">
+        <div className="relative mb-6 w-full sm:max-w-sm">
           <Search
             size={16}
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 tf-text-subtle"
           />
 
           <input
             type="text"
             placeholder="Search projects..."
+            aria-label="Search projects"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-4 text-[13px] text-slate-700 shadow-sm outline-none transition-all placeholder-slate-400 focus:border-slate-400 focus:ring-1 focus:ring-slate-400 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-slate-600 dark:focus:ring-slate-600"
+            className="tf-field tf-field-icon-start w-full"
           />
         </div>
 
         {loading ? (
-          <LoadingState message="Loading projects..." />
+          <CardSkeleton
+            count={6}
+            className="grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
+          />
         ) : filteredProjects.length === 0 ? (
           <div className="py-10">
             <EmptyState
-              icon={<FolderOpen size={24} className="text-slate-400" />}
+              icon={<FolderOpen size={24} className="tf-text-subtle" />}
               title={searchQuery ? "No projects found" : "No projects yet"}
               description={
                 searchQuery
@@ -429,7 +416,7 @@ function Projects() {
               return (
                 <div
                   key={projectId || projectName}
-                  className="group rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 transition-all duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-md dark:border-slate-800/80 dark:bg-slate-900 dark:hover:border-slate-700"
+                  className="group tf-card-interactive rounded-2xl p-4 sm:p-6"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex gap-2">
@@ -445,7 +432,7 @@ function Projects() {
                             e.preventDefault();
                             openEditModal(project);
                           }}
-                          className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-indigo-600 dark:hover:bg-slate-800 dark:hover:text-indigo-400"
+                          className="tf-btn-icon tf-size-sm"
                           aria-label={`Edit ${projectName}`}
                         >
                           <Edit2 size={14} />
@@ -457,7 +444,7 @@ function Projects() {
                             e.preventDefault();
                             openDeleteConfirm(project);
                           }}
-                          className="rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400"
+                          className="tf-btn-icon tf-size-sm tf-text-danger"
                           aria-label={`Delete ${projectName}`}
                         >
                           <Trash2 size={14} />
@@ -468,25 +455,25 @@ function Projects() {
 
                   <Link
                     to={projectId ? `/projects/${projectId}` : "/projects"}
-                    className="mt-5 block transition-colors hover:text-indigo-600 dark:hover:text-indigo-400"
+                    className="mt-5 block"
                   >
-                    <h3 className="line-clamp-1 text-[16px] font-bold text-slate-900 dark:text-white">
+                    <h3 className="line-clamp-1 text-[16px] font-bold tf-text group-hover:tf-text-accent transition-colors">
                       {projectName}
                     </h3>
                   </Link>
 
-                  <p className="mt-1.5 min-h-[40px] line-clamp-2 text-[13px] text-slate-500 dark:text-slate-400">
+                  <p className="mt-1.5 min-h-[40px] line-clamp-2 text-[13px] tf-text-muted">
                     {project?.description || "No description provided."}
                   </p>
 
-                  <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-4 text-[12px] dark:border-slate-800/60">
-                    <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                  <div className="mt-6 flex items-center justify-between tf-bd border-t pt-4 text-[12px]">
+                    <div className="flex items-center gap-1.5 tf-text-muted">
                       <Building2 size={14} />
                       <span className="font-medium">{projectClientName}</span>
                     </div>
 
                     {project?.dueDate && (
-                      <div className="flex items-center gap-1.5 rounded-md bg-slate-50 px-2 py-1 text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
+                      <div className="flex items-center gap-1.5 rounded-md tf-bg-3 px-2 py-1 tf-text-muted">
                         <Calendar size={12} />
 
                         <span className="font-medium">
@@ -511,24 +498,25 @@ function Projects() {
         title={editingProject ? "Edit Project" : "Create Project"}
       >
         {formError && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
+          <div className="tf-alert tf-alert-error mb-4" role="alert">
             {formError}
           </div>
         )}
 
         <form onSubmit={handleSave} className="space-y-5">
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-slate-700 dark:text-slate-300">
+            <label className="tf-label" htmlFor="project-name">
               Project Name *
             </label>
 
             <input
+              id="project-name"
               type="text"
               value={form.name}
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, name: e.target.value }))
               }
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] text-slate-800 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+              className="tf-field w-full"
               required
             />
           </div>
@@ -599,11 +587,12 @@ function Projects() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-slate-700 dark:text-slate-300">
+            <label className="tf-label" htmlFor="project-description">
               Description
             </label>
 
             <textarea
+              id="project-description"
               value={form.description}
               onChange={(e) =>
                 setForm((prev) => ({
@@ -612,7 +601,7 @@ function Projects() {
                 }))
               }
               rows={3}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-[13px] text-slate-800 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+              className="tf-field w-full"
             />
           </div>
 
@@ -621,7 +610,7 @@ function Projects() {
               type="button"
               onClick={closeModal}
               disabled={saving}
-              className="h-10 rounded-lg border border-slate-200 px-4 py-2 text-[13px] font-medium text-slate-600 transition-all duration-300 hover:bg-slate-50 active:scale-[0.98] dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
+              className="tf-btn-base tf-btn-secondary"
             >
               Cancel
             </button>
@@ -629,7 +618,7 @@ function Projects() {
             <button
               type="submit"
               disabled={saving}
-              className="h-10 rounded-lg bg-indigo-600 px-4 py-2 text-[13px] font-semibold text-white shadow-sm transition-all duration-300 hover:bg-indigo-700 hover:shadow-md active:scale-[0.98] disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+              className="tf-btn-base tf-btn-primary"
             >
               {saving ? "Saving..." : "Save Project"}
             </button>

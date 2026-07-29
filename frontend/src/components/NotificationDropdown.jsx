@@ -140,15 +140,14 @@ export default function NotificationDropdown({ onOpenSettings }) {
   return (
     <AppDropdown
       align="right"
-      positionClass="fixed sm:absolute"
-      showBackdropOnMobile={true}
-      className="!top-16 !mt-0 !left-4 !right-4 sm:!top-full sm:!mt-2 sm:!right-0 sm:!left-auto !w-[calc(100vw-32px)] sm:!w-[340px] max-w-[360px] sm:max-w-none mx-auto sm:mx-0"
+      widthClass="w-[min(21.25rem,calc(100vw-1.5rem))]"
+      className="!p-0"
       trigger={({ open }) => {
-        // We simulate a side-effect here safely via onChange pattern or let AppDropdown handle it if it supported it.
-        // Actually, since trigger renders often, we shouldn't fetch here directly.
-        // Let's rely on the onClick of the button instead to fetch if opening.
+        // Fetching happens on the trigger's click rather than during render,
+        // because the trigger re-renders on every open/close transition.
         return (
-          <div
+          <button
+            type="button"
             onClick={() => {
               if (!open) {
                 setTimeout(() => {
@@ -156,10 +155,11 @@ export default function NotificationDropdown({ onOpenSettings }) {
                 }, 0);
               }
             }}
-            className={`group relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border text-slate-500 transition-all duration-300 active:scale-[0.98] ${
+            aria-label="Notifications"
+            className={`group relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700 active:scale-[0.98] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-800/80 dark:hover:text-slate-200 ${
               open
-                ? "border-slate-300 bg-slate-50 dark:border-slate-600 dark:bg-slate-800 text-slate-800 dark:text-slate-200"
-                : "border-slate-200 bg-white hover:bg-slate-50 hover:shadow-sm dark:border-slate-700/80 dark:bg-slate-900 dark:hover:bg-slate-800"
+                ? "border-slate-300 bg-slate-50 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+                : ""
             }`}
           >
             <Bell
@@ -167,22 +167,24 @@ export default function NotificationDropdown({ onOpenSettings }) {
               className="transition-transform group-hover:animate-bell-wiggle"
             />
             {unreadCount > 0 && (
-              <span className="absolute top-[11px] right-[11px] flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500"></span>
+              <span className="absolute top-[8px] right-[8px] flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
               </span>
             )}
-          </div>
+          </button>
         );
       }}
     >
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800/80">
+      {({ close }) => (
+        <>
+      <div className="flex items-center justify-between px-4 py-3 tf-bd border-b">
         <div className="flex items-center gap-2">
-          <span className="text-[14px] font-bold text-slate-900 dark:text-white">
+          <span className="text-[14px] font-bold tf-text">
             Notifications
           </span>
           {unreadCount > 0 && (
-            <span className="bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400 text-[10px] font-bold px-1.5 py-0.5 rounded-md">
+            <span className="tf-badge tf-badge-accent">
               {unreadCount}
             </span>
           )}
@@ -192,7 +194,7 @@ export default function NotificationDropdown({ onOpenSettings }) {
             <button
               type="button"
               onClick={handleClearRead}
-              className="text-[11px] font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors mr-2"
+              className="tf-btn-link mr-2 text-[11px] tf-text-muted hover:tf-text"
             >
               Clear read
             </button>
@@ -201,23 +203,26 @@ export default function NotificationDropdown({ onOpenSettings }) {
             <button
               type="button"
               onClick={handleMarkAllRead}
-              className="text-[11px] font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors mr-1"
+              className="tf-btn-link mr-1 text-[11px]"
             >
               Mark all read
             </button>
           )}
           <button
             type="button"
-            onClick={onOpenSettings}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800"
+            onClick={() => {
+              close();
+              onOpenSettings?.();
+            }}
+            className="tf-btn-icon tf-size-sm"
             title="Manage notification settings"
           >
             <SettingsIcon size={16} />
           </button>
           <button
             type="button"
-            onClick={() => document.body.click()}
-            className="sm:hidden text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800"
+            onClick={close}
+            className="sm:hidden tf-btn-icon tf-size-sm"
             title="Close notifications"
           >
             <X size={16} />
@@ -227,18 +232,18 @@ export default function NotificationDropdown({ onOpenSettings }) {
 
       <div className="max-h-[60vh] sm:max-h-[360px] overflow-y-auto no-scrollbar py-1">
         {!initialLoaded || loading ? (
-          <div className="flex items-center justify-center p-8 text-slate-400">
+          <div className="tf-text-muted flex items-center justify-center p-8">
             <Loader2 className="w-5 h-5 animate-spin" />
           </div>
         ) : notifications.length === 0 ? (
           <div className="p-6 text-center">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-50 dark:bg-slate-800/50">
-              <Bell className="h-5 w-5 text-slate-400" />
+            <div className="tf-bg-3 mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full">
+              <Bell className="tf-text-muted h-5 w-5" />
             </div>
-            <h3 className="text-[13px] font-semibold text-slate-900 dark:text-white mb-1">
+            <h3 className="text-[13px] font-semibold tf-text mb-1">
               No notifications yet
             </h3>
-            <p className="text-[12px] text-slate-500 dark:text-slate-400">
+            <p className="text-[12px] tf-text-muted">
               You're all caught up!
             </p>
           </div>
@@ -254,7 +259,7 @@ export default function NotificationDropdown({ onOpenSettings }) {
                 }`}
               >
                 {!notif.read && (
-                  <div className="absolute left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                  <div className="absolute left-1.5 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-[var(--tf-accent)]" />
                 )}
                 
                 <div className={`mt-0.5 ml-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${color}`}>
@@ -262,15 +267,15 @@ export default function NotificationDropdown({ onOpenSettings }) {
                 </div>
 
                 <div className="ml-3 min-w-0 flex-1 pr-6">
-                  <p className={`text-[13px] font-medium leading-tight ${!notif.read ? 'text-slate-900 dark:text-white' : 'text-slate-700 dark:text-slate-300'}`}>
+                  <p className={`text-[13px] font-medium leading-tight ${!notif.read ? 'tf-text' : 'tf-text-secondary'}`}>
                     {notif.title}
                   </p>
                   
-                  <p className="mt-1 text-[12px] text-slate-500 dark:text-slate-400 leading-snug line-clamp-2">
+                  <p className="mt-1 text-[12px] tf-text-muted leading-snug line-clamp-2">
                     {notif.message}
                   </p>
 
-                  <p className="mt-1.5 text-[10px] text-slate-400 font-medium">
+                  <p className="tf-text-subtle mt-1.5 text-[10px] font-medium">
                     {formatTime(notif.createdAt)}
                   </p>
                 </div>
@@ -285,7 +290,7 @@ export default function NotificationDropdown({ onOpenSettings }) {
                       handleDelete(e, notif._id);
                     }
                   }}
-                  className="absolute right-3 top-3 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-md opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all cursor-pointer"
+                  className="tf-btn-icon tf-size-sm absolute right-2 top-2 hover:tf-text-danger opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                   title="Dismiss"
                 >
                   <Trash2 size={14} />
@@ -295,6 +300,8 @@ export default function NotificationDropdown({ onOpenSettings }) {
           })
         )}
       </div>
+        </>
+      )}
     </AppDropdown>
   );
 }

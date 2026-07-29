@@ -60,15 +60,15 @@ function Login() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setSuccess(messageParam);
       if (messageParam.toLowerCase().includes("could not be sent") && emailParam) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
+
         setUnverifiedEmail(emailParam.trim().toLowerCase());
       }
     }
 
     if (emailParam) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+
       setEmail(emailParam.trim().toLowerCase());
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+
       setEmailReadOnly(false);
     }
   }, [searchParams]);
@@ -163,7 +163,7 @@ function Login() {
       )}
 
       {error && (
-        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13.5px] text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
+        <div className="tf-alert tf-alert-error mb-6" role="alert">
           <div>{error}</div>
 
           {unverifiedEmail && (
@@ -190,7 +190,7 @@ function Login() {
 
       <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
         <div>
-          <label htmlFor="email" className="mb-1.5 sm:mb-2 block text-[13px] font-semibold text-slate-700 dark:text-slate-300">
+          <label htmlFor="email" className="tf-label">
             Email address
           </label>
 
@@ -204,31 +204,32 @@ function Login() {
             autoComplete="username"
             readOnly={emailReadOnly}
             onFocus={() => setEmailReadOnly(false)}
-            className="h-10 sm:h-11 w-full rounded-lg sm:rounded-xl border border-slate-200 bg-white/50 px-3.5 sm:px-4 text-[13.5px] sm:text-[14px] text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700/80 dark:bg-slate-900/50 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-indigo-500 dark:focus:bg-slate-900"
+            className="tf-field w-full"
           />
         </div>
 
         <div>
           <div className="mb-1.5 sm:mb-2 flex items-center justify-between">
-            <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300">
+            <label className="tf-label mb-0" htmlFor="login-password">
               Password
             </label>
 
             <Link
               to="/forgot-password"
-              className="text-[13px] font-semibold text-indigo-600 hover:text-indigo-700 hover:underline dark:text-indigo-400 dark:hover:text-indigo-300"
+              className="tf-btn-link"
             >
               Forgot password?
             </Link>
           </div>
 
           <PasswordInput
+            id="login-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Enter your password"
             required
             autoComplete="current-password"
-            inputClassName="h-10 sm:h-11 w-full rounded-lg sm:rounded-xl border border-slate-200 bg-white/50 pl-3.5 pr-11 text-[13.5px] sm:text-[14px] text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700/80 dark:bg-slate-900/50 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-indigo-500 dark:focus:bg-slate-900"
+            inputClassName="tf-field w-full pl-3.5 pr-11"
           />
         </div>
 
@@ -238,12 +239,12 @@ function Login() {
             type="checkbox"
             checked={rememberMe}
             onChange={(e) => setRememberMe(e.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-800 dark:checked:bg-indigo-500"
+            className="h-4 w-4 rounded tf-bd text-[var(--tf-accent)] focus:ring-[var(--tf-accent)]"
           />
 
           <label
             htmlFor="remember-me"
-            className="ml-2 block cursor-pointer text-[13px] text-slate-600 dark:text-slate-400"
+            className="ml-2 block cursor-pointer text-[13px] tf-text-secondary"
           >
             Remember me
           </label>
@@ -252,7 +253,7 @@ function Login() {
         <button
           type="submit"
           disabled={loading}
-          className="mt-4 sm:mt-6 flex h-10 sm:h-11 w-full items-center justify-center rounded-lg sm:rounded-xl bg-indigo-600 text-[13.5px] sm:text-[14px] font-semibold text-white transition-all hover:bg-indigo-700 hover:shadow-md hover:shadow-indigo-500/20 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+          className="tf-btn-base tf-btn-primary mt-4 sm:mt-6 w-full"
         >
           {loading ? (
             <span className="flex items-center gap-2">
@@ -268,11 +269,11 @@ function Login() {
       <div className="mt-8">
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-slate-200 dark:border-slate-700/80" />
+            <div className="w-full tf-bd border-t" />
           </div>
 
           <div className="relative flex justify-center text-[12px]">
-            <span className="bg-white px-3 text-slate-500 dark:bg-slate-900 dark:text-slate-400">
+            <span className="tf-bg-1 px-3 tf-text-muted">
               Or continue with
             </span>
           </div>
@@ -281,7 +282,7 @@ function Login() {
         <div className="mt-6 grid grid-cols-2 gap-3">
           <a
             href={`${API_URL}/auth/google`}
-            className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white text-[13px] font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700/50"
+            className="tf-btn-base tf-btn-secondary w-full"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24">
               <path
@@ -306,7 +307,7 @@ function Login() {
 
           <a
             href={`${API_URL}/auth/github`}
-            className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white text-[13px] font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700/50"
+            className="tf-btn-base tf-btn-secondary w-full"
           >
             <GitHubIcon />
             GitHub
@@ -314,11 +315,11 @@ function Login() {
         </div>
       </div>
 
-      <p className="mt-8 text-center text-[13px] text-slate-500 dark:text-slate-400">
+      <p className="mt-8 text-center text-[13px] tf-text-muted">
         Don&apos;t have an account?{" "}
         <Link
           to="/register"
-          className="font-semibold text-indigo-600 transition hover:text-indigo-700 hover:underline dark:text-indigo-400 dark:hover:text-indigo-300"
+          className="tf-btn-link"
         >
           Sign up
         </Link>

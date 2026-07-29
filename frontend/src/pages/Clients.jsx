@@ -11,7 +11,7 @@ import {
 import PageHeader from "../components/PageHeader";
 import Badge from "../components/Badge";
 import EmptyState from "../components/EmptyState";
-import LoadingState from "../components/LoadingState";
+import TableSkeleton from "../components/ui/TableSkeleton";
 import Modal from "../components/Modal";
 import { showSuccess, showError, confirmDelete } from "../utils/alerts";
 import { Search, Plus, Edit2, Trash2, Users } from "lucide-react";
@@ -263,61 +263,45 @@ function Clients() {
 
   return (
     <DashboardLayout>
-      <header className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-            Clients
-          </h2>
-
-          <p className="mt-1 text-[14px] text-slate-500 dark:text-slate-400">
-            Manage the clients you work with in this workspace.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {!isMemberRole && (
-            <button
-              type="button"
-              onClick={openCreateModal}
-              className="flex h-10 items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-[13px] font-semibold text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-md active:translate-y-0 active:scale-[0.98] dark:bg-indigo-500 dark:hover:bg-indigo-600"
-            >
-              <Plus size={16} />
-              New Client
-            </button>
-          )}
-        </div>
-      </header>
+      <PageHeader
+        title="Clients"
+        subtitle="Manage the clients you work with in this workspace."
+        action={!isMemberRole ? openCreateModal : undefined}
+        actionLabel={!isMemberRole ? "New Client" : undefined}
+        actionIcon={!isMemberRole ? <Plus size={16} /> : undefined}
+      />
 
       {error && (
-        <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
+        <div className="tf-alert tf-alert-error mb-5" role="alert">
           {error}
         </div>
       )}
 
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
-        <div className="flex flex-col gap-3 border-b border-slate-200 px-6 py-5 dark:border-slate-800/60 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative transition-transform duration-300 hover:scale-[1.02] focus-within:scale-[1.02]">
+      <div className="rounded-2xl tf-card-base overflow-hidden">
+        <div className="flex flex-col gap-3 tf-bd border-b px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative">
             <Search
               size={16}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 tf-text-subtle"
             />
 
             <input
               type="text"
               placeholder="Search clients..."
+              aria-label="Search clients"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-4 text-[13px] text-slate-700 shadow-sm outline-none transition-all placeholder-slate-400 focus:border-slate-400 focus:ring-1 focus:ring-slate-400 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-slate-600 dark:focus:ring-slate-600 sm:w-72"
+              className="tf-field tf-field-icon-start w-full sm:w-72"
             />
           </div>
         </div>
 
         {loading ? (
-          <LoadingState message="Loading clients..." />
+          <TableSkeleton rows={5} cols={4} className="mx-4 my-4 w-[calc(100%-2rem)]" />
         ) : filteredClients.length === 0 ? (
           <div className="py-10">
             <EmptyState
-              icon={<Users size={24} className="text-slate-400" />}
+              icon={<Users size={24} className="tf-text-subtle" />}
               title={searchQuery ? "No clients found" : "No clients yet"}
               description={
                 searchQuery
@@ -331,7 +315,7 @@ function Clients() {
         ) : (
           <div>
             {/* Mobile Card Layout */}
-            <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+            <div className="md:hidden tf-bd divide-y">
               {filteredClients.map((client) => {
                 const clientId = getClientId(client);
                 const clientName = client?.name || "Unnamed Client";
@@ -344,18 +328,18 @@ function Clients() {
                   <div
                     key={clientId || clientName}
                     onClick={() => !isMemberRole && openEditModal(client)}
-                    className="p-4 active:bg-slate-50 dark:active:bg-slate-800/40 cursor-pointer"
+                    className="p-4 active:tf-bg-3 cursor-pointer"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-[13px] font-bold text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl tf-bg-3 text-[13px] font-bold tf-text-accent">
                           {clientName.charAt(0).toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[13px] font-semibold text-slate-900 dark:text-slate-100 truncate">
+                          <p className="text-[13px] font-semibold tf-text truncate">
                             {clientName}
                           </p>
-                          <p className="text-[12px] text-slate-500 dark:text-slate-400 truncate">
+                          <p className="text-[12px] tf-text-muted truncate">
                             {clientEmail}
                           </p>
                         </div>
@@ -364,23 +348,23 @@ function Clients() {
                     </div>
 
                     <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 items-center justify-between text-[12px]">
-                      <div className="text-slate-500 dark:text-slate-400">
-                        <span className="font-medium text-slate-700 dark:text-slate-300">Company:</span> {client?.companyName || "—"}
+                      <div className="tf-text-muted">
+                        <span className="font-medium tf-text-secondary">Company:</span> {client?.companyName || "—"}
                       </div>
-                      <div className="text-slate-400">
+                      <div className="tf-text-subtle">
                         Added {createdDate}
                       </div>
                     </div>
 
                     {!isMemberRole && (
-                      <div className="mt-4 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-800/60 pt-3">
+                      <div className="mt-4 flex items-center justify-end gap-2 tf-bd border-t pt-3">
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             openEditModal(client);
                           }}
-                          className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-[12px] font-medium text-slate-600 dark:border-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-850"
+                          className="tf-btn-base tf-btn-secondary tf-size-sm"
                         >
                           <Edit2 size={12} /> Edit
                         </button>
@@ -390,7 +374,7 @@ function Clients() {
                             e.stopPropagation();
                             openDeleteConfirm(client);
                           }}
-                          className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-[12px] font-medium text-red-650 dark:bg-red-950/20 dark:border-red-900/30 dark:text-red-400"
+                          className="tf-btn-base tf-btn-danger tf-size-sm"
                         >
                           <Trash2 size={12} /> Deactivate
                         </button>
@@ -402,31 +386,15 @@ function Clients() {
             </div>
 
             {/* Desktop Table Layout */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full min-w-[800px] border-collapse text-left">
+            <div className="tf-scroll-x hidden md:block">
+              <table className="tf-table min-w-[800px]">
                 <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50/50 dark:border-slate-800/60 dark:bg-slate-900/50">
-                    <th className="px-6 py-3.5 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
-                      Client Info
-                    </th>
-
-                    <th className="px-6 py-3.5 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
-                      Company
-                    </th>
-
-                    <th className="px-6 py-3.5 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
-                      Status
-                    </th>
-
-                    <th className="px-6 py-3.5 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
-                      Added
-                    </th>
-
-                    {!isMemberRole && (
-                      <th className="px-6 py-3.5 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
-                        Actions
-                      </th>
-                    )}
+                  <tr>
+                    <th>Client Info</th>
+                    <th>Company</th>
+                    <th>Status</th>
+                    <th>Added</th>
+                    {!isMemberRole && <th>Actions</th>}
                   </tr>
                 </thead>
 
@@ -443,25 +411,25 @@ function Clients() {
                       <tr
                         key={clientId || clientName}
                         onClick={() => !isMemberRole && openEditModal(client)}
-                        className="group/row cursor-pointer border-b border-slate-100 transition-colors duration-300 last:border-b-0 hover:bg-slate-50 dark:border-slate-800/60 dark:hover:bg-slate-800/40"
+                        className="group/row cursor-pointer"
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-[13px] font-bold text-indigo-600 transition-transform duration-300 group-hover/row:scale-110 dark:bg-indigo-500/20 dark:text-indigo-400">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl tf-bg-3 text-[13px] font-bold tf-text-accent transition-transform duration-300 group-hover/row:scale-110">
                               {clientName.charAt(0).toUpperCase()}
                             </div>
 
                             <div>
-                              <p className="text-[13px] font-semibold leading-tight text-slate-900 dark:text-slate-100">
+                              <p className="text-[13px] font-semibold leading-tight tf-text">
                                 {clientName}
                               </p>
 
-                              <p className="mt-0.5 text-[12px] text-slate-500 dark:text-slate-400">
+                              <p className="mt-0.5 text-[12px] tf-text-muted">
                                 {clientEmail}
                               </p>
 
                               {client?.phone && (
-                                <p className="mt-0.5 text-[11px] text-slate-400">
+                                <p className="mt-0.5 text-[11px] tf-text-subtle">
                                   {client.phone}
                                 </p>
                               )}
@@ -469,7 +437,7 @@ function Clients() {
                           </div>
                         </td>
 
-                        <td className="px-6 py-4 text-[13px] font-medium text-slate-600 dark:text-slate-400">
+                        <td className="px-6 py-4 text-[13px] font-medium tf-text-secondary">
                           {client?.companyName || "—"}
                         </td>
 
@@ -477,7 +445,7 @@ function Clients() {
                           <Badge variant={client?.status || "active"} />
                         </td>
 
-                        <td className="px-6 py-4 text-[13px] text-slate-500 dark:text-slate-400">
+                        <td className="px-6 py-4 text-[13px] tf-text-muted">
                           {createdDate}
                         </td>
 
@@ -523,7 +491,7 @@ function Clients() {
         title={editingClient ? "Edit Client" : "Add Client"}
       >
         {formError && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
+          <div className="tf-alert tf-alert-error mb-4" role="alert">
             {formError}
           </div>
         )}
@@ -531,33 +499,35 @@ function Clients() {
         <form onSubmit={handleSave} className="space-y-5">
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <div>
-              <label className="mb-1.5 block text-[13px] font-medium text-slate-700 dark:text-slate-300">
+              <label className="tf-label" htmlFor="client-name">
                 Name *
               </label>
 
               <input
+                id="client-name"
                 type="text"
                 value={form.name}
                 onChange={(e) =>
                   setForm((prev) => ({ ...prev, name: e.target.value }))
                 }
-                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] text-slate-800 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                className="tf-field w-full"
                 required
               />
             </div>
 
             <div>
-              <label className="mb-1.5 block text-[13px] font-medium text-slate-700 dark:text-slate-300">
+              <label className="tf-label" htmlFor="client-email">
                 Email *
               </label>
 
               <input
+                id="client-email"
                 type="email"
                 value={form.email}
                 onChange={(e) =>
                   setForm((prev) => ({ ...prev, email: e.target.value }))
                 }
-                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] text-slate-800 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                className="tf-field w-full"
                 required
               />
             </div>
@@ -565,11 +535,12 @@ function Clients() {
 
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <div>
-              <label className="mb-1.5 block text-[13px] font-medium text-slate-700 dark:text-slate-300">
+              <label className="tf-label" htmlFor="client-company">
                 Company
               </label>
 
               <input
+                id="client-company"
                 type="text"
                 value={form.companyName}
                 onChange={(e) =>
@@ -578,38 +549,40 @@ function Clients() {
                     companyName: e.target.value,
                   }))
                 }
-                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] text-slate-800 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                className="tf-field w-full"
               />
             </div>
 
             <div>
-              <label className="mb-1.5 block text-[13px] font-medium text-slate-700 dark:text-slate-300">
+              <label className="tf-label" htmlFor="client-phone">
                 Phone
               </label>
 
               <input
+                id="client-phone"
                 type="text"
                 value={form.phone}
                 onChange={(e) =>
                   setForm((prev) => ({ ...prev, phone: e.target.value }))
                 }
-                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] text-slate-800 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                className="tf-field w-full"
               />
             </div>
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-slate-700 dark:text-slate-300">
+            <label className="tf-label" htmlFor="client-notes">
               Notes
             </label>
 
             <textarea
+              id="client-notes"
               value={form.notes}
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, notes: e.target.value }))
               }
               rows={3}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-[13px] text-slate-800 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+              className="tf-field w-full"
             />
           </div>
 
@@ -618,7 +591,7 @@ function Clients() {
               type="button"
               onClick={closeModal}
               disabled={saving}
-              className="h-10 rounded-lg border border-slate-200 px-4 py-2 text-[13px] font-medium text-slate-600 transition-all duration-300 hover:bg-slate-50 active:scale-[0.98] dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
+              className="tf-btn-base tf-btn-secondary"
             >
               Cancel
             </button>
@@ -626,7 +599,7 @@ function Clients() {
             <button
               type="submit"
               disabled={saving}
-              className="h-10 rounded-lg bg-indigo-600 px-4 py-2 text-[13px] font-semibold text-white shadow-sm transition-all duration-300 hover:bg-indigo-700 hover:shadow-md active:scale-[0.98] disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+              className="tf-btn-base tf-btn-primary"
             >
               {saving ? "Saving..." : "Save Client"}
             </button>

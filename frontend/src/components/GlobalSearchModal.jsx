@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
-import { Search, Loader2, Briefcase, CheckSquare, Users, User } from "lucide-react";
+import { Search, Loader2, Briefcase, CheckSquare, Users, User, X } from "lucide-react";
 import Modal from "./Modal";
 import useWorkspace from "../context/useWorkspace";
 import { searchWorkspace } from "../services/searchService";
@@ -138,22 +138,34 @@ export default function GlobalSearchModal({ open, onClose }) {
                 
                 {/* Search Input Area */}
                 <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none z-10">
                         <Search className="h-5 w-5 text-slate-400" />
                     </div>
                     <input
                         ref={inputRef}
                         type="text"
-                        className="block w-full pl-10 pr-10 py-3 border border-slate-200 dark:border-slate-700 rounded-xl leading-5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors sm:text-sm"
+                        style={{ paddingLeft: "2.75rem", paddingRight: "2.75rem" }}
+                        className="tf-field block w-full leading-5"
                         placeholder="Search projects, tasks, clients, members..."
+                        aria-label="Search TaskFlow Pro"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                     />
-                    {loading && (
-                        <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                    <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center gap-1.5">
+                        {loading && (
                             <Loader2 className="w-5 h-5 animate-spin text-indigo-500" />
-                        </div>
-                    )}
+                        )}
+                        {query && (
+                            <button
+                                type="button"
+                                onClick={() => setQuery("")}
+                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
+                                title="Clear search"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {/* Results Area */}
@@ -162,13 +174,13 @@ export default function GlobalSearchModal({ open, onClose }) {
                     className="max-h-[50vh] overflow-y-auto"
                 >
                     {!isSearching && (
-                        <div className="py-12 text-center text-slate-500 dark:text-slate-400">
+                        <div className="py-12 text-center tf-text-muted">
                             Start typing to search across your workspace.
                         </div>
                     )}
 
                     {isSearching && !loading && !hasResults && (
-                        <div className="py-12 text-center text-slate-500 dark:text-slate-400">
+                        <div className="py-12 text-center tf-text-muted">
                             No results found for "{query}".
                         </div>
                     )}
@@ -228,7 +240,7 @@ function ResultSection({ title, items, type, icon: Icon, flattenedResults, selec
 
     return (
         <div>
-            <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 ml-2">
+            <h3 className="text-xs font-semibold tf-text-muted uppercase tracking-wider mb-3 ml-2">
                 {title}
             </h3>
             <ul className="space-y-2">
@@ -259,7 +271,7 @@ function ResultSection({ title, items, type, icon: Icon, flattenedResults, selec
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between">
                                     <p className={`text-sm font-semibold truncate ${
-                                        isActive ? "text-indigo-900 dark:text-indigo-100" : "text-slate-900 dark:text-slate-100"
+                                        isActive ? "text-indigo-900 dark:text-indigo-100" : "tf-text"
                                     }`}>
                                         {item.title || item.name}
                                     </p>
@@ -268,7 +280,7 @@ function ResultSection({ title, items, type, icon: Icon, flattenedResults, selec
                                     </span>
                                 </div>
                                 <p className={`mt-1 text-xs truncate capitalize ${
-                                    isActive ? "text-indigo-600/80 dark:text-indigo-300/80" : "text-slate-500 dark:text-slate-400"
+                                    isActive ? "text-indigo-600/80 dark:text-indigo-300/80" : "tf-text-muted"
                                 }`}>
                                     {renderSubtitle(item)}
                                 </p>

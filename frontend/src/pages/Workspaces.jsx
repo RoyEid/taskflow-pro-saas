@@ -10,9 +10,10 @@ import {
 } from "../services/memberService";
 import Modal from "../components/Modal";
 import EmptyState from "../components/EmptyState";
-import LoadingState from "../components/LoadingState";
+import CardSkeleton from "../components/ui/CardSkeleton";
 import Badge from "../components/Badge";
 import AppDropdown from "../components/ui/AppDropdown";
+import PageHeader from "../components/PageHeader";
 import { showSuccess } from "../utils/alerts";
 import {
   Plus,
@@ -369,35 +370,35 @@ useEffect(() => {
 
     return (
       <div className="mb-10 space-y-4">
-        <h3 className="text-[16px] font-bold tracking-tight text-slate-900 dark:text-white">Pending Invitations</h3>
+        <h3 className="text-[16px] font-bold tracking-tight tf-text">Pending Invitations</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {pendingInvitations.map((invite) => (
-            <div key={invite._id} className="rounded-2xl border border-indigo-200 bg-indigo-50/50 p-5 shadow-sm dark:border-indigo-500/30 dark:bg-indigo-500/10">
+            <div key={invite._id} className="tf-card-base rounded-2xl p-5">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl tf-bg-3 tf-text-accent">
                   <Building size={20} />
                 </div>
                 <div className="truncate">
-                  <h4 className="truncate text-[14px] font-bold text-slate-900 dark:text-white">{invite.workspace?.name}</h4>
-                  <p className="truncate text-[12px] text-slate-500 dark:text-slate-400">Invited by {invite.invitedBy?.name}</p>
+                  <h4 className="truncate text-[14px] font-bold tf-text">{invite.workspace?.name}</h4>
+                  <p className="truncate text-[12px] tf-text-muted">Invited by {invite.invitedBy?.name}</p>
                 </div>
               </div>
               <div className="mt-4 flex items-center justify-between">
-                <span className="text-[12px] font-medium text-slate-600 dark:text-slate-300">Role: <strong className="capitalize">{invite.role}</strong></span>
-                {invite.expiresAt && <span className="text-[11px] text-slate-400 dark:text-slate-500">Expires: {new Date(invite.expiresAt).toLocaleDateString()}</span>}
+                <span className="text-[12px] font-medium tf-text-secondary">Role: <strong className="capitalize">{invite.role}</strong></span>
+                {invite.expiresAt && <span className="text-[11px] tf-text-subtle">Expires: {new Date(invite.expiresAt).toLocaleDateString()}</span>}
               </div>
               <div className="mt-5 flex gap-2">
                 <button
                   onClick={() => handleAcceptInvite(invite._id)}
                   disabled={invitationActionLoadingId === invite._id}
-                  className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 py-2 text-[13px] font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                  className="tf-btn-base tf-btn-primary flex-1"
                 >
                   <Check size={14} /> Accept
                 </button>
                 <button
                   onClick={() => handleDeclineInvite(invite._id)}
                   disabled={invitationActionLoadingId === invite._id}
-                  className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2 text-[13px] font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700/50"
+                  className="tf-btn-base tf-btn-secondary flex-1"
                 >
                   <X size={14} /> Decline
                 </button>
@@ -412,43 +413,31 @@ useEffect(() => {
   return (
     <DashboardLayout>
       {renderPendingInvitations()}
-      <header className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-            Workspaces
-          </h2>
-
-          <p className="mt-1 text-[14px] text-slate-500 dark:text-slate-400">
-            Manage your teams, clients, and projects in organized workspaces.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={openCreateModal}
-            className="flex h-10 items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-[13px] font-semibold text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-md active:translate-y-0 active:scale-[0.98] dark:bg-indigo-500 dark:hover:bg-indigo-600"
-          >
-            <Plus size={16} />
-            New Workspace
-          </button>
-        </div>
-      </header>
+      <PageHeader
+        title="Workspaces"
+        subtitle="Manage your teams, clients, and projects in organized workspaces."
+        action={openCreateModal}
+        actionLabel="New Workspace"
+        actionIcon={<Plus size={16} />}
+      />
 
       {error && (
-        <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
+        <div className="tf-alert tf-alert-error mb-5" role="alert">
           {error}
         </div>
       )}
 
       {loading ? (
         <div className="mt-10">
-          <LoadingState message="Loading workspaces..." />
+          <CardSkeleton
+            count={4}
+            className="grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
+          />
         </div>
       ) : workspaces.length === 0 ? (
         <div className="mt-10">
           <EmptyState
-            icon={<LayoutGrid size={24} className="text-slate-400" />}
+            icon={<LayoutGrid size={24} className="tf-text-subtle" />}
             title="No workspaces yet"
             description="Create your first workspace to start managing projects, clients, and tasks."
             action="Create Workspace"
@@ -476,14 +465,14 @@ useEffect(() => {
                     handleSelect(workspace);
                   }
                 }}
-                className={`group rounded-2xl bg-white p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-md dark:bg-slate-900 ${
+                className={`group tf-card-interactive rounded-2xl p-6 ${
                   isActive
-                    ? "border border-indigo-600 shadow-sm ring-1 ring-indigo-600/10 dark:border-indigo-500 dark:ring-indigo-500/20"
-                    : "cursor-pointer border border-slate-200 hover:border-slate-300 dark:border-slate-800 dark:hover:border-slate-700"
+                    ? "border-[var(--tf-accent)]"
+                    : ""
                 }`}
               >
                 <div className="flex items-start justify-between">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 text-lg font-bold text-white shadow-sm transition-transform duration-300 group-hover:scale-110">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl tf-bg-3 text-lg font-bold tf-text-accent transition-transform duration-300 group-hover:scale-110">
                     {workspaceName.charAt(0).toUpperCase()}
                   </div>
 
@@ -496,10 +485,8 @@ useEffect(() => {
                         trigger={({ open }) => (
                           <button
                             type="button"
-                            className={`rounded-lg p-1.5 transition-colors ${
-                              open
-                                ? "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white"
-                                : "text-slate-400 hover:bg-slate-50 hover:text-slate-600 dark:hover:bg-slate-800/50 dark:hover:text-slate-300"
+                            className={`tf-btn-icon tf-size-sm ${
+                              open ? "tf-bg-3" : ""
                             }`}
                           >
                             <MoreVertical size={16} />
@@ -515,21 +502,21 @@ useEffect(() => {
                           </AppDropdown.Item>
                         ) : (
                           <AppDropdown.Item disabled>
-                            <CheckCircle2 size={14} className="mr-2 text-indigo-600 dark:text-indigo-400" />
+                            <CheckCircle2 size={14} className="mr-2 tf-text-accent" />
                             Current workspace
                           </AppDropdown.Item>
                         )}
                         
                         {normalizedRole === "owner" && (
                           <>
-                            <div className="my-1 border-t border-slate-100 dark:border-slate-800/80" />
+                            <AppDropdown.Separator />
                             <AppDropdown.Item onClick={() => openEditModal(workspace)}>
                               <Edit2 size={14} className="mr-2" />
                               Edit Workspace
                             </AppDropdown.Item>
                             <AppDropdown.Item
                               onClick={() => openDeleteModal(workspace)}
-                              className="text-red-600 hover:!bg-red-50 dark:text-red-400 dark:hover:!bg-red-950/30"
+                              danger
                             >
                               <Trash2 size={14} className="mr-2" />
                               Delete Workspace
@@ -541,21 +528,21 @@ useEffect(() => {
                   </div>
                 </div>
 
-                <h3 className="mt-5 line-clamp-1 text-[16px] font-bold text-slate-900 dark:text-white">
+                <h3 className="mt-5 line-clamp-1 text-[16px] font-bold tf-text">
                   {workspaceName}
                 </h3>
 
                 {workspace?.description ? (
-                  <p className="mt-1.5 min-h-[40px] line-clamp-2 text-[13px] text-slate-500 dark:text-slate-400">
+                  <p className="mt-1.5 min-h-[40px] line-clamp-2 text-[13px] tf-text-muted">
                     {workspace.description}
                   </p>
                 ) : (
-                  <p className="mt-1.5 min-h-[40px] text-[13px] text-slate-400 dark:text-slate-500">
+                  <p className="mt-1.5 min-h-[40px] text-[13px] tf-text-subtle">
                     No description provided.
                   </p>
                 )}
 
-                <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-4 text-[12px] text-slate-400 dark:border-slate-800/60 dark:text-slate-500">
+                <div className="mt-6 flex items-center justify-between tf-bd border-t pt-4 text-[12px] tf-text-subtle">
                   <span>
                     Created {getSafeDateLabel(workspace?.createdAt)}
                   </span>
@@ -579,18 +566,19 @@ useEffect(() => {
         title="Create Workspace"
       >
         {formError && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
+          <div className="tf-alert tf-alert-error mb-4" role="alert">
             {formError}
           </div>
         )}
 
         <form onSubmit={handleCreate} className="space-y-5">
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-slate-700 dark:text-slate-300">
+            <label className="tf-label" htmlFor="create-workspace-name">
               Name *
             </label>
 
             <input
+              id="create-workspace-name"
               type="text"
               value={form.name}
               onChange={(e) =>
@@ -600,16 +588,17 @@ useEffect(() => {
                 }))
               }
               placeholder="My Workspace"
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] text-slate-800 shadow-sm outline-none transition placeholder-slate-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:placeholder-slate-500"
+              className="tf-field w-full"
             />
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-slate-700 dark:text-slate-300">
+            <label className="tf-label" htmlFor="create-workspace-description">
               Description
             </label>
 
             <textarea
+              id="create-workspace-description"
               value={form.description}
               onChange={(e) =>
                 setForm((previousForm) => ({
@@ -619,7 +608,7 @@ useEffect(() => {
               }
               placeholder="Optional description..."
               rows={3}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-[13px] text-slate-800 shadow-sm outline-none transition placeholder-slate-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:placeholder-slate-500"
+              className="tf-field w-full"
             />
           </div>
 
@@ -628,7 +617,7 @@ useEffect(() => {
               type="button"
               onClick={closeCreateModal}
               disabled={saving}
-              className="h-10 rounded-lg border border-slate-200 px-4 py-2 text-[13px] font-medium text-slate-600 transition-all duration-300 hover:bg-slate-50 active:scale-[0.98] disabled:opacity-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
+              className="tf-btn-base tf-btn-secondary"
             >
               Cancel
             </button>
@@ -636,7 +625,7 @@ useEffect(() => {
             <button
               type="submit"
               disabled={saving}
-              className="h-10 rounded-lg bg-indigo-600 px-4 py-2 text-[13px] font-semibold text-white shadow-sm transition-all duration-300 hover:bg-indigo-700 hover:shadow-md active:scale-[0.98] disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+              className="tf-btn-base tf-btn-primary"
             >
               {saving ? "Creating..." : "Create Workspace"}
             </button>
@@ -650,18 +639,19 @@ useEffect(() => {
         title="Edit Workspace"
       >
         {formError && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
+          <div className="tf-alert tf-alert-error mb-4" role="alert">
             {formError}
           </div>
         )}
 
         <form onSubmit={handleEdit} className="space-y-5">
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-slate-700 dark:text-slate-300">
+            <label className="tf-label" htmlFor="edit-workspace-name">
               Name *
             </label>
 
             <input
+              id="edit-workspace-name"
               type="text"
               value={form.name}
               onChange={(e) =>
@@ -671,16 +661,17 @@ useEffect(() => {
                 }))
               }
               placeholder="My Workspace"
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] text-slate-800 shadow-sm outline-none transition placeholder-slate-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:placeholder-slate-500"
+              className="tf-field w-full"
             />
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-slate-700 dark:text-slate-300">
+            <label className="tf-label" htmlFor="edit-workspace-description">
               Description
             </label>
 
             <textarea
+              id="edit-workspace-description"
               value={form.description}
               onChange={(e) =>
                 setForm((previousForm) => ({
@@ -690,7 +681,7 @@ useEffect(() => {
               }
               placeholder="Optional description..."
               rows={3}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-[13px] text-slate-800 shadow-sm outline-none transition placeholder-slate-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:placeholder-slate-500"
+              className="tf-field w-full"
             />
           </div>
 
@@ -699,7 +690,7 @@ useEffect(() => {
               type="button"
               onClick={closeEditModal}
               disabled={saving}
-              className="h-10 rounded-lg border border-slate-200 px-4 py-2 text-[13px] font-medium text-slate-600 transition-all duration-300 hover:bg-slate-50 active:scale-[0.98] disabled:opacity-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
+              className="tf-btn-base tf-btn-secondary"
             >
               Cancel
             </button>
@@ -707,7 +698,7 @@ useEffect(() => {
             <button
               type="submit"
               disabled={saving || !form.name.trim()}
-              className="h-10 rounded-lg bg-indigo-600 px-4 py-2 text-[13px] font-semibold text-white shadow-sm transition-all duration-300 hover:bg-indigo-700 hover:shadow-md active:scale-[0.98] disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+              className="tf-btn-base tf-btn-primary"
             >
               {saving ? "Saving..." : "Save Changes"}
             </button>
@@ -721,7 +712,7 @@ useEffect(() => {
         title="Delete Workspace"
       >
         {formError && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
+          <div className="tf-alert tf-alert-error mb-4" role="alert">
             {formError}
           </div>
         )}
@@ -737,16 +728,17 @@ useEffect(() => {
 
         <form onSubmit={handleDelete} className="space-y-5">
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-slate-700 dark:text-slate-300">
+            <label className="tf-label" htmlFor="delete-workspace-confirmation">
               Type <strong>{deletingWorkspace?.name}</strong> to confirm
             </label>
 
             <input
+              id="delete-workspace-confirmation"
               type="text"
               value={deleteConfirmText}
               onChange={(e) => setDeleteConfirmText(e.target.value)}
               placeholder={deletingWorkspace?.name}
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] text-slate-800 shadow-sm outline-none transition placeholder-slate-400 focus:border-red-500 focus:ring-1 focus:ring-red-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:placeholder-slate-500"
+              className="tf-field w-full focus:border-red-500 focus:ring-red-500"
             />
           </div>
 
@@ -755,7 +747,7 @@ useEffect(() => {
               type="button"
               onClick={closeDeleteModal}
               disabled={saving}
-              className="h-10 rounded-lg border border-slate-200 px-4 py-2 text-[13px] font-medium text-slate-600 transition-all duration-300 hover:bg-slate-50 active:scale-[0.98] disabled:opacity-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
+              className="tf-btn-base tf-btn-secondary"
             >
               Cancel
             </button>
@@ -763,7 +755,7 @@ useEffect(() => {
             <button
               type="submit"
               disabled={saving || deleteConfirmText !== deletingWorkspace?.name}
-              className="h-10 rounded-lg bg-red-600 px-4 py-2 text-[13px] font-semibold text-white shadow-sm transition-all duration-300 hover:bg-red-700 hover:shadow-md active:scale-[0.98] disabled:opacity-50 dark:bg-red-500 dark:hover:bg-red-600"
+              className="tf-btn-base tf-btn-danger"
             >
               {saving ? "Deleting..." : "Delete Workspace"}
             </button>

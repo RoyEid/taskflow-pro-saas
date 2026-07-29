@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 
 export default function PasswordInput({
@@ -21,16 +21,19 @@ export default function PasswordInput({
   const [showPassword, setShowPassword] = useState(false);
   // Starts as readOnly to prevent aggressive browser autofills on page load
   const [isReadOnly, setIsReadOnly] = useState(true);
+  const generatedId = useId();
+  const inputId = id || name || `password-${generatedId.replace(/:/g, "")}`;
+  const errorId = `${inputId}-error`;
 
   const defaultInputStyle =
-    "h-11 w-full rounded-xl border border-slate-200 bg-white/50 pl-4 pr-11 text-[14px] text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700/80 dark:bg-slate-900/50 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-indigo-500 dark:focus:bg-slate-900";
+    "tf-field w-full pl-4 pr-11";
 
   return (
     <div className={`w-full ${className}`}>
       {label && (
         <label
-          htmlFor={id || name}
-          className="mb-2 block text-[13px] font-semibold text-slate-700 dark:text-slate-300"
+          htmlFor={inputId}
+          className="tf-label"
         >
           {label}
         </label>
@@ -38,7 +41,7 @@ export default function PasswordInput({
 
       <div className="relative">
         <input
-          id={id || name}
+          id={inputId}
           name={name}
           type={showPassword ? "text" : "password"}
           value={value}
@@ -47,6 +50,8 @@ export default function PasswordInput({
           required={required}
           autoComplete={autoComplete}
           disabled={disabled}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
           // Starts as readOnly to block autofill, then switches on initial user interaction
           readOnly={props.readOnly !== undefined ? props.readOnly : isReadOnly}
           onFocus={(e) => {
@@ -70,14 +75,14 @@ export default function PasswordInput({
               ? "Password visible, click to hide"
               : "Password hidden, click to show"
           }
-          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300 disabled:opacity-50"
+          className="absolute right-0 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-[var(--tf-r-sm)] tf-text-muted transition hover:bg-[var(--tf-bg-3)] hover:text-[var(--tf-fg)] disabled:opacity-50 sm:right-1 sm:h-10 sm:w-10"
         >
           {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
         </button>
       </div>
 
       {error && (
-        <p className="mt-1.5 text-[12px] text-red-500 dark:text-red-400">
+        <p id={errorId} className="tf-msg-error mt-1.5">
           {error}
         </p>
       )}

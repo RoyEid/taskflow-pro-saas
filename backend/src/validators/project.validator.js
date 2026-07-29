@@ -20,27 +20,27 @@ export const createProjectValidator = [
         .withMessage("Project name must be between 2 and 100 characters"),
 
     body("description")
-        .optional()
+        .optional({ checkFalsy: true })
         .isLength({ max: 1000 })
         .withMessage("Description cannot be more than 1000 characters"),
 
     body("status")
-        .optional()
+        .optional({ checkFalsy: true })
         .isIn(["planning", "active", "on_hold", "completed", "cancelled"])
         .withMessage("Invalid project status"),
 
     body("priority")
-        .optional()
+        .optional({ checkFalsy: true })
         .isIn(["low", "medium", "high"])
         .withMessage("Invalid project priority"),
 
     body("startDate")
-        .optional({ nullable: true })
+        .optional({ checkFalsy: true, nullable: true })
         .isISO8601()
         .withMessage("Start date must be a valid date"),
 
     body("dueDate")
-        .optional({ nullable: true })
+        .optional({ checkFalsy: true, nullable: true })
         .isISO8601()
         .withMessage("Due date must be a valid date"),
 ];
@@ -55,37 +55,37 @@ export const updateProjectValidator = [
         .withMessage("Invalid project ID"),
 
     body("client")
-        .optional()
+        .optional({ checkFalsy: true })
         .isMongoId()
         .withMessage("Invalid client ID"),
 
     body("name")
-        .optional()
+        .optional({ checkFalsy: true })
         .isLength({ min: 2, max: 100 })
         .withMessage("Project name must be between 2 and 100 characters"),
 
     body("description")
-        .optional()
+        .optional({ checkFalsy: true })
         .isLength({ max: 1000 })
         .withMessage("Description cannot be more than 1000 characters"),
 
     body("status")
-        .optional()
+        .optional({ checkFalsy: true })
         .isIn(["planning", "active", "on_hold", "completed", "cancelled"])
         .withMessage("Invalid project status"),
 
     body("priority")
-        .optional()
+        .optional({ checkFalsy: true })
         .isIn(["low", "medium", "high"])
         .withMessage("Invalid project priority"),
 
     body("startDate")
-        .optional({ nullable: true })
+        .optional({ checkFalsy: true, nullable: true })
         .isISO8601()
         .withMessage("Start date must be a valid date"),
 
     body("dueDate")
-        .optional({ nullable: true })
+        .optional({ checkFalsy: true, nullable: true })
         .isISO8601()
         .withMessage("Due date must be a valid date"),
 ];

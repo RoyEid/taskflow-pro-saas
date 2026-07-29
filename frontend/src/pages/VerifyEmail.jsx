@@ -125,37 +125,42 @@ function VerifyEmail() {
   return (
     <AuthLayout title="Check your email" subtitle="Enter the 6-digit code sent to your email">
       <div className="mb-6 text-center">
-        <div className="inline-flex items-center justify-center rounded-full bg-indigo-50 px-3 py-1 text-[13px] font-medium text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
+        <div className="inline-flex items-center justify-center rounded-full tf-bg-3 px-3 py-1 text-[13px] font-medium tf-text-accent">
           {email}
         </div>
       </div>
 
       {warning && (
-        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13.5px] text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-400">
+        <div className="tf-alert tf-alert-warning mb-6" role="status">
           {warning}
         </div>
       )}
 
       {error && (
-        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13.5px] text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
+        <div className="tf-alert tf-alert-error mb-6" role="alert">
           {error}
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="flex justify-between gap-1 sm:gap-2.5">
+        <div
+          className="flex justify-between gap-1 sm:gap-2.5"
+          role="group"
+          aria-label="Six-digit verification code"
+        >
           {code.map((digit, index) => (
             <input
               key={index}
               ref={(el) => (inputRefs.current[index] = el)}
               type="text"
+              aria-label={`Verification code digit ${index + 1}`}
               inputMode="numeric"
               maxLength={1}
               value={digit}
               onChange={(e) => handleChange(index, e)}
               onKeyDown={(e) => handleKeyDown(index, e)}
               onPaste={handlePaste}
-              className="w-[14%] aspect-square max-w-[56px] min-w-[32px] rounded-lg sm:rounded-xl border border-slate-200 bg-white/50 text-center text-lg sm:text-xl font-bold text-slate-800 outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700/80 dark:bg-slate-900/50 dark:text-slate-200 dark:focus:border-indigo-500 dark:focus:bg-slate-900"
+              className="tf-field w-[14%] aspect-square max-w-[56px] min-w-[32px] text-center text-lg sm:text-xl font-bold"
             />
           ))}
         </div>
@@ -163,7 +168,7 @@ function VerifyEmail() {
         <button
           type="submit"
           disabled={loading || code.join("").length !== 6}
-          className="flex h-11 w-full items-center justify-center rounded-xl bg-indigo-600 text-[14px] font-semibold text-white transition-all hover:bg-indigo-700 hover:shadow-md hover:shadow-indigo-500/20 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+          className="tf-btn-base tf-btn-primary w-full"
         >
           {loading ? (
             <span className="flex items-center gap-2">
@@ -176,19 +181,19 @@ function VerifyEmail() {
         </button>
       </form>
 
-      <div className="mt-8 text-center text-[13px] text-slate-600 dark:text-slate-400">
+      <div className="mt-8 text-center text-[13px] tf-text-secondary">
         Didn't receive the code?{" "}
         <button
           onClick={handleResend}
           disabled={resending}
-          className="font-semibold text-indigo-600 transition hover:text-indigo-700 hover:underline disabled:opacity-50 dark:text-indigo-400 dark:hover:text-indigo-300"
+          className="tf-btn-link"
         >
           {resending ? "Sending..." : "Resend code"}
         </button>
       </div>
 
-      <p className="mt-4 text-center text-[13px] text-slate-500 dark:text-slate-400">
-        <Link to="/login" className="font-semibold text-slate-700 hover:text-slate-900 hover:underline dark:text-slate-300 dark:hover:text-white">
+      <p className="mt-4 text-center text-[13px] tf-text-muted">
+        <Link to="/login" className="tf-btn-link">
           Back to login
         </Link>
       </p>

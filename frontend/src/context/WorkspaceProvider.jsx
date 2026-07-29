@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import WorkspaceContext from "./WorkspaceContext";
-import { getWorkspaceById, getWorkspaces } from "../services/workspaceService";
+import { getWorkspaces } from "../services/workspaceService";
 import useAuth from "./useAuth";
 
 function getWorkspaceId(ws) {
@@ -19,6 +19,13 @@ function normalizeWorkspace(data) {
   if (data?._id || data?.id) return data;
 
   return null;
+}
+
+function normalizeWorkspaceList(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.workspaces)) return data.workspaces;
+  if (Array.isArray(data?.data?.workspaces)) return data.data.workspaces;
+  return [];
 }
 
 function WorkspaceProvider({ children }) {
@@ -58,7 +65,7 @@ function WorkspaceProvider({ children }) {
     setLoadingWorkspaces(true);
     try {
       const data = await getWorkspaces();
-      setWorkspaces(data || []);
+      setWorkspaces(normalizeWorkspaceList(data));
     } catch (err) {
       console.error("Failed to refresh workspaces:", err);
     } finally {
@@ -82,10 +89,14 @@ function WorkspaceProvider({ children }) {
       }
 
       setLoadingWorkspaces(true);
+      setLoading(true);
+
+      let userWorkspaces = [];
       try {
         const wsData = await getWorkspaces();
         if (!cancelled) {
-          setWorkspaces(wsData || []);
+          userWorkspaces = normalizeWorkspaceList(wsData);
+          setWorkspaces(userWorkspaces);
         }
       } catch (err) {
         console.error("Failed to load workspaces list:", err);
@@ -95,48 +106,54 @@ function WorkspaceProvider({ children }) {
         }
       }
 
+      if (cancelled) return;
+
       const savedWorkspaceId = localStorage.getItem("workspaceId");
 
-      if (!savedWorkspaceId) {
-        setWorkspaceState(null);
+      // Find if savedWorkspaceId matches one of the user's valid workspaces
+      const matchedWorkspace = userWorkspaces.find((w) => {
+        const id = w?._id || w?.id || w?.workspace?._id || w?.workspace?.id;
+        return id === savedWorkspaceId;
+      });
+
+      if (matchedWorkspace) {
+        const normalized = normalizeWorkspace(matchedWorkspace);
+        const normalizedId = getWorkspaceId(normalized) || savedWorkspaceId;
+        setWorkspaceState(normalized);
+        const role =
+          matchedWorkspace?.role ||
+          matchedWorkspace?.member?.role ||
+          matchedWorkspace?.membership?.role ||
+          matchedWorkspace?.userRole;
+        setMemberRole(role ? role.toLowerCase() : null);
+        localStorage.setItem("workspaceId", normalizedId);
         setLoading(false);
         return;
       }
 
-      setLoading(true);
-
-      try {
-        const response = await getWorkspaceById(savedWorkspaceId);
-
-        if (cancelled) return;
-
-        const normalizedWorkspace = normalizeWorkspace(response);
-        const normalizedWorkspaceId = getWorkspaceId(normalizedWorkspace);
-
-        if (normalizedWorkspace && normalizedWorkspaceId) {
-          setWorkspaceState(normalizedWorkspace);
-          
-          const role = response?.role || response?.member?.role || response?.data?.member?.role || response?.membership?.role || response?.userRole;
-          if (role) {
-            setMemberRole(role.toLowerCase());
-          }
-          
-          localStorage.setItem("workspaceId", normalizedWorkspaceId);
+      // If savedWorkspaceId is invalid/forbidden or missing, fallback to first available workspace
+      if (userWorkspaces.length > 0) {
+        const fallbackWs = normalizeWorkspace(userWorkspaces[0]);
+        const fallbackId = getWorkspaceId(fallbackWs);
+        setWorkspaceState(fallbackWs);
+        const role =
+          userWorkspaces[0]?.role ||
+          userWorkspaces[0]?.member?.role ||
+          userWorkspaces[0]?.membership?.role ||
+          userWorkspaces[0]?.userRole;
+        setMemberRole(role ? role.toLowerCase() : null);
+        if (fallbackId) {
+          localStorage.setItem("workspaceId", fallbackId);
         } else {
-          setWorkspaceState(null);
-          setMemberRole(null);
           localStorage.removeItem("workspaceId");
         }
-      } catch {
-        if (!cancelled) {
-          setWorkspaceState(null);
-          localStorage.removeItem("workspaceId");
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+      } else {
+        setWorkspaceState(null);
+        setMemberRole(null);
+        localStorage.removeItem("workspaceId");
       }
+
+      setLoading(false);
     }
 
     loadSavedWorkspace();

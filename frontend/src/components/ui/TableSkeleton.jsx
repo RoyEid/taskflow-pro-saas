@@ -1,31 +1,28 @@
-
-
+/*
+ * Matches the real table's header band, row height and column count, so a
+ * loading table occupies the same space as the loaded one.
+ */
 export default function TableSkeleton({ rows = 5, cols = 4, className = "" }) {
   return (
-    <div className={`w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800/80 dark:bg-slate-900 ${className}`}>
-      <div className="animate-pulse">
-        {/* Header skeleton */}
-        <div className="flex border-b border-slate-200 bg-slate-50/50 px-6 py-4 dark:border-slate-800/60 dark:bg-slate-900/50">
-          {Array.from({ length: cols }).map((_, cIdx) => (
-            <div
-              key={`thead-${cIdx}`}
-              className="h-4 flex-1 rounded bg-slate-200 dark:bg-slate-800 mr-4 last:mr-0"
-            />
-          ))}
-        </div>
-        {/* Rows skeleton */}
-        <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
-          {Array.from({ length: rows }).map((_, rIdx) => (
-            <div key={`trow-${rIdx}`} className="flex px-6 py-5">
-              {Array.from({ length: cols }).map((_, cIdx) => (
-                <div
-                  key={`tcol-${cIdx}`}
-                  className="h-4 flex-1 rounded bg-slate-200/60 dark:bg-slate-800/60 mr-4 last:mr-0"
-                />
-              ))}
-            </div>
-          ))}
-        </div>
+    <div className={`tf-table-wrap ${className}`} aria-hidden="true">
+      <div className="tf-bd tf-bg-2 flex gap-4 border-b px-4 py-3">
+        {Array.from({ length: cols }).map((_, index) => (
+          <div key={`thead-${index}`} className="tf-skeleton h-3 flex-1" />
+        ))}
+      </div>
+
+      <div>
+        {Array.from({ length: rows }).map((_, rowIndex) => (
+          <div
+            key={`trow-${rowIndex}`}
+            className="flex gap-4 border-b px-4 py-4 last:border-b-0"
+            style={{ borderColor: "var(--tf-border-subtle)" }}
+          >
+            {Array.from({ length: cols }).map((_, colIndex) => (
+              <div key={`tcol-${colIndex}`} className="tf-skeleton h-3.5 flex-1" />
+            ))}
+          </div>
+        ))}
       </div>
     </div>
   );

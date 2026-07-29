@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
+@import "./styles/design-system.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -34,11 +35,23 @@
   --color-violet-900: #1C1917;
   --color-violet-950: #0C0A09;
 
-  /* Slate overrides for true-black dark mode */
-  --color-slate-950: #0B0B0B;
-  --color-slate-900: #111111;
-  --color-slate-800: #1A1A1A;
+  /* Slate → warm neutral.
+     Only 700-950 were remapped before, so every remaining text-slate-300,
+     -400, -500 and -600 kept Tailwind's blue-grey and read cold against
+     the stone/amber palette. Remapping the whole ramp makes the leftover
+     one-off usages land on the same neutrals as the design tokens
+     (slate-200 == --tf-border, slate-50 == --tf-bg-2, and so on). */
+  --color-slate-50: #FAFAF9;
+  --color-slate-100: #F5F5F4;
+  --color-slate-200: #E5E3E0;
+  --color-slate-300: #D2CFCB;
+  --color-slate-400: #A8A29E;
+  --color-slate-500: #79736D;
+  --color-slate-600: #57534E;
   --color-slate-700: #2A2A2A;
+  --color-slate-800: #1A1A1A;
+  --color-slate-900: #111111;
+  --color-slate-950: #0B0B0B;
 }
 
 * {
@@ -83,15 +96,12 @@ body {
   margin: 0;
   min-height: 100%;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: #F4F4F2;
-  color: #111111;
+  /* Both themes read the same tokens, so the app shell can never disagree
+     with the components rendered inside it. */
+  background-color: var(--tf-bg-app);
+  color: var(--tf-fg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-.dark body {
-  background-color: #0B0B0B;
-  color: #F5F5F5;
 }
 
 /* Custom scrollbar */
@@ -105,20 +115,20 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #D6D3D1;
+  background: var(--tf-border-strong);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #A8A29E;
+  background: var(--tf-fg-subtle);
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: #2A2A2A;
+  background: var(--tf-border);
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: #3A3A3A;
+  background: var(--tf-border-strong);
 }
 
 /* Sidebar scrollbar */
@@ -127,12 +137,12 @@ body {
 }
 
 .sidebar-scroll::-webkit-scrollbar-thumb {
-  background: #D6D3D1;
+  background: var(--tf-border-strong);
   border-radius: 2px;
 }
 
 .dark .sidebar-scroll::-webkit-scrollbar-thumb {
-  background: #1A1A1A;
+  background: var(--tf-bg-2);
 }
 
 /* Kanban board custom scrollbar */
@@ -143,17 +153,17 @@ body {
   background: transparent;
 }
 .kanban-board-scroll::-webkit-scrollbar-thumb {
-  background: #D6D3D1;
+  background: var(--tf-border-strong);
   border-radius: 9999px;
 }
 .dark .kanban-board-scroll::-webkit-scrollbar-thumb {
-  background: #2A2A2A;
+  background: var(--tf-border);
 }
 .kanban-board-scroll::-webkit-scrollbar-thumb:hover {
-  background: #A8A29E;
+  background: var(--tf-fg-subtle);
 }
 .dark .kanban-board-scroll::-webkit-scrollbar-thumb:hover {
-  background: #3A3A3A;
+  background: var(--tf-border-strong);
 }
 
 /* DatePicker Styles */
@@ -162,59 +172,65 @@ body {
 }
 .react-datepicker {
   font-family: inherit !important;
-  border-color: #E5E5E0 !important;
+  background-color: var(--tf-bg-elevated) !important;
+  border-color: var(--tf-border) !important;
+  color: var(--tf-fg) !important;
+  border-radius: var(--tf-r-lg) !important;
+  box-shadow: var(--tf-shadow-elevated) !important;
+  overflow: hidden;
 }
 .react-datepicker__header {
-  background-color: #F4F4F2 !important;
-  border-bottom-color: #E5E5E0 !important;
+  background-color: var(--tf-bg-2) !important;
+  border-bottom-color: var(--tf-border) !important;
 }
 .react-datepicker__current-month, .react-datepicker-time__header, .react-datepicker-year-header {
-  color: #111111 !important;
+  color: var(--tf-fg) !important;
   font-weight: 600 !important;
   font-size: 0.9rem !important;
 }
 .react-datepicker__day-name, .react-datepicker__day, .react-datepicker__time-name {
-  color: #6B7280 !important;
+  color: var(--tf-fg-secondary) !important;
 }
 .react-datepicker__day:hover {
-  background-color: #EBEBEA !important;
+  background-color: var(--tf-bg-3) !important;
+  color: var(--tf-fg) !important;
 }
 .react-datepicker__day--selected, .react-datepicker__day--keyboard-selected {
-  background-color: #171717 !important;
-  color: #fff !important;
+  background-color: var(--tf-accent) !important;
+  color: var(--tf-fg-on-accent) !important;
 }
 
 /* Dark mode overwrites for DatePicker */
 .dark .react-datepicker {
-  background-color: #141414 !important;
-  border-color: #2A2A2A !important;
+  background-color: var(--tf-bg-elevated) !important;
+  border-color: var(--tf-border) !important;
 }
 .dark .react-datepicker__header {
-  background-color: #141414 !important;
-  border-bottom-color: #2A2A2A !important;
+  background-color: var(--tf-bg-2) !important;
+  border-bottom-color: var(--tf-border) !important;
 }
 .dark .react-datepicker__current-month {
-  color: #F5F5F5 !important;
+  color: var(--tf-fg) !important;
 }
 .dark .react-datepicker__day-name, .dark .react-datepicker__day {
-  color: #A3A3A3 !important;
+  color: var(--tf-fg-secondary) !important;
 }
 .dark .react-datepicker__day:hover {
-  background-color: #222222 !important;
-  color: #F5F5F5 !important;
+  background-color: var(--tf-bg-3) !important;
+  color: var(--tf-fg) !important;
 }
 .dark .react-datepicker__day--selected, .dark .react-datepicker__day--keyboard-selected {
-  background-color: #fff !important;
-  color: #111111 !important;
+  background-color: var(--tf-accent) !important;
+  color: var(--tf-fg-on-accent) !important;
 }
 .react-datepicker-popper[data-placement^=bottom] .react-datepicker__triangle::before, .react-datepicker-popper[data-placement^=bottom] .react-datepicker__triangle::after {
-  border-bottom-color: #F4F4F2 !important;
+  border-bottom-color: var(--tf-bg-2) !important;
 }
 .dark .react-datepicker-popper[data-placement^=bottom] .react-datepicker__triangle::before {
-  border-bottom-color: #2A2A2A !important;
+  border-bottom-color: var(--tf-border) !important;
 }
 .dark .react-datepicker-popper[data-placement^=bottom] .react-datepicker__triangle::after {
-  border-bottom-color: #141414 !important;
+  border-bottom-color: var(--tf-bg-2) !important;
 }
 
 /* Custom Animations */
@@ -255,38 +271,6 @@ body {
   opacity: 0;
 }
 
-@keyframes grow-up {
-  from {
-    transform: scaleY(0);
-  }
-  to {
-    transform: scaleY(1);
-  }
-}
-
-@keyframes nav-item-active-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(120, 113, 108, 0.3); }
-  70% { box-shadow: 0 0 0 6px rgba(120, 113, 108, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(120, 113, 108, 0); }
-}
-
-.animate-nav-pulse {
-  animation: nav-item-active-pulse 1s cubic-bezier(0.4, 0, 0.2, 1) 1;
-}
-
-@keyframes pulse-slow {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: .7; transform: scale(1.1); }
-}
-
-.animate-pulse-slow {
-  animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-.sidebar-tooltip {
-  @apply absolute left-full ml-4 top-1/2 -translate-y-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs font-semibold text-white shadow-lg opacity-0 -translate-x-2 pointer-events-none transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0 dark:bg-slate-100 dark:text-slate-900 z-50 whitespace-nowrap;
-}
-
 .stagger-1 { animation-delay: 50ms; }
 .stagger-2 { animation-delay: 100ms; }
 .stagger-3 { animation-delay: 150ms; }
@@ -309,4 +293,580 @@ input[type="password"]::-ms-clear {
 input[type="password"]::-webkit-contacts-auto-fill-button,
 input[type="password"]::-webkit-credentials-auto-fill-button {
   margin-right: 24px; /* avoid overlaying custom eye toggle */
+}
+
+/* ══ Landing page ═══════════════════════════════════════════════════
+   Scoped to the marketing page.
+   ═════════════════════════════════════════════════════════════════ */
+
+:root {
+  --lp-accent: #D97706;
+  --lp-accent-soft: #F59E0B;
+}
+
+.lp-container {
+  width: calc(100% - 32px);
+  margin-inline: auto;
+  max-width: 72rem;
+}
+
+@media (min-width: 640px) {
+  .lp-container {
+    width: 100%;
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+/* ── Typography ──────────────────────────────────────────────────── */
+
+.lp-display {
+  font-size: clamp(2.25rem, 1.2rem + 4.6vw, 4.5rem);
+  line-height: 1.04;
+  letter-spacing: -0.033em;
+  font-weight: 800;
+}
+
+.lp-h2 {
+  font-size: clamp(1.75rem, 1.1rem + 2.6vw, 3rem);
+  line-height: 1.1;
+  letter-spacing: -0.024em;
+  font-weight: 800;
+}
+
+.lp-lead {
+  font-size: clamp(1rem, 0.94rem + 0.3vw, 1.1875rem);
+  line-height: 1.65;
+}
+
+.lp-eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.lp-tabular {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+@keyframes nav-item-active-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(120, 113, 108, 0.3); }
+  70% { box-shadow: 0 0 0 6px rgba(120, 113, 108, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(120, 113, 108, 0); }
+}
+
+.animate-nav-pulse {
+  animation: nav-item-active-pulse 1s cubic-bezier(0.4, 0, 0.2, 1) 1;
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .7; transform: scale(1.1); }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.sidebar-tooltip {
+  @apply absolute left-full ml-4 top-1/2 -translate-y-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs font-semibold text-white shadow-lg opacity-0 -translate-x-2 pointer-events-none transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0 group-focus-within:opacity-100 group-focus-within:translate-x-0 dark:bg-slate-100 dark:text-slate-900 z-50 whitespace-nowrap;
+}
+
+/* ── Background texture ──────────────────────────────────────────── */
+
+.lp-dot-grid {
+  background-image: radial-gradient(circle at 1px 1px, rgba(87, 83, 78, 0.16) 1px, transparent 0);
+  background-size: 28px 28px;
+  -webkit-mask-image: radial-gradient(ellipse 78% 58% at 50% 0%, #000 38%, transparent 100%);
+  mask-image: radial-gradient(ellipse 78% 58% at 50% 0%, #000 38%, transparent 100%);
+}
+
+.dark .lp-dot-grid {
+  background-image: radial-gradient(circle at 1px 1px, rgba(214, 211, 209, 0.11) 1px, transparent 0);
+}
+
+.lp-glow {
+  background: radial-gradient(circle, rgba(217, 119, 6, 0.16) 0%, rgba(217, 119, 6, 0) 68%);
+}
+
+.dark .lp-glow {
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.13) 0%, rgba(245, 158, 11, 0) 68%);
+}
+
+.lp-accent-text {
+  background-image: linear-gradient(100deg, var(--lp-accent), var(--lp-accent-soft), var(--lp-accent));
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: lp-gradient-pan 7s linear infinite;
+}
+
+@keyframes lp-gradient-pan {
+  to { background-position: 220% center; }
+}
+
+/* ── Scroll reveal ───────────────────────────────────────────────── */
+
+.lp-reveal {
+  opacity: 0;
+  transform: translateY(26px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.lp-reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* ── Floating depth ──────────────────────────────────────────────── */
+
+@keyframes lp-float {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -13px, 0); }
+}
+
+.lp-float-a { animation: lp-float 7s ease-in-out infinite; }
+.lp-float-b { animation: lp-float 9.5s ease-in-out -3.2s infinite; }
+.lp-float-c { animation: lp-float 11.5s ease-in-out -5.6s infinite; }
+
+@keyframes lp-breathe {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.9; }
+}
+
+.lp-breathe { animation: lp-breathe 6s ease-in-out infinite; }
+
+/* ── 3D hero scene ───────────────────────────────────────────────────
+   The scene is authored at a fixed 940x600 stage and scaled per
+   breakpoint. Scaling one stage keeps the composition intact at every
+   width instead of reflowing absolutely-positioned layers. */
+
+/* Height reserves a little more than the stage so the perspective
+   rotation has room below the board without hitting the next block. */
+.lp-scene-frame {
+  --lp-scene-scale: 0.36;
+  height: calc(610px * var(--lp-scene-scale));
+  perspective: 1500px;
+}
+
+@media (min-width: 400px) { .lp-scene-frame { --lp-scene-scale: 0.42; } }
+@media (min-width: 480px) { .lp-scene-frame { --lp-scene-scale: 0.52; } }
+@media (min-width: 640px) { .lp-scene-frame { --lp-scene-scale: 0.64; } }
+@media (min-width: 768px) { .lp-scene-frame { --lp-scene-scale: 0.76; } }
+@media (min-width: 1024px) { .lp-scene-frame { --lp-scene-scale: 0.84; } }
+@media (min-width: 1280px) { .lp-scene-frame { --lp-scene-scale: 0.95; } }
+@media (min-width: 1536px) { .lp-scene-frame { --lp-scene-scale: 1; } }
+
+.lp-scene {
+  width: 940px;
+  height: 560px;
+  transform-origin: top center;
+  transform: scale(var(--lp-scene-scale));
+  transform-style: preserve-3d;
+}
+
+.lp-stage {
+  transform-style: preserve-3d;
+  transform: rotateX(var(--lp-rx, 13deg)) rotateY(var(--lp-ry, -15deg)) rotateZ(1.5deg);
+  transition: transform 350ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lp-layer {
+  transform-style: preserve-3d;
+}
+
+/* Depth shadow shared by every floating panel */
+.lp-panel-shadow {
+  box-shadow:
+    0 2px 6px rgba(12, 10, 9, 0.05),
+    0 12px 28px rgba(12, 10, 9, 0.09),
+    0 40px 80px rgba(12, 10, 9, 0.12);
+}
+
+.dark .lp-panel-shadow {
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.5),
+    0 12px 30px rgba(0, 0, 0, 0.55),
+    0 44px 90px rgba(0, 0, 0, 0.6);
+}
+
+/* Flatten the scene when the pointer can't drive it and space is tight */
+@media (max-width: 767px) {
+  .lp-stage {
+    transform: rotateX(8deg) rotateY(-7deg) rotateZ(0.5deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-reveal {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ══ TaskFlow depth system ═══════════════════════════════════════════
+   App-wide pseudo-3D language. Additive: existing classes keep working,
+   these compose on top. Two rules govern performance —
+     1. backdrop-filter only on bounded panels (shells, modals, cards),
+        never on repeated list rows.
+     2. animate transform/opacity only.
+   Escape hatches: html[data-perf="low"] drops blur and ambient motion;
+   the global prefers-reduced-motion block above already halts animation.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Surfaces ────────────────────────────────────────────────────── */
+
+.tf-surface {
+  background-color: rgb(var(--tf-surface) / var(--tf-surface-alpha));
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: var(--tf-elev-2), inset 0 1px 0 var(--tf-inner-top);
+}
+
+/* Opaque sibling for list rows and long scrollers, where blur is too
+   expensive to repeat. Same visual family, no compositing cost. */
+.tf-surface-solid {
+  background-color: var(--tf-surface-solid);
+  box-shadow: var(--tf-elev-1), inset 0 1px 0 var(--tf-inner-top);
+}
+
+.tf-elev-1 { box-shadow: var(--tf-elev-1), inset 0 1px 0 var(--tf-inner-top); }
+.tf-elev-2 { box-shadow: var(--tf-elev-2), inset 0 1px 0 var(--tf-inner-top); }
+.tf-elev-3 { box-shadow: var(--tf-elev-3), inset 0 1px 0 var(--tf-inner-top); }
+.tf-elev-4 { box-shadow: var(--tf-elev-4), inset 0 1px 0 var(--tf-inner-top); }
+
+/* Gradient hairline border — the edge that reads as a lit bevel. */
+.tf-hairline {
+  position: relative;
+}
+
+.tf-hairline::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(160deg, var(--tf-hairline-from), var(--tf-hairline-to));
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── Interaction ─────────────────────────────────────────────────── */
+
+.tf-lift {
+  transition: transform 0.32s var(--tf-ease), box-shadow 0.32s var(--tf-ease);
+  will-change: transform;
+}
+
+.tf-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--tf-elev-3), inset 0 1px 0 var(--tf-inner-top);
+}
+
+.tf-press:active {
+  transform: translateY(0) scale(0.985);
+}
+
+/* Button interaction: small lift, accent glow, springy press. Applied to
+   existing primary buttons so they gain depth without being rewritten. */
+.tf-btn {
+  transition:
+    transform 0.22s var(--tf-ease),
+    box-shadow 0.22s var(--tf-ease),
+    background-color 0.2s var(--tf-ease);
+  will-change: transform;
+}
+
+.tf-btn:hover {
+  transform: translateY(-1.5px);
+  box-shadow: var(--tf-elev-3), 0 0 20px rgb(var(--tf-accent-rgb) / 0.16);
+}
+
+.tf-btn:active {
+  transform: translateY(0) scale(0.975);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tf-btn:hover,
+  .tf-btn:active {
+    transform: none;
+  }
+}
+
+.tf-glow-ring {
+  box-shadow:
+    var(--tf-elev-2),
+    inset 0 1px 0 var(--tf-inner-top),
+    0 0 0 1px rgb(var(--tf-accent-rgb) / 0.28),
+    0 0 24px rgb(var(--tf-accent-rgb) / 0.18);
+}
+
+/* Sheen that sweeps a surface on hover */
+.tf-sheen {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.tf-sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.28) 50%,
+    transparent 60%
+  );
+  transform: translateX(-120%);
+  transition: transform 0.75s var(--tf-ease);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.dark .tf-sheen::after {
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.09) 50%,
+    transparent 60%
+  );
+}
+
+.tf-sheen:hover::after {
+  transform: translateX(120%);
+}
+
+/* ── 3D scene helpers ────────────────────────────────────────────── */
+
+.tf-scene {
+  perspective: 1200px;
+}
+
+/* Rotation driven by CSS custom properties so JS can write them inside
+   a rAF frame without triggering React re-renders. */
+.tf-tilt {
+  transform:
+    rotateX(var(--tf-rx, 0deg))
+    rotateY(var(--tf-ry, 0deg))
+    translateZ(0);
+  transform-style: preserve-3d;
+  transition: transform 0.4s var(--tf-ease);
+}
+
+.tf-tilt-layer {
+  transform: translateZ(var(--tf-z, 0px));
+  transform-style: preserve-3d;
+}
+
+/* ── Ambient background ──────────────────────────────────────────── */
+
+.tf-ambient {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.tf-aurora {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  opacity: 0.5;
+  will-change: transform;
+}
+
+.dark .tf-aurora { opacity: 0.38; }
+
+@keyframes tf-drift-a {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  33% { transform: translate3d(4%, -6%, 0) scale(1.08); }
+  66% { transform: translate3d(-3%, 4%, 0) scale(0.96); }
+}
+
+@keyframes tf-drift-b {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-5%, 5%, 0) scale(1.1); }
+}
+
+.tf-drift-a { animation: tf-drift-a 26s ease-in-out infinite; }
+.tf-drift-b { animation: tf-drift-b 34s ease-in-out infinite; }
+
+.tf-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(120, 113, 108, 0.09) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(120, 113, 108, 0.09) 1px, transparent 1px);
+  background-size: 64px 64px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 25%, transparent 85%);
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 25%, transparent 85%);
+}
+
+.dark .tf-grid {
+  background-image:
+    linear-gradient(to right, rgba(214, 211, 209, 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(214, 211, 209, 0.055) 1px, transparent 1px);
+}
+
+/* Film grain, inline so it costs no request */
+.tf-noise {
+  position: absolute;
+  inset: 0;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.dark .tf-noise { opacity: 0.05; }
+
+/* ── Forms ───────────────────────────────────────────────────────── */
+
+.tf-input {
+  background-color: rgb(var(--tf-surface) / 0.55);
+  box-shadow: inset 0 1px 2px rgba(12, 10, 9, 0.05);
+  transition:
+    border-color 0.22s var(--tf-ease),
+    box-shadow 0.22s var(--tf-ease),
+    background-color 0.22s var(--tf-ease);
+}
+
+.dark .tf-input {
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.tf-input:focus,
+.tf-input:focus-visible {
+  outline: none;
+  background-color: rgb(var(--tf-surface) / 0.9);
+  box-shadow:
+    inset 0 1px 2px rgba(12, 10, 9, 0.04),
+    0 0 0 3px rgb(var(--tf-accent-rgb) / 0.14),
+    0 0 18px rgb(var(--tf-accent-rgb) / 0.1);
+}
+
+/* Drop-in card surface.
+
+   Uses a real border rather than the ::before hairline, so it can be
+   swapped into existing markup without forcing position:relative and
+   disturbing absolutely-positioned children. */
+.tf-card {
+  background-color: var(--tf-bg-1);
+  border: 1px solid var(--tf-border);
+  box-shadow: var(--tf-shadow-sm), inset 0 1px 0 var(--tf-inner-top);
+}
+
+.dark .tf-card {
+  border-color: var(--tf-border);
+}
+
+.tf-card-hover {
+  transition: transform 0.32s var(--tf-ease), box-shadow 0.32s var(--tf-ease);
+}
+
+.tf-card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--tf-elev-3), inset 0 1px 0 var(--tf-inner-top);
+}
+
+/* Table/list rows: elevation on hover with no blur, so long lists stay
+   cheap to composite. */
+.tf-row {
+  transition: transform 0.22s var(--tf-ease), box-shadow 0.22s var(--tf-ease),
+    background-color 0.22s var(--tf-ease);
+}
+
+.tf-row:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--tf-elev-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tf-card-hover:hover,
+  .tf-row:hover {
+    transform: none;
+  }
+}
+
+/* Skeleton shimmer — a travelling highlight rather than a flat pulse */
+@keyframes tf-shimmer {
+  100% { transform: translateX(100%); }
+}
+
+.tf-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.tf-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.55),
+    transparent
+  );
+  animation: tf-shimmer 1.8s infinite;
+}
+
+.dark .tf-shimmer::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.07),
+    transparent
+  );
+}
+
+/* Native controls inherit the accent instead of the browser's blue */
+input[type="checkbox"],
+input[type="radio"],
+input[type="range"],
+progress {
+  accent-color: var(--tf-accent);
+}
+
+/* ── Capability downgrades ───────────────────────────────────────── */
+
+html[data-perf="low"] .tf-surface,
+html[data-perf="low"] .tf-ambient,
+html[data-perf="low"] .tf-glass-strong {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+html[data-perf="low"] .tf-surface {
+  background-color: var(--tf-surface-solid);
+}
+
+html[data-perf="low"] .tf-aurora,
+html[data-perf="low"] .tf-noise {
+  display: none;
+}
+
+html[data-perf="low"] .tf-drift-a,
+html[data-perf="low"] .tf-drift-b {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tf-lift:hover { transform: none; }
+  .tf-sheen::after { display: none; }
+  .tf-tilt { transform: none !important; }
 }

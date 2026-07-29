@@ -15,6 +15,7 @@ import EmptyState from "../components/EmptyState";
 import AppSelect from "../components/ui/AppSelect";
 import { showSuccess, showError } from "../utils/alerts";
 import ConfirmDialog from "../components/ConfirmDialog";
+import PageHeader from "../components/PageHeader";
 import {
   ArrowLeft,
   MessageSquare,
@@ -337,30 +338,31 @@ const assigneeName = task?.assignee?.name || "Unassigned";
 
   return (
     <DashboardLayout>
-      <div className="mb-6">
-        <Link
-          to={`/tasks?project=${projectId}`}
-          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-500 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
-        >
-          <ArrowLeft size={14} />
-          Back to Kanban Board
-        </Link>
-      </div>
+      <PageHeader
+        breadcrumb={
+          <Link
+            to={`/tasks?project=${projectId}`}
+            className="inline-flex items-center gap-1.5 transition hover:text-[var(--tf-fg)]"
+          >
+            <ArrowLeft size={14} />
+            Kanban Board
+          </Link>
+        }
+        title={taskTitle}
+        subtitle={`Assigned to ${assigneeName}`}
+        toolbar={
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={task?.status || "todo"} />
+            <Badge variant={task?.priority || "medium"} dot />
+          </div>
+        }
+      />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-7 shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
-            <div className="mb-4 flex items-center gap-2">
-              <Badge variant={task?.status || "todo"} />
-              <Badge variant={task?.priority || "medium"} dot />
-            </div>
-
-            <h1 className="mb-2 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-              {taskTitle}
-            </h1>
-
+          <div className="tf-card rounded-2xl p-4 sm:p-7">
             <div className="mt-8">
-              <h3 className="mb-3 flex items-center gap-2 text-[14px] font-semibold text-slate-900 dark:text-white">
+              <h3 className="mb-3 flex items-center gap-2 text-[14px] font-semibold tf-text">
                 <AlignLeft size={16} className="text-slate-400" />
                 Description
               </h3>
@@ -371,8 +373,8 @@ const assigneeName = task?.assignee?.name || "Unassigned";
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-7 shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
-            <h3 className="mb-6 flex items-center gap-2 text-[15px] font-bold text-slate-900 dark:text-white">
+          <div className="tf-card rounded-2xl p-4 sm:p-7">
+            <h3 className="mb-6 flex items-center gap-2 text-[15px] font-bold tf-text">
               <MessageSquare size={16} className="text-slate-400" />
               Discussion
             </h3>
@@ -400,7 +402,7 @@ const assigneeName = task?.assignee?.name || "Unassigned";
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
                           <div className="flex items-baseline gap-2.5">
-                            <span className="text-[14px] font-semibold text-slate-900 dark:text-white">
+                            <span className="text-[14px] font-semibold tf-text">
                               {authorName}
                             </span>
 
@@ -444,15 +446,16 @@ const assigneeName = task?.assignee?.name || "Unassigned";
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
                   placeholder="Add a comment..."
+                  aria-label="Add a comment"
                   rows={2}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-[14px] text-slate-800 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                  className="tf-field w-full"
                 />
 
                 <div className="flex justify-end">
                   <button
                     type="submit"
                     disabled={!commentText.trim() || savingComment}
-                    className="rounded-lg bg-indigo-600 px-5 py-2.5 text-[13px] font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                    className="tf-btn-base tf-btn-primary"
                   >
                     {savingComment ? "Posting..." : "Comment"}
                   </button>
@@ -463,15 +466,15 @@ const assigneeName = task?.assignee?.name || "Unassigned";
         </div>
 
         <div className="space-y-6">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-7 shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
-            <h3 className="mb-5 flex items-center gap-2 text-[15px] font-bold text-slate-900 dark:text-white">
+          <div className="tf-card rounded-2xl p-4 sm:p-7">
+            <h3 className="mb-5 flex items-center gap-2 text-[15px] font-bold tf-text">
               <LayoutList size={16} className="text-slate-400" />
               Task Details
             </h3>
 
             <div className="space-y-5 text-[13px]">
               <div>
-                <p className="mb-1.5 font-medium text-slate-500 dark:text-slate-400">
+                <p className="mb-1.5 font-medium tf-text-muted">
                   Status
                 </p>
 
@@ -491,7 +494,7 @@ const assigneeName = task?.assignee?.name || "Unassigned";
               </div>
 
               <div>
-                <p className="mb-1.5 font-medium text-slate-500 dark:text-slate-400">
+                <p className="mb-1.5 font-medium tf-text-muted">
                   Priority
                 </p>
 
@@ -510,7 +513,7 @@ const assigneeName = task?.assignee?.name || "Unassigned";
               </div>
 
               <div>
-                <p className="mb-1.5 font-medium text-slate-500 dark:text-slate-400">
+                <p className="mb-1.5 font-medium tf-text-muted">
                   Assignee
                 </p>
 
@@ -534,7 +537,7 @@ const assigneeName = task?.assignee?.name || "Unassigned";
               </div>
 
               <div>
-                <p className="mb-1.5 flex items-center gap-1.5 font-medium text-slate-500 dark:text-slate-400">
+                <p className="mb-1.5 flex items-center gap-1.5 font-medium tf-text-muted">
                   <Calendar size={14} />
                   Due Date
                 </p>

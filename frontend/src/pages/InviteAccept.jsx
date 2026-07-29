@@ -77,15 +77,15 @@ function InviteAccept() {
   if (error) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4 dark:bg-slate-950">
-        <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-lg dark:bg-slate-900">
+        <div className="w-full max-w-md tf-card tf-elev-4 rounded-2xl p-8 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-500">
             <X size={24} />
           </div>
-          <h2 className="mb-2 text-xl font-bold text-slate-900 dark:text-white">Invitation Unavailable</h2>
-          <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">{error}</p>
+          <h2 className="mb-2 text-xl font-bold tf-text">Invitation Unavailable</h2>
+          <p className="mb-6 text-sm tf-text-muted">{error}</p>
           <Link
             to="/"
-            className="inline-flex h-10 items-center justify-center rounded-lg bg-indigo-600 px-6 text-sm font-medium text-white transition-colors hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+            className="tf-btn-base tf-btn-primary"
           >
             Go to Homepage
           </Link>
@@ -127,20 +127,20 @@ function InviteAccept() {
 
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4 dark:bg-slate-950">
-        <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-lg dark:bg-slate-900">
+        <div className="w-full max-w-md tf-card tf-elev-4 rounded-2xl p-8 text-center">
           <div className={`mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full ${config.iconBg}`}>
             {config.icon}
           </div>
-          <h2 className="mb-2 text-xl font-bold text-slate-900 dark:text-white">{config.title}</h2>
+          <h2 className="mb-2 text-xl font-bold tf-text">{config.title}</h2>
           {invite.workspace?.name && (
-            <p className="mb-2 text-sm text-slate-600 dark:text-slate-300">
+            <p className="mb-2 text-sm tf-text-secondary">
               Workspace: <strong>{invite.workspace.name}</strong>
             </p>
           )}
-          <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">{config.message}</p>
+          <p className="mb-6 text-sm tf-text-muted">{config.message}</p>
           <Link
             to={user ? "/dashboard" : "/login"}
-            className="inline-flex h-10 items-center justify-center rounded-lg bg-indigo-600 px-6 text-sm font-medium text-white transition-colors hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+            className="tf-btn-base tf-btn-primary"
           >
             {user ? "Go to Dashboard" : "Go to Login"}
           </Link>
@@ -153,22 +153,22 @@ function InviteAccept() {
   if (!user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4 dark:bg-slate-950">
-        <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-lg dark:bg-slate-900">
+        <div className="w-full max-w-md tf-card tf-elev-4 rounded-2xl p-8 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400">
             <Building size={24} />
           </div>
-          <h2 className="mb-2 text-xl font-bold text-slate-900 dark:text-white">Sign in required</h2>
-          <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">
+          <h2 className="mb-2 text-xl font-bold tf-text">Sign in required</h2>
+          <p className="mb-6 text-sm tf-text-muted">
             You've been invited to join <strong>{invite?.workspace?.name}</strong> by <strong>{invite?.invitedBy?.name}</strong>.
             Please sign in with the invited email to accept this invitation.
           </p>
           <Link
             to={`/login?redirect=/invitations/${token}`}
-            className="inline-flex w-full h-10 items-center justify-center rounded-lg bg-indigo-600 px-6 text-sm font-medium text-white transition-colors hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+            className="tf-btn-base tf-btn-primary w-full"
           >
             Sign In to Accept
           </Link>
-          <p className="mt-4 text-xs text-slate-500 dark:text-slate-400">
+          <p className="mt-4 text-xs tf-text-muted">
             Don't have an account? <Link to="/register" className="text-indigo-600 hover:underline dark:text-indigo-400">Register here</Link>
           </p>
         </div>
@@ -182,17 +182,17 @@ function InviteAccept() {
   if (currentUserId !== invitedUserId && user.email !== invite?.invitedEmail) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4 dark:bg-slate-950">
-        <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-lg dark:bg-slate-900">
+        <div className="w-full max-w-md tf-card tf-elev-4 rounded-2xl p-8 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-500">
             <Mail size={24} />
           </div>
-          <h2 className="mb-2 text-xl font-bold text-slate-900 dark:text-white">Account Mismatch</h2>
-          <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">
+          <h2 className="mb-2 text-xl font-bold tf-text">Account Mismatch</h2>
+          <p className="mb-6 text-sm tf-text-muted">
             This invitation was sent to <strong>{invite?.invitedEmail}</strong>, but you are logged in as <strong>{user.email}</strong>.
           </p>
           <Link
             to="/settings"
-            className="inline-flex w-full h-10 items-center justify-center rounded-lg bg-indigo-600 px-6 text-sm font-medium text-white transition-colors hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+            className="tf-btn-base tf-btn-primary w-full"
           >
             Go to Settings / Sign Out
           </Link>
@@ -203,24 +203,24 @@ function InviteAccept() {
 
   // Valid pending invite — show accept/decline
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4 dark:bg-slate-950">
-      <div className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900">
-        <div className="border-b border-slate-100 bg-slate-50/50 px-8 py-6 text-center dark:border-slate-800 dark:bg-slate-800/20">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400">
+    <div className="flex min-h-screen items-center justify-center tf-bg-app p-4">
+      <div className="w-full max-w-md overflow-hidden tf-card-elevated rounded-2xl">
+        <div className="tf-bd border-b tf-bg-2 px-8 py-6 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl tf-bg-3 tf-text-accent">
             <Building size={32} />
           </div>
-          <h2 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">
+          <h2 className="mt-4 text-xl font-bold tf-text">
             Workspace Invitation
           </h2>
         </div>
         
         <div className="p-8 text-center">
-          <p className="text-[15px] leading-relaxed text-slate-600 dark:text-slate-300">
-            <strong>{invite?.invitedBy?.name}</strong> has invited you to join the workspace <strong className="text-slate-900 dark:text-white">{invite?.workspace?.name}</strong> as a <strong>{invite?.role}</strong>.
+          <p className="text-[15px] leading-relaxed tf-text-secondary">
+            <strong>{invite?.invitedBy?.name}</strong> has invited you to join the workspace <strong className="tf-text">{invite?.workspace?.name}</strong> as a <strong>{invite?.role}</strong>.
           </p>
 
           {invite?.expiresAt && (
-            <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
+            <p className="mt-3 flex items-center justify-center gap-1.5 text-xs tf-text-subtle">
               <Clock size={12} />
               Expires {new Date(invite.expiresAt).toLocaleDateString()}
             </p>
@@ -230,7 +230,7 @@ function InviteAccept() {
             <button
               onClick={handleAccept}
               disabled={actionLoading}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 font-semibold text-white transition-colors hover:bg-indigo-700 disabled:opacity-70 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+              className="tf-btn-base tf-btn-primary w-full disabled:opacity-70"
             >
               <Check size={18} />
               {actionLoading ? "Processing..." : "Accept Invitation"}
@@ -238,7 +238,7 @@ function InviteAccept() {
             <button
               onClick={handleDecline}
               disabled={actionLoading}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-70 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700/50"
+              className="tf-btn-base tf-btn-secondary w-full"
             >
               <X size={18} />
               Decline

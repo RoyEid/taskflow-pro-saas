@@ -22,22 +22,22 @@ export const createTaskValidator = [
         .withMessage("Description cannot be more than 2000 characters"),
 
     body("assignee")
-        .optional({ nullable: true })
+        .optional({ checkFalsy: true, nullable: true })
         .isMongoId()
         .withMessage("Invalid assigned user ID"),
 
     body("status")
-        .optional()
+        .optional({ checkFalsy: true })
         .isIn(["todo", "in_progress", "review", "done", "blocked"])
         .withMessage("Invalid task status"),
 
     body("priority")
-        .optional()
+        .optional({ checkFalsy: true })
         .isIn(["low", "medium", "high"])
         .withMessage("Invalid task priority"),
 
     body("dueDate")
-        .optional({ nullable: true })
+        .optional({ checkFalsy: true, nullable: true })
         .isISO8601()
         .withMessage("Due date must be a valid date"),
 ];
@@ -56,32 +56,32 @@ export const updateTaskValidator = [
         .withMessage("Invalid task ID"),
 
     body("title")
-        .optional()
+        .optional({ checkFalsy: true })
         .isLength({ min: 2, max: 150 })
         .withMessage("Task title must be between 2 and 150 characters"),
 
     body("description")
-        .optional()
+        .optional({ checkFalsy: true })
         .isLength({ max: 2000 })
         .withMessage("Description cannot be more than 2000 characters"),
 
     body("assignee")
-        .optional({ nullable: true })
+        .optional({ checkFalsy: true, nullable: true })
         .isMongoId()
         .withMessage("Invalid assigned user ID"),
 
     body("status")
-        .optional()
+        .optional({ checkFalsy: true })
         .isIn(["todo", "in_progress", "review", "done", "blocked"])
         .withMessage("Invalid task status"),
 
     body("priority")
-        .optional()
+        .optional({ checkFalsy: true })
         .isIn(["low", "medium", "high"])
         .withMessage("Invalid task priority"),
 
     body("dueDate")
-        .optional({ nullable: true })
+        .optional({ checkFalsy: true, nullable: true })
         .isISO8601()
         .withMessage("Due date must be a valid date"),
 ];

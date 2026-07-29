@@ -26,7 +26,7 @@ export const serializeUser = (user) => {
     };
 };
 
-export const serializeMessage = (message) => {
+export const serializeMessage = (message, senderOverride = null) => {
     const isDeleted = Boolean(message.isDeleted);
     const messageType = message.messageType || "text";
     const fileUrl = isDeleted ? null : message.fileUrl;
@@ -34,7 +34,7 @@ export const serializeMessage = (message) => {
     return {
         _id: message._id,
         workspace: message.workspace,
-        sender: message.sender,
+        sender: senderOverride || message.sender,
         type: messageType,
         messageType,
         content: isDeleted ? DELETED_CHAT_MESSAGE_CONTENT : message.content,
@@ -307,9 +307,11 @@ export const getWorkspaceUnreadCount = async (workspaceId, userId) => {
     return state?.unreadCount || 0;
 };
 
-export const markWorkspaceChatRead = async (workspaceId, userId) => {
-    const readAt = new Date();
-
+export const markWorkspaceMessageReceiptsRead = async (
+    workspaceId,
+    userId,
+    readAt = new Date()
+) => {
     await Message.updateMany(
         {
             workspace: workspaceId,
@@ -327,6 +329,14 @@ export const markWorkspaceChatRead = async (workspaceId, userId) => {
         }
     );
 
+    return readAt;
+};
+
+export const resetWorkspaceChatUnread = async (
+    workspaceId,
+    userId,
+    readAt = new Date()
+) => {
     await ChatReadState.findOneAndUpdate(
         {
             workspace: workspaceId,
@@ -346,6 +356,20 @@ export const markWorkspaceChatRead = async (workspaceId, userId) => {
             setDefaultsOnInsert: true,
         }
     );
+
+    return {
+        readAt,
+        unreadCount: 0,
+    };
+};
+
+export const markWorkspaceChatRead = async (workspaceId, userId) => {
+    const readAt = new Date();
+
+    await Promise.all([
+        markWorkspaceMessageReceiptsRead(workspaceId, userId, readAt),
+        resetWorkspaceChatUnread(workspaceId, userId, readAt),
+    ]);
 
     return {
         readAt,
@@ -385,8 +409,6 @@ export const createWorkspaceMessage = async ({
             readAt,
         })),
     });
-
-    await message.populate("sender", "name email avatar");
 
     return message;
 };

@@ -57,18 +57,18 @@ export default function WorkspaceSwitcher({
           isOpen && !isCompact ? "bg-slate-200/50 dark:bg-slate-800/50" : ""
         }`}
       >
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-xs font-bold text-white shadow-sm transition-transform duration-300 dark:bg-indigo-500">
+        <div className="tf-btn-base tf-btn-primary w-9 shrink-0 text-xs font-bold transition-transform">
           {workspace?.name ? workspace.name.charAt(0).toUpperCase() : "TF"}
         </div>
 
         {!isCompact && (
-          <div className="flex min-w-0 flex-1 items-center justify-between gap-2 pr-8 lg:pr-0">
+          <div className="flex min-w-0 flex-1 items-center justify-between gap-1.5 pr-1">
             <div className="flex min-w-0 flex-1 flex-col items-start">
-              <span className="w-full truncate text-left text-[13px] font-bold text-slate-900 dark:text-white">
+              <span className="w-full truncate text-left text-[13px] font-bold tf-text">
                 TaskFlow Pro
               </span>
               <div className="flex w-full items-center gap-1.5">
-                <span className="truncate text-left text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                <span className="truncate text-left text-[11px] font-medium tf-text-muted">
                   {workspace ? workspace.name : "Select Workspace"}
                 </span>
                 {memberRole && getRoleBadge(memberRole)}
@@ -86,8 +86,8 @@ export default function WorkspaceSwitcher({
 
       {/* Inline Panel */}
       {isOpen && !isCompact && (
-        <div className="mt-2 flex w-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/50">
-          <div className="px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+        <div className="mt-2 flex w-full flex-col overflow-hidden rounded-xl tf-card/50">
+          <div className="px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider tf-text-subtle">
             Switch Workspace
           </div>
           
@@ -106,7 +106,7 @@ export default function WorkspaceSwitcher({
                     className={`flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 ${
                       isActive 
                         ? "bg-indigo-50 text-indigo-900 dark:bg-indigo-500/10 dark:text-indigo-200" 
-                        : "text-slate-700 dark:text-slate-300"
+                        : "tf-text-secondary"
                     }`}
                   >
                     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-slate-200 text-[10px] font-bold text-slate-600 dark:bg-slate-700 dark:text-slate-300">
@@ -117,7 +117,7 @@ export default function WorkspaceSwitcher({
                         {ws.name}
                       </span>
                       {role && (
-                        <span className="mt-0.5 text-[10px] font-medium capitalize text-slate-500 dark:text-slate-400">
+                        <span className="mt-0.5 text-[10px] font-medium capitalize tf-text-muted">
                           {role}
                         </span>
                       )}
@@ -129,7 +129,7 @@ export default function WorkspaceSwitcher({
                 );
               })
             ) : (
-              <div className="px-3 py-4 text-center text-[12px] text-slate-500 dark:text-slate-400">
+              <div className="px-3 py-4 text-center text-[12px] tf-text-muted">
                 No workspaces found
               </div>
             )}

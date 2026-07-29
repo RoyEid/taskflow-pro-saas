@@ -6,7 +6,9 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
+import { AnimatePresence, motion } from "motion/react";
 import {
   Archive,
   Check,
@@ -19,18 +21,27 @@ import {
   Mic,
   MessageSquare,
   Paperclip,
+  Pause,
+  Play,
   Search,
   Send,
   Smile,
   Square,
   Trash2,
   UserPlus,
+  Users,
   Wifi,
   WifiOff,
   X,
+  AlertCircle,
+  Loader2,
+  RotateCcw,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 
 import DashboardLayout from "../layouts/DashboardLayout";
+import { easeOutFast } from "../components/ui3d/motionTokens";
 
 const STICKER_MAP = {
   thumbs_up: "👍",
@@ -50,19 +61,227 @@ const STICKER_MAP = {
   star: "⭐",
   hundred: "💯",
 };
+
+const EDIT_MESSAGE_WINDOW_MS = 15 * 60 * 1000;
+const DELETE_MESSAGE_WINDOW_MS = 60 * 60 * 1000;
+const DELETED_MESSAGE_TEXT = "This message was deleted.";
+const CHAT_MESSAGE_MAX_LENGTH = 2000;
+
+function normalizeMimeType(mimeType) {
+  if (!mimeType) return "";
+  return String(mimeType).toLowerCase().trim();
+}
+
+function isSupportedImageMedia({ mimeType, fileName, fileUrl }) {
+  if (mimeType && mimeType.startsWith("image/")) return true;
+  const nameOrUrl = String(fileName || fileUrl || "").toLowerCase();
+  return /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(nameOrUrl);
+}
+
+function getAudioExtension(mimeType) {
+  const norm = normalizeMimeType(mimeType);
+  if (norm.includes("webm")) return "webm";
+  if (norm.includes("mp3")) return "mp3";
+  if (norm.includes("wav")) return "wav";
+  if (norm.includes("ogg")) return "ogg";
+  if (norm.includes("aac")) return "aac";
+  if (norm.includes("m4a")) return "m4a";
+  if (norm.includes("mp4")) return "mp4";
+  return "webm";
+}
+
+function getMessageKind(message) {
+  if (message?.isDeleted || message?.deletedAt) return "deleted";
+  if (message?.messageType) return message.messageType;
+  if (message?.fileUrl) {
+    const mime = normalizeMimeType(message.mimeType);
+    if (mime.startsWith("image/")) return "image";
+    if (mime.startsWith("audio/")) return "audio";
+    return "file";
+  }
+  if (message?.stickerId) return "sticker";
+  return "text";
+}
+
+function getMessageMediaUrl(message) {
+  return message?.fileUrl || message?.mediaUrl || message?.url || "";
+}
+
+function downloadFile(url, fileName) {
+  if (!url) return;
+  const a = document.createElement("a");
+  a.href = url;
+  if (fileName) {
+    a.download = fileName;
+  }
+  a.target = "_blank";
+  a.rel = "noopener noreferrer";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+const WAVEFORM_BARS = [35, 60, 45, 80, 55, 90, 70, 40, 65, 85, 50, 75, 40, 95, 60, 80, 45, 70, 50, 85, 40, 60, 75, 50];
+
+function formatAudioTime(seconds) {
+  if (!seconds || isNaN(seconds) || seconds < 0 || seconds === Infinity) {
+    return "0:00";
+  }
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+}
+
+function CustomAudioPlayer({ src, duration, isOwnMessage, isPreview = false }) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [totalDuration, setTotalDuration] = useState(duration || 0);
+  const [isBuffering, setIsBuffering] = useState(false);
+  const audioRef = useRef(null);
+
+  useEffect(() => {
+    if (duration && duration > 0) {
+      setTotalDuration(duration);
+    }
+  }, [duration]);
+
+  const togglePlay = (e) => {
+    e.stopPropagation();
+    if (!audioRef.current) return;
+
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play().catch((err) => {
+        console.error("Audio playback error:", err);
+      });
+    }
+  };
+
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime);
+      if (!totalDuration && audioRef.current.duration && audioRef.current.duration !== Infinity) {
+        setTotalDuration(audioRef.current.duration);
+      }
+    }
+  };
+
+  const handleLoadedMetadata = () => {
+    if (audioRef.current && audioRef.current.duration && audioRef.current.duration !== Infinity) {
+      setTotalDuration(audioRef.current.duration);
+    }
+    setIsBuffering(false);
+  };
+
+  const handleSeek = (e, barIndex) => {
+    e.stopPropagation();
+    if (!audioRef.current || !totalDuration) return;
+
+    const fraction = (barIndex + 1) / WAVEFORM_BARS.length;
+    const newTime = fraction * totalDuration;
+    audioRef.current.currentTime = newTime;
+    setCurrentTime(newTime);
+  };
+
+  const progressFraction = totalDuration > 0 ? currentTime / totalDuration : 0;
+
+  return (
+    <div
+      className={`flex items-center gap-3 rounded-2xl p-2.5 sm:p-3 transition-all ${
+        isPreview
+          ? "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700"
+          : isOwnMessage
+          ? "bg-white/10 text-white backdrop-blur-xs"
+          : "bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200"
+      }`}
+    >
+      <audio
+        ref={audioRef}
+        src={src}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        onEnded={() => {
+          setIsPlaying(false);
+          setCurrentTime(0);
+        }}
+        onTimeUpdate={handleTimeUpdate}
+        onLoadedMetadata={handleLoadedMetadata}
+        onWaiting={() => setIsBuffering(true)}
+        onPlaying={() => setIsBuffering(false)}
+        preload="metadata"
+      />
+
+      <button
+        type="button"
+        onClick={togglePlay}
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition active:scale-95 shadow-sm ${
+          isOwnMessage
+            ? "bg-white text-indigo-700 hover:bg-slate-100"
+            : "bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+        }`}
+        title={isPlaying ? "Pause" : "Play"}
+      >
+        {isBuffering ? (
+          <Loader2 size={16} className="animate-spin" />
+        ) : isPlaying ? (
+          <Pause size={16} className="fill-current" />
+        ) : (
+          <Play size={16} className="fill-current ml-0.5" />
+        )}
+      </button>
+
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex h-6 items-center gap-0.5 cursor-pointer py-1" title="Seek audio">
+          {WAVEFORM_BARS.map((heightPercent, idx) => {
+            const barFraction = (idx + 1) / WAVEFORM_BARS.length;
+            const isPlayed = barFraction <= progressFraction;
+
+            return (
+              <button
+                key={idx}
+                type="button"
+                onClick={(e) => handleSeek(e, idx)}
+                style={{ height: `${heightPercent}%` }}
+                className={`w-1 rounded-full transition-all duration-150 hover:opacity-100 ${
+                  isPlayed
+                    ? isOwnMessage
+                      ? "bg-white opacity-100"
+                      : "bg-indigo-600 dark:bg-indigo-400 opacity-100"
+                    : isOwnMessage
+                    ? "bg-white/40 hover:bg-white/70"
+                    : "bg-slate-300 dark:bg-slate-700 hover:bg-slate-400"
+                }`}
+              />
+            );
+          })}
+        </div>
+
+        <div className="flex items-center justify-between text-[11px] font-medium opacity-80 tabular-nums">
+          <span>{formatAudioTime(currentTime)}</span>
+          <span>{formatAudioTime(totalDuration)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+import { getToken } from "../utils/tokenStorage";
 import useAuth from "../context/useAuth";
 import useWorkspace from "../context/useWorkspace";
 import EmptyState from "../components/EmptyState";
 import LoadingState from "../components/LoadingState";
+import PageHeader from "../components/PageHeader";
 import {
-  createChatSocket,
   CHAT_PAGE_SIZE,
+  CHAT_SEARCH_MAX_LIMIT,
+  createChatSocket,
   deleteMessage as deleteMessageRequest,
   editMessage as editMessageRequest,
   getChatMeta,
+  getChatUnreadCount,
   getMessageContext,
   getRecentMessages,
-  markChatRead,
   searchMessages,
   startNewChat as startNewChatRequest,
   uploadChatFile,
@@ -73,267 +292,195 @@ import {
   showError,
   showSuccess,
 } from "../utils/alerts";
-import { getToken } from "../utils/tokenStorage";
+/*
+ * Chat image thumbnail.
+ *
+ * A failed image used to call setError() on the page, which raised a single
+ * global banner ("Image preview could not be loaded...") while the broken
+ * image itself stayed in place looking like it might still work. Failure is
+ * now local to the image that failed, and recoverable.
+ */
+function ChatImage({ src, alt, onOpen, isOwnMessage }) {
+  const [status, setStatus] = useState("loading");
+  const [reloadKey, setReloadKey] = useState(0);
 
-const EDIT_MESSAGE_WINDOW_MS = 15 * 60 * 1000;
-const DELETE_MESSAGE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
-const DELETED_MESSAGE_TEXT = "This message was deleted.";
-const CHAT_MESSAGE_MAX_LENGTH = 2000;
-const SUPPORTED_IMAGE_MIME_TYPES = new Set([
-  "image/jpeg",
-  "image/jpg",
-  "image/png",
-  "image/webp",
-  "image/gif",
-]);
-const SUPPORTED_IMAGE_EXTENSIONS = new Set([
-  "jpg",
-  "jpeg",
-  "png",
-  "webp",
-  "gif",
-]);
-const AUDIO_FILE_EXTENSIONS = new Set([
-  "webm",
-  "ogg",
-  "mp3",
-  "m4a",
-  "mp4",
-  "wav",
-  "aac",
-]);
-
-function normalizeMimeType(value = "") {
-  return String(value).split(";")[0].trim().toLowerCase();
-}
-
-function getFileExtension(value = "") {
-  const cleanValue = String(value).split("?")[0].split("#")[0];
-  const fileName = cleanValue.split("/").pop() || "";
-  const extension = fileName.includes(".") ? fileName.split(".").pop() : "";
-
-  return extension.toLowerCase();
-}
-
-function getMessageMediaUrl(message) {
-  return message?.fileUrl || message?.audioUrl || message?.imageUrl || "";
-}
-
-function isSupportedImageMedia({
-  messageType,
-  mimeType,
-  fileName,
-  fileUrl,
-} = {}) {
-  const type = String(messageType || "").toLowerCase();
-  const cleanMime = normalizeMimeType(mimeType);
-
-  return (
-    type === "image" ||
-    SUPPORTED_IMAGE_MIME_TYPES.has(cleanMime) ||
-    SUPPORTED_IMAGE_EXTENSIONS.has(getFileExtension(fileName)) ||
-    SUPPORTED_IMAGE_EXTENSIONS.has(getFileExtension(fileUrl))
-  );
-}
-
-function isAudioMedia({ messageType, mimeType, fileName, fileUrl } = {}) {
-  const type = String(messageType || "").toLowerCase();
-  const cleanMime = normalizeMimeType(mimeType);
-
-  return (
-    type === "audio" ||
-    cleanMime.startsWith("audio/") ||
-    AUDIO_FILE_EXTENSIONS.has(getFileExtension(fileName)) ||
-    AUDIO_FILE_EXTENSIONS.has(getFileExtension(fileUrl))
-  );
-}
-
-function getMessageKind(message) {
-  const messageType = String(
-    message?.messageType || message?.type || "",
-  ).toLowerCase();
-  const fileUrl = getMessageMediaUrl(message);
-
-  if (messageType === "sticker") return "sticker";
-  if (isAudioMedia({ ...message, messageType, fileUrl })) return "audio";
-  if (isSupportedImageMedia({ ...message, messageType, fileUrl }))
-    return "image";
-  if (messageType === "file" || fileUrl) return "file";
-
-  return "text";
-}
-
-function getAudioExtension(mimeType) {
-  const cleanMime = normalizeMimeType(mimeType);
-
-  if (cleanMime === "audio/ogg") return "ogg";
-  if (
-    cleanMime === "audio/mp4" ||
-    cleanMime === "audio/x-m4a" ||
-    cleanMime === "audio/m4a"
-  )
-    return "m4a";
-  if (cleanMime === "audio/wav" || cleanMime === "audio/x-wav") return "wav";
-  if (cleanMime === "audio/aac") return "aac";
-  if (cleanMime === "audio/mpeg" || cleanMime === "audio/mp3") return "mp3";
-
-  return "webm";
-}
-
-function formatDuration(seconds) {
-  const normalizedSeconds = Math.max(0, Math.round(Number(seconds) || 0));
-  const minutes = Math.floor(normalizedSeconds / 60);
-  const remainder = normalizedSeconds % 60;
-
-  return `${minutes}:${remainder.toString().padStart(2, "0")}`;
-}
-
-async function downloadFile(url, filename) {
-  if (!url) return;
-  try {
-    const res = await fetch(url, { mode: "cors" });
-    if (!res.ok) throw new Error("Network response was not ok");
-    const blob = await res.blob();
-    const blobUrl = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = blobUrl;
-    a.download = filename || "download";
-    a.style.display = "none";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-  } catch (err) {
-    console.warn(
-      "[Download Helper] CORS or fetch failed, falling back to direct anchor download:",
-      err,
-    );
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename || "download";
-    a.target = "_blank";
-    a.rel = "noopener noreferrer";
-    a.style.display = "none";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  }
-}
-
-function CustomAudioPlayer({ src, duration, isOwnMessage }) {
-  const audioRef = useRef(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [totalDuration, setTotalDuration] = useState(duration || 0);
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const handlePlay = () => setIsPlaying(true);
-    const handlePause = () => setIsPlaying(false);
-    const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
-    const handleLoadedMetadata = () => {
-      if (audio.duration && !totalDuration) {
-        setTotalDuration(audio.duration);
-      }
-    };
-    const handleEnded = () => {
-      setIsPlaying(false);
-      setCurrentTime(0);
-    };
-
-    audio.addEventListener("play", handlePlay);
-    audio.addEventListener("pause", handlePause);
-    audio.addEventListener("timeupdate", handleTimeUpdate);
-    audio.addEventListener("loadedmetadata", handleLoadedMetadata);
-    audio.addEventListener("ended", handleEnded);
-
-    if (audio.duration && !totalDuration) {
-      setTotalDuration(audio.duration);
-    }
-
-    return () => {
-      audio.removeEventListener("play", handlePlay);
-      audio.removeEventListener("pause", handlePause);
-      audio.removeEventListener("timeupdate", handleTimeUpdate);
-      audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
-      audio.removeEventListener("ended", handleEnded);
-    };
-  }, [src, totalDuration]);
-
-  const togglePlay = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (isPlaying) {
-      audio.pause();
-    } else {
-      audio.play().catch(() => {});
-    }
+  const handleRetry = (event) => {
+    event.stopPropagation();
+    setStatus("loading");
+    setReloadKey((key) => key + 1);
   };
 
-  const handleSeek = (e) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    const time = Number(e.target.value);
-    audio.currentTime = time;
-    setCurrentTime(time);
-  };
-
-  const formatAudioTime = (time) => {
-    if (Number.isNaN(time) || !Number.isFinite(time)) return "0:00";
-    const mins = Math.floor(time / 60);
-    const secs = Math.floor(time % 60);
-    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
-  };
-
-  return (
-    <div
-      className={`flex items-center gap-3 w-full min-w-[240px] sm:min-w-[280px] p-2 rounded-xl transition ${
-        isOwnMessage
-          ? "bg-white/10 text-white"
-          : "bg-slate-100/70 dark:bg-slate-900/70 text-slate-800 dark:text-slate-200"
-      }`}
-    >
-      <audio ref={audioRef} src={src} preload="metadata" />
-
-      <button
-        type="button"
-        onClick={togglePlay}
-        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all active:scale-90 ${
-          isOwnMessage
-            ? "bg-white text-indigo-600 hover:bg-indigo-50"
-            : "bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+  if (status === "error") {
+    return (
+      <div
+        className={`flex w-full max-w-full flex-col items-start gap-2 rounded-lg p-3 sm:max-w-sm ${
+          isOwnMessage ? "bg-white/10 text-white" : "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300"
         }`}
       >
-        {isPlaying ? (
-          <svg className="h-3 w-3 fill-current" viewBox="0 0 24 24">
-            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-          </svg>
-        ) : (
-          <svg className="ml-0.5 h-3.5 w-3.5 fill-current" viewBox="0 0 24 24">
-            <path d="M8 5v14l11-7z" />
-          </svg>
-        )}
-      </button>
-
-      <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-        <input
-          type="range"
-          min={0}
-          max={totalDuration || 100}
-          value={currentTime}
-          onChange={handleSeek}
-          className={`h-1.5 w-full cursor-pointer appearance-none rounded-lg accent-indigo-500 bg-slate-200 dark:bg-slate-800 ${
-            isOwnMessage ? "accent-white bg-indigo-400" : ""
-          }`}
-        />
-        <div className="flex justify-between text-[9px] opacity-75 font-mono leading-none mt-0.5">
-          <span>{formatAudioTime(currentTime)}</span>
-          <span>{formatAudioTime(totalDuration)}</span>
+        <div className="flex items-center gap-2">
+          <AlertCircle size={16} className="shrink-0" />
+          <p className="text-[12px] font-semibold">Image unavailable</p>
         </div>
+        <p className="text-[11px] opacity-80 break-all">{alt}</p>
+        <button
+          type="button"
+          onClick={handleRetry}
+          className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-bold transition hover:bg-black/5 dark:hover:bg-white/10"
+        >
+          <RotateCcw size={12} />
+          Try again
+        </button>
       </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full max-w-full sm:max-w-sm">
+      {status === "loading" && (
+        <div className="tf-shimmer absolute inset-0 flex h-40 items-center justify-center rounded-lg bg-slate-200/60 dark:bg-slate-800/60">
+          <Loader2 size={18} className="animate-spin text-slate-400" />
+        </div>
+      )}
+      <img
+        key={reloadKey}
+        src={src}
+        alt={alt}
+        loading="lazy"
+        onLoad={() => setStatus("loaded")}
+        onError={() => setStatus("error")}
+        onClick={onOpen}
+        className={`block max-h-72 max-w-full cursor-zoom-in rounded-lg object-contain transition hover:opacity-95 ${
+          status === "loading" ? "opacity-0" : "opacity-100"
+        }`}
+      />
     </div>
+  );
+}
+
+/*
+ * Full-screen image preview. Portalled to the document root so no glass
+ * surface or transformed ancestor can clip or re-origin it.
+ */
+function ImageLightbox({ open, src, alt, onClose, onDownload }) {
+  return createPortal(
+    <AnimatePresence>
+      {open && (
+        <LightboxViewer
+          // Remounting per image gives each preview fresh zoom and load state
+          // without an effect that resets state after render.
+          key={src}
+          src={src}
+          alt={alt}
+          onClose={onClose}
+          onDownload={onDownload}
+        />
+      )}
+    </AnimatePresence>,
+    document.body
+  );
+}
+
+function LightboxViewer({ src, alt, onClose, onDownload }) {
+  const [zoom, setZoom] = useState(1);
+  const [status, setStatus] = useState("loading");
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") onClose();
+      if (event.key === "+" || event.key === "=") setZoom((z) => Math.min(z + 0.5, 4));
+      if (event.key === "-") setZoom((z) => Math.max(z - 0.5, 1));
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  return (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={easeOutFast}
+          onClick={onClose}
+          role="dialog"
+          aria-modal="true"
+          aria-label={alt || "Image preview"}
+          className="fixed inset-0 z-[80] flex flex-col bg-slate-950/85 backdrop-blur-sm"
+        >
+          <div
+            className="flex shrink-0 items-center justify-between gap-3 p-3 text-white"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <p className="min-w-0 truncate text-[13px] font-semibold">{alt}</p>
+            <div className="flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setZoom((z) => Math.max(z - 0.5, 1))}
+                disabled={zoom <= 1}
+                aria-label="Zoom out"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-white/15 disabled:opacity-40"
+              >
+                <ZoomOut size={17} />
+              </button>
+              <span className="w-12 text-center text-[12px] font-bold tabular-nums">
+                {Math.round(zoom * 100)}%
+              </span>
+              <button
+                type="button"
+                onClick={() => setZoom((z) => Math.min(z + 0.5, 4))}
+                disabled={zoom >= 4}
+                aria-label="Zoom in"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-white/15 disabled:opacity-40"
+              >
+                <ZoomIn size={17} />
+              </button>
+              <button
+                type="button"
+                onClick={onDownload}
+                aria-label="Download image"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-white/15"
+              >
+                <Download size={17} />
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close preview"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-white/15"
+              >
+                <X size={18} />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto p-4">
+            {status === "loading" && (
+              <Loader2 size={28} className="animate-spin text-white/70" />
+            )}
+
+            {status === "error" ? (
+              <div className="flex flex-col items-center gap-2 text-center text-white/80">
+                <AlertCircle size={28} />
+                <p className="text-[14px] font-semibold">Image could not be loaded</p>
+                <p className="max-w-xs text-[12px] text-white/60">
+                  The file may have been removed from the server.
+                </p>
+              </div>
+            ) : (
+              <img
+                src={src}
+                alt={alt}
+                onClick={(event) => event.stopPropagation()}
+                onLoad={() => setStatus("loaded")}
+                onError={() => setStatus("error")}
+                style={{ transform: `scale(${zoom})` }}
+                className={`max-h-full max-w-full origin-center object-contain transition-transform duration-200 ${
+                  status === "loading" ? "hidden" : ""
+                } ${zoom > 1 ? "cursor-grab" : "cursor-zoom-in"}`}
+              />
+            )}
+          </div>
+        </motion.div>
   );
 }
 
@@ -590,6 +737,8 @@ function Chat() {
   const bottomRef = useRef(null);
   const messageElementRefs = useRef(new Map());
   const typingTimeoutRef = useRef(null);
+  const typingActiveRef = useRef(false);
+  const editingMessageIdRef = useRef(null);
   const skipNextAutoScrollRef = useRef(false);
   const searchNavigationRef = useRef(false);
   const pendingScrollMessageIdRef = useRef(null);
@@ -656,6 +805,13 @@ function Chat() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [deletingMessageId, setDeletingMessageId] = useState(null);
   const [permissionNow, setPermissionNow] = useState(() => Date.now());
+  // Holds the image the lightbox is showing; null keeps the overlay unmounted.
+  const [previewImage, setPreviewImage] = useState(null);
+  const [showMembersMobile, setShowMembersMobile] = useState(false);
+
+  useEffect(() => {
+    editingMessageIdRef.current = editingMessageId;
+  }, [editingMessageId]);
 
   const [showStickerPicker, setShowStickerPicker] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -1037,8 +1193,14 @@ function Chat() {
 
   const emitTyping = useCallback(
     (isTyping) => {
-      if (!workspaceId || !socketRef.current?.connected) return;
+      if (typingActiveRef.current === isTyping) return;
 
+      if (!workspaceId || !socketRef.current?.connected) {
+        if (!isTyping) typingActiveRef.current = false;
+        return;
+      }
+
+      typingActiveRef.current = isTyping;
       socketRef.current.emit("typing", {
         workspaceId,
         isTyping,
@@ -1178,18 +1340,6 @@ function Chat() {
     const socket = createChatSocket();
     socketRef.current = socket;
 
-    const clearUnread = async () => {
-      try {
-        await markChatRead(workspaceId);
-        if (!cancelled) {
-          setUnreadCount(0);
-          notifyUnreadUpdated(0);
-        }
-      } catch {
-        // Socket join also attempts to clear unread state.
-      }
-    };
-
     const loadChat = async () => {
       setLoading(true);
       setError("");
@@ -1202,14 +1352,14 @@ function Chat() {
         ]);
 
         if (!cancelled) {
-          setMessages(normalizeMessages(messagesData));
+          // A real-time message can arrive while the initial request is still
+          // in flight. Merge instead of replacing so that message is not lost.
+          mergeMessages(normalizeMessages(messagesData));
           setHasMoreMessages(Boolean(messagesData?.hasMore));
           setMembers(normalizeMembers(metaData));
           setUnreadCount(metaData?.unreadCount || 0);
           notifyUnreadUpdated(metaData?.unreadCount || 0);
         }
-
-        await clearUnread();
       } catch (err) {
         if (!cancelled) {
           setMessages([]);
@@ -1249,6 +1399,7 @@ function Chat() {
 
     const handleDisconnect = () => {
       if (!cancelled) {
+        typingActiveRef.current = false;
         setConnected(false);
       }
     };
@@ -1277,7 +1428,7 @@ function Chat() {
 
         if (
           isDeletedMessage(message) &&
-          idsEqual(getMessageId(message), editingMessageId)
+          idsEqual(getMessageId(message), editingMessageIdRef.current)
         ) {
           setEditingMessageId(null);
           setEditDraft("");
@@ -1396,8 +1547,8 @@ function Chat() {
     appendMessage,
     clearTypingTimer,
     currentUserId,
-    editingMessageId,
     emitTyping,
+    mergeMessages,
     notifyUnreadUpdated,
     updateMessageInList,
     workspaceId,
@@ -1927,6 +2078,8 @@ function Chat() {
     return deleteMessageRequest(workspaceId, messageId);
   };
 
+
+
   const handleEditSubmit = async (e, message) => {
     e.preventDefault();
 
@@ -2118,14 +2271,10 @@ function Chat() {
   if (!workspace) {
     return (
       <DashboardLayout>
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-            Workspace Chat
-          </h2>
-          <p className="mt-1 text-[14px] text-slate-500 dark:text-slate-400">
-            Chat with members in the selected workspace.
-          </p>
-        </div>
+        <PageHeader
+          title="Workspace Chat"
+          subtitle="Chat with members in the selected workspace."
+        />
 
         <div className="mt-10">
           <EmptyState
@@ -2141,50 +2290,35 @@ function Chat() {
 
   return (
     <DashboardLayout>
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-            Workspace Chat
-          </h2>
-          <p className="mt-1 text-[14px] text-slate-500 dark:text-slate-400">
-            {workspaceName}
-          </p>
-        </div>
+      <PageHeader title="Workspace Chat" subtitle={workspaceName}>
+        {unreadCount > 0 && (
+          <span className="tf-badge tf-badge-error h-9 px-3">
+            {unreadCount} unread
+          </span>
+        )}
 
-        <div className="flex flex-wrap items-center gap-2">
-          {unreadCount > 0 && (
-            <span className="inline-flex h-9 items-center rounded-lg border border-red-200 bg-red-50 px-3 text-[12px] font-bold text-red-600 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
-              {unreadCount} unread
-            </span>
-          )}
-
-          {canStartNewChat && (
-            <button
-              type="button"
-              onClick={handleStartNewChat}
-              disabled={archiving}
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
-            >
-              <Archive size={14} />
-              {archiving ? "Archiving..." : "Start New Chat"}
-            </button>
-          )}
-
-          <div
-            className={`inline-flex h-9 w-fit items-center gap-2 rounded-lg border px-3 text-[12px] font-semibold ${
-              connected
-                ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300"
-                : "border-slate-200 bg-white text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
-            }`}
+        {canStartNewChat && (
+          <button
+            type="button"
+            onClick={handleStartNewChat}
+            disabled={archiving}
+            className="tf-btn-base tf-btn-secondary tf-size-sm"
           >
-            {connected ? <Wifi size={14} /> : <WifiOff size={14} />}
-            {connectionLabel}
-          </div>
+            <Archive size={14} />
+            {archiving ? "Archiving..." : "Start New Chat"}
+          </button>
+        )}
+
+        <div
+          className={`tf-badge h-9 px-3 ${connected ? "tf-badge-success" : "tf-badge-neutral"}`}
+        >
+          {connected ? <Wifi size={14} /> : <WifiOff size={14} />}
+          {connectionLabel}
         </div>
-      </div>
+      </PageHeader>
 
       {isOnlyMemberWorkspace && (
-        <div className="mb-5 flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200 sm:flex-row sm:items-center sm:justify-between">
+        <div className="tf-alert tf-alert-warning mb-5 flex-col sm:flex-row sm:items-center sm:justify-between">
           <span>
             You are the only member in this workspace. Invite members to start a
             team conversation.
@@ -2203,17 +2337,17 @@ function Chat() {
       )}
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
-        <section className="flex min-h-[560px] max-h-[calc(100vh-180px)] min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
-          <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-4 dark:border-slate-800/70 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <section className="flex min-h-[520px] max-h-[calc(100vh-160px)] min-w-0 flex-col overflow-hidden rounded-2xl tf-card">
+          <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3.5 dark:border-slate-800/70 sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300 shadow-2xs">
                 <MessageSquare size={18} />
               </div>
               <div className="min-w-0">
-                <h3 className="truncate text-[15px] font-bold text-slate-900 dark:text-white">
+                <h3 className="truncate text-[15px] font-bold tf-text">
                   {workspaceName}
                 </h3>
-                <p className="text-[12px] text-slate-500 dark:text-slate-400">
+                <p className="text-[12px] tf-text-muted">
                   {isSearchMode
                     ? searching
                       ? "Searching..."
@@ -2228,9 +2362,22 @@ function Chat() {
             </div>
 
             <div className="flex w-full items-center gap-2 sm:w-auto">
+              {/* Mobile Members Toggle */}
+              <button
+                type="button"
+                onClick={() => setShowMembersMobile((prev) => !prev)}
+                className="lg:hidden inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-900 dark:border-slate-800 px-2.5 py-1.5 text-[12px] font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              >
+                <Users size={14} />
+                <span className="hidden sm:inline">Members</span>
+                <span className="rounded-full bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold">
+                  {onlineUserIds.length}/{members.length}
+                </span>
+              </button>
+
               {isSearchMode && (
                 <div className="flex items-center gap-1">
-                  <span className="min-w-[52px] text-center text-[12px] font-semibold text-slate-600 dark:text-slate-300">
+                  <span className="min-w-[52px] text-center text-[12px] font-semibold tf-text-secondary">
                     {searchCounterLabel}
                   </span>
                   <button
@@ -2260,10 +2407,10 @@ function Chat() {
                 </div>
               )}
 
-              <div className="relative w-full sm:w-72">
+              <div className="relative flex-1 sm:flex-none sm:w-64 lg:w-72">
                 <Search
                   size={15}
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 z-10"
                 />
                 <input
                   type="text"
@@ -2277,8 +2424,10 @@ function Chat() {
                       e.currentTarget.blur();
                     }
                   }}
-                  placeholder="Search messages"
-                  className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-9 text-[13px] text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500"
+                  placeholder="Search messages..."
+                  aria-label="Search chat messages"
+                  style={{ paddingLeft: "2.5rem", paddingRight: "2.25rem" }}
+                  className="tf-field w-full text-[13px] rounded-xl border-slate-200/80 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 focus:bg-white dark:focus:bg-slate-900 transition-all"
                 />
                 {(searchTerm || searchFocused) && (
                   <button
@@ -2294,7 +2443,7 @@ function Chat() {
                         document.activeElement?.blur();
                       }
                     }}
-                    className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                    className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 transition hover:bg-slate-200/60 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                   >
                     <X size={14} />
                   </button>
@@ -2424,7 +2573,7 @@ function Chat() {
                             : "px-4 py-2.5"
                         } ${
                           isOwnMessage
-                            ? "rounded-br-md bg-indigo-600 text-white dark:bg-indigo-500"
+                            ? "bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-br-md"
                             : "rounded-bl-md border border-slate-200 bg-slate-50 text-slate-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
                         } ${isActiveSearchResult ? "ring-2 ring-yellow-400 ring-offset-2 ring-offset-white dark:ring-offset-slate-900" : ""}`;
 
@@ -2471,7 +2620,7 @@ function Chat() {
                         <div
                           className={`min-w-0 max-w-[84vw] sm:max-w-[70%] ${isOwnMessage ? "items-end" : "items-start"} flex flex-col`}
                         >
-                          <div className="mb-1 flex max-w-full items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+                          <div className="mb-1 flex max-w-full items-center gap-2 text-[11px] tf-text-muted">
                             <span className="truncate font-semibold">
                               {isOwnMessage ? "You" : senderName}
                             </span>
@@ -2479,7 +2628,7 @@ function Chat() {
                               {formatMessageTime(message.createdAt)}
                             </span>
                             {message.editedAt && !messageDeleted && (
-                              <span className="shrink-0 text-[10px] font-semibold text-slate-400 dark:text-slate-500">
+                              <span className="shrink-0 text-[10px] font-semibold tf-text-subtle">
                                 edited
                               </span>
                             )}
@@ -2488,7 +2637,7 @@ function Chat() {
                           {editingThisMessage ? (
                             <form
                               onSubmit={(e) => handleEditSubmit(e, message)}
-                              className="w-full rounded-2xl border border-indigo-200 bg-white p-2 shadow-sm dark:border-indigo-900/70 dark:bg-slate-950"
+                              className="w-full tf-card rounded-2xl border-amber-500/35 p-2 dark:border-amber-400/25"
                             >
                               <textarea
                                 value={editDraft}
@@ -2496,7 +2645,7 @@ function Chat() {
                                 maxLength={CHAT_MESSAGE_MAX_LENGTH}
                                 rows={3}
                                 autoFocus
-                                className="min-h-20 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] leading-6 text-slate-900 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
+                                className="tf-field min-h-20 w-full resize-none leading-6"
                               />
                               <div className="mt-2 flex items-center justify-end gap-2">
                                 <button
@@ -2514,7 +2663,7 @@ function Chat() {
                                   title="Save edit"
                                   aria-label="Save edit"
                                   disabled={savingEdit || !editDraft.trim()}
-                                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white transition hover:bg-indigo-700 disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+                                  className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition-all active:scale-95 shadow-sm disabled:opacity-40"
                                 >
                                   <Check size={14} />
                                 </button>
@@ -2526,29 +2675,26 @@ function Chat() {
                                 displayContent
                               ) : messageKind === "image" && mediaUrl ? (
                                 <div className="flex max-w-full flex-col gap-1.5 p-1">
-                                  <img
+                                  <ChatImage
                                     src={authenticatedMediaUrl}
                                     alt={message.fileName || "Chat image"}
-                                    loading="lazy"
-                                    className="block max-h-72 max-w-full rounded-lg object-contain cursor-pointer transition hover:opacity-95 sm:max-w-sm"
-                                    onClick={() =>
-                                      window.open(
-                                        authenticatedMediaUrl,
-                                        "_blank",
-                                        "noopener,noreferrer",
-                                      )
-                                    }
-                                    onError={() =>
-                                      setError(
-                                        "Image preview could not be loaded. Try opening it again or refreshing the chat.",
-                                      )
+                                    isOwnMessage={isOwnMessage}
+                                    onOpen={() =>
+                                      setPreviewImage({
+                                        src: authenticatedMediaUrl,
+                                        alt: message.fileName || "Chat image",
+                                        downloadUrl: getAuthenticatedUrl(
+                                          mediaUrl,
+                                          true,
+                                        ),
+                                      })
                                     }
                                   />
                                   <div
                                     className={`mt-1 flex items-center justify-between gap-2 px-1 text-[11px] font-semibold ${
                                       isOwnMessage
                                         ? "text-indigo-200"
-                                        : "text-slate-550 dark:text-slate-400"
+                                        : "tf-text-muted"
                                     }`}
                                   >
                                     <span className="truncate block max-w-[180px]">
@@ -2578,7 +2724,7 @@ function Chat() {
                                   className={`flex items-center gap-3 min-w-0 max-w-full rounded-xl p-2 sm:p-2.5 ${
                                     isOwnMessage
                                       ? "bg-white/10 text-white"
-                                      : "bg-slate-100/60 dark:bg-slate-900/60 text-slate-800 dark:text-slate-200"
+                                      : "bg-slate-100/60 dark:bg-slate-900/60 tf-text"
                                   }`}
                                 >
                                   <div
@@ -2595,7 +2741,7 @@ function Chat() {
                                       className={`truncate text-[13px] font-semibold ${
                                         isOwnMessage
                                           ? "text-white"
-                                          : "text-slate-850 dark:text-slate-150"
+                                          : "tf-text"
                                       }`}
                                     >
                                       {message.fileName}
@@ -2604,7 +2750,7 @@ function Chat() {
                                       className={`text-[11px] ${
                                         isOwnMessage
                                           ? "text-indigo-200"
-                                          : "text-slate-550 dark:text-slate-400"
+                                          : "tf-text-muted"
                                       }`}
                                     >
                                       {formatFileSize(message.fileSize)}
@@ -2622,7 +2768,7 @@ function Chat() {
                                       className={`flex h-8 w-8 items-center justify-center rounded-lg transition ${
                                         isOwnMessage
                                           ? "hover:bg-white/20 text-indigo-100 hover:text-white"
-                                          : "hover:bg-slate-200/50 hover:text-slate-850 dark:hover:bg-slate-800/50 dark:hover:text-slate-150 text-slate-500 dark:text-slate-400"
+                                          : "hover:bg-slate-200/50 hover:text-slate-850 dark:hover:bg-slate-800/50 dark:hover:text-slate-150 tf-text-muted"
                                       }`}
                                     >
                                       <svg
@@ -2657,7 +2803,7 @@ function Chat() {
                                       className={`flex h-8 w-8 items-center justify-center rounded-lg transition ${
                                         isOwnMessage
                                           ? "hover:bg-white/20 text-indigo-100 hover:text-white"
-                                          : "hover:bg-slate-200/50 hover:text-slate-850 dark:hover:bg-slate-800/50 dark:hover:text-slate-150 text-slate-500 dark:text-slate-400"
+                                          : "hover:bg-slate-200/50 hover:text-slate-850 dark:hover:bg-slate-800/50 dark:hover:text-slate-150 tf-text-muted"
                                       }`}
                                     >
                                       <Download size={16} />
@@ -2722,7 +2868,7 @@ function Chat() {
                           )}
 
                           {isOwnMessage && (
-                            <span className="mt-1 text-[10px] font-medium text-slate-400 dark:text-slate-500">
+                            <span className="mt-1 text-[10px] font-medium tf-text-subtle">
                               {getSeenLabel(message)}
                             </span>
                           )}
@@ -2766,7 +2912,7 @@ function Chat() {
               accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
               onChange={handleAttachFile}
               className="hidden"
-              disabled={isUploading || isRecording || !connected}
+              disabled={isUploading || isRecording}
             />
 
             <input
@@ -2775,10 +2921,10 @@ function Chat() {
               accept="image/*"
               onChange={handleAttachFile}
               className="hidden"
-              disabled={isUploading || isRecording || !connected}
+              disabled={isUploading || isRecording}
             />
 
-            <div className="flex flex-col rounded-xl border border-slate-200 bg-white shadow-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex flex-col rounded-xl border border-slate-200 bg-white shadow-xs focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 dark:border-slate-800 dark:bg-slate-900 transition-all">
               <div className="flex items-end p-1.5 sm:p-2">
                 {isUploading ? (
                   <div className="min-w-0 flex-1 flex items-center gap-2.5 px-3 py-2 text-[13px] text-indigo-600 dark:text-indigo-400 font-semibold select-none">
@@ -2788,60 +2934,59 @@ function Chat() {
                     </span>
                   </div>
                 ) : isRecording ? (
-                  <div className="min-w-0 flex-1 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 px-2 py-2 text-[13px] text-red-500 font-semibold animate-pulse select-none">
+                  <div className="min-w-0 flex-1 flex items-center justify-between gap-2 p-1">
+                    <div className="flex items-center gap-2 px-2 py-1 text-[13px] text-red-500 font-semibold animate-pulse select-none">
                       <span className="h-2.5 w-2.5 rounded-full bg-red-500 animate-ping shrink-0" />
                       <span className="truncate">
                         Recording: {formatDuration(recordingDuration)}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <button
                         type="button"
                         onClick={cancelVoiceRecording}
-                        className="flex h-9 w-9 items-center justify-center rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition active:scale-95 sm:h-10 sm:w-10"
+                        className="flex h-9 w-9 items-center justify-center rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition active:scale-95 border border-red-200/60 dark:border-red-900/40"
                         title="Cancel recording"
                       >
-                        <Trash2 size={18} />
+                        <Trash2 size={17} />
                       </button>
                       <button
                         type="button"
                         onClick={stopVoiceRecording}
-                        className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 transition active:scale-95 sm:h-10 sm:w-10"
+                        className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-red-600 hover:bg-red-700 text-white transition-all active:scale-95 shadow-sm"
                         title="Stop recording"
                       >
-                        <Square size={16} />
+                        <Square size={16} fill="currentColor" />
                       </button>
                     </div>
                   </div>
                 ) : tempAudioBlob ? (
-                  <div className="min-w-0 flex-1 flex items-center justify-between gap-2">
-                    <div className="min-w-0 flex-1 flex items-center gap-2">
-                      <audio
+                  <div className="min-w-0 flex-1 flex items-center justify-between gap-3 p-1">
+                    <div className="min-w-0 flex-1">
+                      <CustomAudioPlayer
                         src={tempAudioUrl}
-                        controls
-                        className="h-9 min-w-0 flex-1 outline-none"
+                        duration={tempAudioDuration}
+                        isOwnMessage={false}
+                        isPreview={true}
                       />
-                      <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 shrink-0 hidden sm:inline">
-                        Preview ({formatDuration(tempAudioDuration)})
-                      </span>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <button
                         type="button"
                         onClick={cancelVoiceRecording}
-                        className="flex h-9 w-9 items-center justify-center rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition active:scale-95 sm:h-10 sm:w-10"
+                        className="flex h-9 w-9 items-center justify-center rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition active:scale-95 border border-red-200/60 dark:border-red-900/40"
                         title="Delete recording"
                       >
-                        <Trash2 size={18} />
+                        <Trash2 size={17} />
                       </button>
                       <button
                         type="button"
                         onClick={sendRecordedVoiceNote}
-                        className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 transition active:scale-95 sm:h-10 sm:w-10"
+                        disabled={isUploading}
+                        className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition-all active:scale-95 shadow-sm disabled:opacity-50"
                         title="Send voice note"
                       >
-                        <Send size={16} />
+                        {isUploading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} className="ml-0.5" />}
                       </button>
                     </div>
                   </div>
@@ -2858,6 +3003,7 @@ function Chat() {
                     rows={1}
                     maxLength={2000}
                     placeholder="Write a message..."
+                    aria-label="Write a chat message"
                     className="max-h-32 min-h-[40px] min-w-0 flex-1 resize-none bg-transparent px-2.5 py-2 text-[13px] leading-snug text-slate-800 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
                   />
                 )}
@@ -2869,7 +3015,6 @@ function Chat() {
                     <button
                       type="button"
                       onClick={() => setShowStickerPicker((prev) => !prev)}
-                      disabled={!connected}
                       className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition dark:text-slate-400 dark:hover:bg-slate-800"
                       title="Send sticker"
                     >
@@ -2895,7 +3040,6 @@ function Chat() {
                     <button
                       type="button"
                       onClick={startVoiceRecording}
-                      disabled={!connected}
                       className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition dark:text-slate-400 dark:hover:bg-slate-800"
                       title="Record voice note"
                     >
@@ -2905,12 +3049,16 @@ function Chat() {
 
                   <button
                     type="submit"
-                    disabled={!draft.trim() || sending || !connected}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm transition hover:bg-indigo-700 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                    disabled={!draft.trim() || sending}
+                    className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white transition-all shadow-xs hover:shadow-md disabled:opacity-40 disabled:hover:bg-indigo-600 disabled:active:scale-100 disabled:cursor-not-allowed shrink-0"
                     aria-label="Send message"
-                    title="Send message"
+                    title={!connected ? "Chat connecting..." : "Send message"}
                   >
-                    <Send size={14} />
+                    {sending ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <Send size={15} className="ml-0.5" />
+                    )}
                   </button>
                 </div>
               )}
@@ -2918,11 +3066,13 @@ function Chat() {
           </form>
         </section>
 
-        <aside className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
+        <aside
+          className={`tf-card rounded-2xl p-4 transition-all ${
+            showMembersMobile ? "block" : "hidden lg:block"
+          }`}
+        >
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-[14px] font-bold text-slate-900 dark:text-white">
-              Members
-            </h3>
+            <h3 className="text-[14px] font-bold tf-text">Members</h3>
             <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
               {onlineUserIds.length}/{members.length} online
             </span>
@@ -2952,10 +3102,10 @@ function Chat() {
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-semibold text-slate-900 dark:text-slate-100">
+                    <p className="truncate text-[13px] font-semibold tf-text">
                       {memberName}
                     </p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    <p className="text-[11px] tf-text-muted">
                       {isOnline ? "Online" : "Offline"} · {member.role}
                     </p>
                   </div>
@@ -2965,6 +3115,16 @@ function Chat() {
           </div>
         </aside>
       </div>
+
+      <ImageLightbox
+        open={Boolean(previewImage)}
+        src={previewImage?.src}
+        alt={previewImage?.alt}
+        onClose={() => setPreviewImage(null)}
+        onDownload={() =>
+          downloadFile(previewImage?.downloadUrl, previewImage?.alt)
+        }
+      />
     </DashboardLayout>
   );
 }

@@ -15,7 +15,7 @@ import { getMembers } from "../services/memberService";
 import PageHeader from "../components/PageHeader";
 import Badge from "../components/Badge";
 import EmptyState from "../components/EmptyState";
-import LoadingState from "../components/LoadingState";
+import CardSkeleton from "../components/ui/CardSkeleton";
 import Modal from "../components/Modal";
 import AppSelect from "../components/ui/AppSelect";
 import AppDatePicker from "../components/ui/AppDatePicker";
@@ -188,7 +188,7 @@ function Tasks() {
   const loadData = useCallback(async () => {
     await Promise.resolve();
 
-    if (!workspaceId) {
+    if (!workspaceId || !isValidMongoId(workspaceId)) {
       setProjects([]);
       setTasks([]);
       setMembers([]);
@@ -205,10 +205,15 @@ function Tasks() {
         getMembers(workspaceId).catch(() => []),
       ]);
 
-      setProjects(normalizeProjects(projectsData));
+      const normProjects = normalizeProjects(projectsData);
+      setProjects(normProjects);
       setMembers(normalizeMembers(membersData));
 
-      if (selectedProjectId) {
+      const activeProjectExists = normProjects.some(
+        (p) => (p._id || p.id) === selectedProjectId
+      );
+
+      if (selectedProjectId && isValidMongoId(selectedProjectId) && activeProjectExists) {
         const tasksData = await getTasks(workspaceId, selectedProjectId);
         setTasks(normalizeTasks(tasksData));
       } else {
@@ -218,7 +223,7 @@ function Tasks() {
       setProjects([]);
       setTasks([]);
       setMembers([]);
-      setError("Failed to load tasks. Please ensure a project is selected.");
+      setError("Failed to load tasks. Please ensure a valid project is selected.");
     } finally {
       setLoading(false);
     }
@@ -476,17 +481,7 @@ function Tasks() {
 
   return (
     <DashboardLayout>
-      <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-            Tasks Board
-          </h2>
-
-          <p className="mt-1 text-[14px] text-slate-500 dark:text-slate-400">
-            Manage and track project tasks.
-          </p>
-        </div>
-
+      <PageHeader title="Tasks Board" subtitle="Manage and track project tasks.">
         <div className="flex w-full items-center gap-2.5 sm:w-auto">
           <div className="relative flex-1 sm:min-w-[220px] sm:w-56">
             <AppSelect
@@ -501,17 +496,17 @@ function Tasks() {
             type="button"
             onClick={openCreateModal}
             disabled={!selectedProjectId}
-            className="flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-[13px] font-semibold text-white shadow-[0_4px_12px_rgba(99,102,241,0.2)] transition-all duration-300 hover:-translate-y-0.5 hover:from-indigo-500 hover:to-violet-500 hover:shadow-md active:translate-y-0 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none disabled:shadow-none disabled:transform-none dark:shadow-[0_4px_20px_rgba(99,102,241,0.15)] sm:w-auto"
+            className="tf-btn-base tf-btn-primary shrink-0 sm:w-auto"
           >
             <Plus size={16} />
             <span className="hidden min-[400px]:inline">New Task</span>
             <span className="min-[400px]:hidden">New</span>
           </button>
         </div>
-      </header>
+      </PageHeader>
 
       {error && (
-        <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
+        <div className="tf-alert tf-alert-error mb-5" role="alert">
           {error}
         </div>
       )}
@@ -531,22 +526,26 @@ function Tasks() {
         </div>
       ) : loading ? (
         <div className="mt-10">
-          <LoadingState message="Loading tasks..." />
+          <CardSkeleton
+            count={5}
+            className="grid-cols-1 sm:grid-cols-2 xl:grid-cols-5"
+          />
         </div>
       ) : (
         <>
           <div className="relative mb-6 w-full sm:max-w-sm">
             <Search
               size={16}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 tf-text-subtle"
             />
 
             <input
               type="text"
               placeholder="Search tasks..."
+              aria-label="Search tasks"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-4 text-[13px] text-slate-700 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-indigo-500 dark:focus:ring-indigo-500"
+              className="tf-field tf-field-icon-start w-full"
             />
           </div>
 
@@ -565,8 +564,8 @@ function Tasks() {
                   onClick={() => setActiveMobileTab(column.id)}
                   className={`flex shrink-0 items-center gap-2 rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-all duration-300 border ${
                     isActive
-                      ? "bg-indigo-600 text-white border-indigo-600 shadow-sm shadow-indigo-600/20 dark:bg-indigo-500 dark:border-indigo-500"
-                      : "bg-white text-slate-650 border-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800"
+                      ? "tf-btn-base tf-btn-primary"
+                      : "tf-bg-1 tf-text-secondary tf-bd hover:tf-bg-2"
                   }`}
                 >
                   <span
@@ -574,7 +573,7 @@ function Tasks() {
                   />
                   <span>{column.title}</span>
                   <span className={`rounded-full px-1.5 py-0.5 text-[9px] ${
-                    isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                    isActive ? "bg-white/20 text-white" : "tf-bg-3 tf-text-muted"
                   }`}>
                     {columnTasks.length}
                   </span>
@@ -592,7 +591,7 @@ function Tasks() {
               return (
                 <div
                   key={column.id}
-                  className={`flex w-full sm:w-[310px] 2xl:w-full shrink-0 flex-col rounded-2xl border border-slate-200/50 bg-slate-100/30 p-4 dark:border-slate-800/40 dark:bg-slate-900/20 snap-start shadow-[0_1px_3px_rgba(0,0,0,0.02)] ${
+                  className={`tf-card-base flex w-full sm:w-[310px] 2xl:w-full shrink-0 flex-col rounded-2xl p-4 snap-start ${
                     activeMobileTab === column.id ? "flex" : "hidden sm:flex"
                   }`}
                 >
@@ -603,12 +602,12 @@ function Tasks() {
                         style={{ color: column.dotColor.includes("blue") ? "#3b82f6" : column.dotColor.includes("amber") ? "#f59e0b" : column.dotColor.includes("emerald") ? "#10b981" : column.dotColor.includes("red") ? "#ef4444" : "#94a3b8" }}
                       />
 
-                      <h3 className="text-[14px] font-bold text-slate-800 dark:text-slate-200">
+                      <h3 className="text-[14px] font-bold tf-text">
                         {column.title}
                       </h3>
                     </div>
 
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200/50 text-[10px] font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full tf-bg-3 text-[10px] font-bold tf-text-muted">
                       {columnTasks.length}
                     </span>
                   </div>
@@ -623,7 +622,7 @@ function Tasks() {
                       return (
                         <div
                           key={taskId || taskTitle}
-                          className="group cursor-pointer rounded-xl border border-slate-200/60 bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.02)] transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.01] hover:border-slate-300/80 hover:shadow-[0_8px_24px_rgba(148,163,184,0.12)] dark:border-slate-800/80 dark:bg-slate-900/80 dark:hover:border-slate-700/80 dark:hover:shadow-[0_8px_24px_rgba(0,0,0,0.3)]"
+                          className="tf-card-interactive group rounded-xl p-4"
                         >
                           <div className="flex items-start justify-between">
                             <Badge variant={task?.priority || "medium"} dot />
@@ -633,18 +632,18 @@ function Tasks() {
                               trigger={({ open }) => (
                                 <button
                                   type="button"
-                                  className={`group/btn rounded p-1 text-slate-400 transition-all duration-300 hover:scale-110 hover:bg-slate-100 hover:text-slate-600 active:scale-95 dark:hover:bg-slate-800 dark:hover:text-slate-300 ${
-                                    open ? "bg-slate-100 dark:bg-slate-800" : ""
+                                  className={`tf-btn-icon tf-size-sm ${
+                                    open ? "tf-bg-3" : ""
                                   }`}
                                 >
                                   <CircleDashed
                                     size={14}
-                                    className="transition-transform duration-300 group-hover/btn:rotate-90"
+                                    className="transition-transform duration-300 group-hover:rotate-90"
                                   />
                                 </button>
                               )}
                             >
-                              <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                              <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider tf-text-subtle">
                                 Change Status
                               </div>
 
@@ -656,7 +655,7 @@ function Tasks() {
                                   }
                                   className={
                                     task?.status === statusColumn.id
-                                      ? "bg-indigo-50/50 text-indigo-600 dark:bg-indigo-950/20 dark:text-indigo-400 font-semibold"
+                                      ? "tf-bg-3 tf-text font-semibold"
                                       : ""
                                   }
                                 >
@@ -675,7 +674,7 @@ function Tasks() {
                                 ? `/tasks/${taskId}?project=${selectedProjectId}`
                                 : `/tasks?project=${selectedProjectId}`
                             }
-                            className="mt-3 line-clamp-2 block text-[14px] font-semibold text-slate-900 transition-colors hover:text-indigo-600 dark:text-white dark:hover:text-indigo-400"
+                            className="mt-3 line-clamp-2 block text-[14px] font-semibold tf-text hover:tf-text-accent transition-colors"
                           >
                             {taskTitle}
                           </Link>
@@ -684,14 +683,14 @@ function Tasks() {
                             <div className="flex items-center gap-2">
                               {task?.assignee ? (
                                 <div
-                                  className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-50 text-[10px] font-bold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300"
+                                  className="flex h-7 w-7 items-center justify-center rounded-full tf-bg-3 text-[10px] font-bold tf-text-accent"
                                   title={assigneeName}
                                 >
                                   {assigneeName.charAt(0).toUpperCase()}
                                 </div>
                               ) : (
                                 <div
-                                  className="flex h-7 w-7 items-center justify-center rounded-full border border-dashed border-slate-300 bg-slate-50 text-[11px] text-slate-400 dark:border-slate-700 dark:bg-slate-800"
+                                  className="flex h-7 w-7 items-center justify-center rounded-full border border-dashed tf-bd tf-bg-2 text-[11px] tf-text-subtle"
                                   title="Unassigned"
                                 >
                                   <User size={12} />
@@ -701,7 +700,7 @@ function Tasks() {
 
                             <div className="flex items-center gap-2">
                               {task?.dueDate && (
-                                <span className="flex items-center gap-1.5 rounded-md bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
+                                <span className="flex items-center gap-1.5 rounded-md tf-bg-3 px-2 py-1 text-[11px] font-medium tf-text-muted">
                                   <Calendar size={12} />
                                   {getSafeShortDate(task.dueDate)}
                                 </span>
@@ -715,7 +714,7 @@ function Tasks() {
                                       e.preventDefault();
                                       openEditModal(task);
                                     }}
-                                    className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-indigo-600 dark:hover:bg-slate-800"
+                                    className="tf-btn-icon tf-size-sm"
                                     aria-label={`Edit ${taskTitle}`}
                                   >
                                     <Edit2 size={12} />
@@ -727,7 +726,7 @@ function Tasks() {
                                       e.preventDefault();
                                       openDeleteConfirm(task);
                                     }}
-                                    className="rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/30"
+                                    className="tf-btn-icon tf-size-sm tf-text-danger"
                                     aria-label={`Delete ${taskTitle}`}
                                   >
                                     <Trash2 size={12} />
@@ -753,24 +752,25 @@ function Tasks() {
         title={editingTask ? "Edit Task" : "Create Task"}
       >
         {formError && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
+          <div className="tf-alert tf-alert-error mb-4" role="alert">
             {formError}
           </div>
         )}
 
         <form onSubmit={handleSave} className="space-y-5">
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-slate-700 dark:text-slate-300">
+            <label className="tf-label" htmlFor="task-title">
               Title *
             </label>
 
             <input
+              id="task-title"
               type="text"
               value={form.title}
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, title: e.target.value }))
               }
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] text-slate-800 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+              className="tf-field w-full"
               required
             />
           </div>
@@ -841,11 +841,12 @@ function Tasks() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-slate-700 dark:text-slate-300">
+            <label className="tf-label" htmlFor="task-description">
               Description
             </label>
 
             <textarea
+              id="task-description"
               value={form.description}
               onChange={(e) =>
                 setForm((prev) => ({
@@ -854,7 +855,7 @@ function Tasks() {
                 }))
               }
               rows={3}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-[13px] text-slate-800 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+              className="tf-field w-full"
             />
           </div>
 
@@ -863,7 +864,7 @@ function Tasks() {
               type="button"
               onClick={closeModal}
               disabled={saving}
-              className="h-10 rounded-lg border border-slate-200 px-4 py-2 text-[13px] font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
+              className="tf-btn-base tf-btn-secondary"
             >
               Cancel
             </button>
@@ -871,7 +872,7 @@ function Tasks() {
             <button
               type="submit"
               disabled={saving}
-              className="h-10 rounded-lg bg-indigo-600 px-4 py-2 text-[13px] font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+              className="tf-btn-base tf-btn-primary"
             >
               {saving ? "Saving..." : "Save Task"}
             </button>

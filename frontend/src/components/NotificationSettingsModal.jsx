@@ -62,9 +62,35 @@ export default function NotificationSettingsModal({ open, onClose }) {
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="Notification Settings" maxWidth="sm">
-      <div className="p-6">
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Notification Settings"
+      description="Choose which activity should appear in your notification center."
+      maxWidth="sm"
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={onClose}
+            className="tf-btn-base tf-btn-secondary"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={loading || saving}
+            className="tf-btn-base tf-btn-primary"
+          >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Save Settings
+          </button>
+        </>
+      }
+    >
+      <div>
+        <p className="text-sm tf-text-muted mb-6">
           Choose which notifications you'd like to receive in the app.
           <br/>
           <span className="text-xs italic mt-2 block opacity-80">
@@ -79,7 +105,7 @@ export default function NotificationSettingsModal({ open, onClose }) {
         ) : (
           <div className="space-y-4">
             <div className="pt-2 pb-2">
-              <h4 className="text-[13px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">In-App Notifications</h4>
+              <h4 className="text-[13px] font-bold uppercase tracking-wider tf-text-muted">In-App Notifications</h4>
             </div>
             
             <ToggleOption 
@@ -117,24 +143,6 @@ export default function NotificationSettingsModal({ open, onClose }) {
           </div>
         )}
 
-        <div className="mt-8 flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={loading || saving}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Save Settings
-          </button>
-        </div>
       </div>
     </Modal>
   );
@@ -144,8 +152,8 @@ function ToggleOption({ label, description, checked, onChange, disabled = false 
   return (
     <div className={`flex items-start justify-between gap-4 py-2 ${disabled ? 'opacity-60' : ''}`}>
       <div>
-        <p className="text-sm font-medium text-slate-900 dark:text-white">{label}</p>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{description}</p>
+        <p className="text-sm font-medium tf-text">{label}</p>
+        <p className="text-xs tf-text-muted mt-0.5">{description}</p>
       </div>
       <button
         type="button"
@@ -153,17 +161,9 @@ function ToggleOption({ label, description, checked, onChange, disabled = false 
         disabled={disabled}
         aria-checked={checked}
         onClick={onChange}
-        className={`${
-          checked ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-slate-700'
-        } relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 disabled:cursor-not-allowed`}
-      >
-        <span
-          aria-hidden="true"
-          className={`${
-            checked ? 'translate-x-4' : 'translate-x-0'
-          } pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out`}
-        />
-      </button>
+        data-checked={checked}
+        className="tf-switch"
+      />
     </div>
   );
 }

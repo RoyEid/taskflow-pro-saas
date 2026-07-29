@@ -113,7 +113,7 @@ export default function CommandPalette({ open, setOpen }) {
         <div
           role="dialog"
           aria-modal="true"
-          className="mx-auto max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800"
+          className="mx-auto max-w-xl overflow-hidden tf-surface tf-hairline tf-elev-4 rounded-2xl"
         >
           <Command className="flex max-h-[60vh] flex-col">
             <div className="flex items-center border-b border-slate-100 px-4 py-4 dark:border-slate-800/60">
@@ -122,6 +122,7 @@ export default function CommandPalette({ open, setOpen }) {
               <Command.Input
                 autoFocus
                 placeholder="Search projects, navigation, and more..."
+                aria-label="Search commands and navigation"
                 className="h-12 w-full border-0 bg-transparent pl-3 pr-4 text-[15px] text-slate-900 placeholder-slate-400 outline-none focus:ring-0 dark:text-white"
               />
 
@@ -134,7 +135,7 @@ export default function CommandPalette({ open, setOpen }) {
             </div>
 
             <Command.List className="overflow-y-auto p-2">
-              <Command.Empty className="p-8 text-center text-[14px] text-slate-500 dark:text-slate-400">
+              <Command.Empty className="p-8 text-center text-[14px] tf-text-muted">
                 No results found.
               </Command.Empty>
 
@@ -198,7 +199,7 @@ export default function CommandPalette({ open, setOpen }) {
               </Command.Group>
 
               {loading && (
-                <div className="px-5 py-4 text-[13px] text-slate-500 dark:text-slate-400">
+                <div className="px-5 py-4 text-[13px] tf-text-muted">
                   Loading workspace data...
                 </div>
               )}

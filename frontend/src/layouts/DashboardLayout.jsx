@@ -1,8 +1,12 @@
 import { useEffect, useState, useRef } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router";
+import { AnimatePresence, motion } from "motion/react";
 import useAuth from "../context/useAuth";
+import useTheme from "../context/useTheme";
 import useWorkspace from "../context/useWorkspace";
 import { getChatUnreadCount } from "../services/chatService";
+import AppBackground from "../components/ui3d/AppBackground";
+import { easeOutFast, springSoft } from "../components/ui3d/motionTokens";
 
 import AppDropdown from "../components/ui/AppDropdown";
 import BrandLogo from "../components/ui/BrandLogo";
@@ -91,18 +95,16 @@ const navSections = [
         hoverClass: "group-hover:animate-spin-soft group-active:scale-95",
       },
       {
-        to: "#",
+        to: "/help",
         label: "Help & Support",
         icon: HelpCircle,
         hoverClass: "group-hover:scale-110 group-active:scale-95",
-        action: "help",
       },
       {
-        to: "#",
+        to: "/feedback",
         label: "Feedback",
         icon: MessageSquare,
         hoverClass: "group-hover:scale-110 group-active:scale-95",
-        action: "feedback",
       },
     ],
   },
@@ -124,6 +126,8 @@ function DashboardLayout({ children }) {
 
   const touchStart = useRef({ x: 0, y: 0 });
   const touchDelta = useRef({ x: 0, y: 0 });
+  const mobileDrawerRef = useRef(null);
+  const mobileTriggerRef = useRef(null);
 
   const handleTouchStart = (e) => {
     touchStart.current = {
@@ -155,9 +159,7 @@ function DashboardLayout({ children }) {
     return localStorage.getItem("sidebarPinned") === "true";
   });
 
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    return localStorage.getItem("theme") === "dark";
-  });
+  const { isDarkMode, toggleTheme } = useTheme();
 
   const isExpanded = isPinned || isHovered || mobileOpen;
   const isCompact = !isExpanded && !mobileOpen;
@@ -214,16 +216,61 @@ function DashboardLayout({ children }) {
   }, [workspaceId, location.pathname]);
 
   useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
-  }, [isDarkMode]);
+    if (!mobileOpen) return undefined;
 
-  // Global hotkey for search (Ctrl+K or Cmd+K)
+    const previouslyFocused = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    const focusTimer = window.setTimeout(() => {
+      mobileDrawerRef.current
+        ?.querySelector("button, a[href], input, [tabindex]:not([tabindex='-1'])")
+        ?.focus();
+    }, 0);
+
+    document.body.style.overflow = "hidden";
+
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") {
+        setMobileOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+
+      if (previouslyFocused instanceof HTMLElement) {
+        previouslyFocused.focus();
+      }
+    };
+  }, [mobileOpen]);
+
+  const trapMobileDrawerFocus = (event) => {
+    if (event.key !== "Tab" || !mobileDrawerRef.current) return;
+
+    const focusableElements = Array.from(
+      mobileDrawerRef.current.querySelectorAll(
+        "button:not(:disabled), a[href], input:not(:disabled), [tabindex]:not([tabindex='-1'])"
+      )
+    ).filter((element) => element.getClientRects().length > 0);
+
+    if (focusableElements.length === 0) return;
+
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+
+    if (event.shiftKey && document.activeElement === firstElement) {
+      event.preventDefault();
+      lastElement.focus();
+    } else if (!event.shiftKey && document.activeElement === lastElement) {
+      event.preventDefault();
+      firstElement.focus();
+    }
+  };
+
+  /* Global hotkey for search (Ctrl+K or Cmd+K) */
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "k") {
@@ -246,36 +293,12 @@ function DashboardLayout({ children }) {
     localStorage.setItem("sidebarPinned", nextValue.toString());
   };
 
-  const handleSupportAction = (e, action) => {
-    e.preventDefault();
-
-    if (action === "help") {
-      navigate("/help");
-    }
-
-    if (action === "feedback") {
-      navigate("/feedback");
-    }
-  };
-
   const getNavLinkClass = ({ isActive }) => {
-    let base =
-      "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-all duration-300 overflow-visible whitespace-nowrap active:scale-[0.97] border w-full";
+    const base = `tf-nav-item group relative w-full overflow-visible whitespace-nowrap ${
+      isCompact ? "justify-center px-0" : ""
+    }`;
 
-    if (isCompact) {
-      base =
-        "group relative flex items-center justify-center rounded-lg px-0 py-2.5 text-[13px] font-medium transition-all duration-300 overflow-visible whitespace-nowrap active:scale-[0.97] border w-full";
-    }
-
-    if (isActive) {
-      if (isCompact) {
-        return `${base} border-transparent bg-indigo-50/80 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400 animate-nav-pulse`;
-      }
-
-      return `${base} border-slate-200 bg-gradient-to-r from-white to-slate-50/50 text-indigo-700 shadow-sm dark:border-slate-700 dark:from-slate-800 dark:to-slate-800/80 dark:text-indigo-400 animate-nav-pulse`;
-    }
-
-    return `${base} border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-slate-200`;
+    return isActive ? `${base} tf-text font-semibold` : base;
   };
 
   const userInitials = user?.name
@@ -289,12 +312,12 @@ function DashboardLayout({ children }) {
 
   /* ── Sidebar Content ─────────────────────────────────────────── */
 
-  const sidebarContent = (
-    <div className="relative flex h-full flex-1 flex-col overflow-hidden bg-slate-50 dark:bg-slate-950/50">
-      {/* Logo */}
+  const renderSidebar = (instanceId) => (
+    <div className="relative flex h-full flex-1 flex-col overflow-hidden">
+      {/* Logo / Header */}
       <div
-        className={`relative flex min-w-0 shrink-0 items-center justify-between gap-2 pb-4 pt-5 transition-all duration-300 ${
-          isCompact ? "px-2" : "px-4"
+        className={`relative flex min-w-0 shrink-0 items-start justify-between gap-1.5 pb-4 pt-5 transition-all duration-300 ${
+          isCompact ? "px-2" : "px-3.5"
         }`}
       >
         <WorkspaceSwitcher
@@ -307,39 +330,43 @@ function DashboardLayout({ children }) {
           onExpandSidebar={() => setIsPinned(true)}
         />
 
-        <div
-          className={`flex items-center pt-1 transition-opacity duration-300 ${
-            isCompact ? "hidden opacity-0" : "flex opacity-100"
-          }`}
-        >
-          <button
-            type="button"
-            onClick={handlePinSidebar}
-            className={`hidden shrink-0 rounded-md p-1.5 transition-all duration-200 lg:flex ${
-              isPinned
-                ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400"
-                : "text-slate-400 hover:bg-slate-200/50 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
-            }`}
-            title={isPinned ? "Unpin sidebar" : "Pin sidebar open"}
-          >
-            <Pin
-              size={15}
-              className={`transition-transform duration-300 ${
-                isPinned ? "rotate-45" : "rotate-0"
+        <div className="relative z-50 flex shrink-0 items-center gap-1 pt-0.5">
+          {instanceId === "desktop" && !isCompact && (
+            <button
+              type="button"
+              onClick={handlePinSidebar}
+              className={`tf-btn-icon tf-size-sm ${
+                isPinned ? "tf-bg-3 tf-text-accent" : ""
               }`}
-            />
-          </button>
-        </div>
+              title={isPinned ? "Unpin sidebar" : "Pin sidebar open"}
+              aria-pressed={isPinned}
+              aria-label={isPinned ? "Unpin sidebar" : "Pin sidebar open"}
+            >
+              <Pin
+                size={15}
+                className={`transition-transform duration-300 ${
+                  isPinned ? "rotate-45" : "rotate-0"
+                }`}
+              />
+            </button>
+          )}
 
-        {/* Mobile close */}
-        <button
-          type="button"
-          onClick={() => setMobileOpen(false)}
-          className="shrink-0 rounded-md p-1.5 text-slate-400 hover:bg-slate-200/50 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300 lg:hidden z-50"
-          aria-label="Close sidebar"
-        >
-          <X size={18} />
-        </button>
+          {instanceId === "mobile" && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setMobileOpen(false);
+                setIsWorkspacePanelOpen(false);
+              }}
+              className="tf-btn-icon tf-size-sm relative z-50 cursor-pointer active:scale-95"
+              aria-label="Close sidebar"
+            >
+              <X size={18} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Search */}
@@ -354,7 +381,7 @@ function DashboardLayout({ children }) {
           className="group/search relative w-full cursor-text text-left transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98]"
         >
           <span
-            className={`pointer-events-none absolute top-1/2 -translate-y-1/2 text-slate-400 transition-all duration-300 group-hover/search:scale-110 group-hover/search:text-slate-500 dark:group-hover/search:text-slate-300 ${
+            className={`tf-text-subtle pointer-events-none absolute top-1/2 -translate-y-1/2 transition-all duration-300 group-hover/search:scale-110 ${
               isCompact ? "left-1/2 -translate-x-1/2" : "left-3"
             }`}
           >
@@ -362,10 +389,10 @@ function DashboardLayout({ children }) {
           </span>
 
           <div
-            className={`flex h-9 w-full cursor-pointer items-center rounded-lg border text-[13px] transition-all duration-300 ${
+            className={`tf-text-subtle flex h-9 w-full cursor-pointer items-center rounded-[var(--tf-r-md)] border text-[13px] transition-all duration-300 ${
               isCompact
-                ? "border-transparent bg-transparent px-0 shadow-none hover:bg-slate-200/50 dark:hover:bg-slate-800/50"
-                : "border-slate-200 bg-white pl-9 pr-14 text-slate-400 shadow-sm hover:border-slate-300 hover:shadow-sm dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-500 dark:hover:border-slate-600"
+                ? "tf-bg-3/0 border-transparent bg-transparent px-0 shadow-none hover:bg-[var(--tf-bg-3)]"
+                : "tf-bd tf-bg-2 pl-9 pr-14 hover:border-[var(--tf-border-strong)]"
             }`}
           >
             <span
@@ -378,7 +405,7 @@ function DashboardLayout({ children }) {
           </div>
 
           <span
-            className={`pointer-events-none hidden lg:absolute lg:inline-flex right-1.5 top-1/2 -translate-y-1/2 rounded-md border border-slate-100 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 shadow-sm transition-opacity duration-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500 ${
+            className={`tf-bd tf-bg-3 tf-text-muted pointer-events-none right-1.5 top-1/2 hidden -translate-y-1/2 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold transition-opacity duration-300 lg:absolute lg:inline-flex ${
               isCompact ? "hidden opacity-0" : "opacity-100"
             }`}
           >
@@ -396,7 +423,7 @@ function DashboardLayout({ children }) {
         {navSections.map((section) => (
           <div key={section.label}>
             <p
-              className={`mb-3 whitespace-nowrap px-2 text-[11px] font-bold uppercase tracking-wider text-slate-400 transition-opacity duration-300 dark:text-slate-500 ${
+              className={`tf-eyebrow mb-2.5 whitespace-nowrap px-2 transition-opacity duration-300 ${
                 isCompact ? "hidden opacity-0" : "opacity-100"
               }`}
             >
@@ -404,80 +431,61 @@ function DashboardLayout({ children }) {
             </p>
 
             <div className="relative space-y-1">
-              {section.items.map((item) =>
-                item.action ? (
-                  <a
-                    key={item.label}
-                    href="#"
-                    className={getNavLinkClass({ isActive: false })}
-                    onClick={(e) => handleSupportAction(e, item.action)}
-                  >
-                    <div className="flex shrink-0 items-center justify-center">
-                      <item.icon
-                        size={18}
-                        strokeWidth={2.2}
-                        className={`transition-all duration-300 ${item.hoverClass}`}
-                      />
-                    </div>
+              {section.items.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={getNavLinkClass}
+                  onClick={() => {
+                    setMobileOpen(false);
+                    setIsWorkspacePanelOpen(false);
+                  }}
+                >
+                  {({ isActive }) => (
+                    <>
+                      {isActive && (
+                        <motion.span
+                          layoutId={`tf-nav-active-${instanceId}`}
+                          transition={{ type: "spring", stiffness: 380, damping: 34 }}
+                          aria-hidden="true"
+                          className="tf-bg-3 absolute inset-0 -z-10 rounded-[var(--tf-r-md)]"
+                          style={{ boxShadow: "inset 3px 0 0 var(--tf-accent)" }}
+                        />
+                      )}
 
-                    <span
-                      className={`transition-opacity duration-300 ${
-                        isCompact ? "hidden opacity-0" : "opacity-100"
-                      }`}
-                    >
-                      {item.label}
-                    </span>
+                      <div className="flex shrink-0 items-center justify-center">
+                        <item.icon
+                          size={18}
+                          strokeWidth={2.2}
+                          className={`transition-all duration-300 ${item.hoverClass}`}
+                        />
+                      </div>
 
-                    {item.to === "/chat" && chatUnreadCount > 0 && (
                       <span
-                        className={`ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold leading-none text-white shadow-sm ${
-                          isCompact ? "absolute right-1 top-1" : ""
+                        className={`transition-opacity duration-300 ${
+                          isCompact ? "hidden opacity-0" : "opacity-100"
                         }`}
                       >
-                        {chatUnreadCount > 99 ? "99+" : chatUnreadCount}
+                        {item.label}
                       </span>
-                    )}
-                    
-                    {isCompact && (
-                      <div className="sidebar-tooltip">
-                        {item.label}
-                      </div>
-                    )}
-                  </a>
-                ) : (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    className={getNavLinkClass}
-                    onClick={() => {
-                      setMobileOpen(false);
-                      setIsWorkspacePanelOpen(false);
-                    }}
-                  >
-                    <div className="flex shrink-0 items-center justify-center">
-                      <item.icon
-                        size={18}
-                        strokeWidth={2.2}
-                        className={`transition-all duration-300 ${item.hoverClass}`}
-                      />
-                    </div>
 
-                    <span
-                      className={`transition-opacity duration-300 ${
-                        isCompact ? "hidden opacity-0" : "opacity-100"
-                      }`}
-                    >
-                      {item.label}
-                    </span>
-                    
-                    {isCompact && (
-                      <div className="sidebar-tooltip">
-                        {item.label}
-                      </div>
-                    )}
-                  </NavLink>
-                )
-              )}
+                      {item.to === "/chat" && chatUnreadCount > 0 && (
+                        <span
+                          className={`ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--tf-error-dot)] px-1.5 text-[10px] font-bold leading-none text-white shadow-sm ${
+                            isCompact ? "absolute right-1 top-1" : ""
+                          }`}
+                        >
+                          {chatUnreadCount > 99 ? "99+" : chatUnreadCount}
+                        </span>
+                      )}
+
+                      {isCompact && (
+                        <div className="sidebar-tooltip">{item.label}</div>
+                      )}
+                    </>
+                  )}
+                </NavLink>
+              ))}
             </div>
           </div>
         ))}
@@ -485,7 +493,7 @@ function DashboardLayout({ children }) {
 
       {/* Bottom section */}
       <div
-        className={`mt-auto shrink-0 border-t border-slate-200/60 transition-all duration-300 dark:border-slate-800/60 ${
+        className={`tf-bd mt-auto shrink-0 border-t transition-all duration-300 ${
           isCompact ? "p-[14px]" : "p-4"
         }`}
         style={{ paddingBottom: isCompact ? undefined : 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
@@ -496,20 +504,26 @@ function DashboardLayout({ children }) {
           containerClassName="w-full"
           trigger={({ open }) => (
             <div
-              className={`group flex w-full cursor-pointer items-center gap-3 rounded-xl transition-all duration-300 active:scale-[0.98] ${
+              className={`group flex w-full cursor-pointer items-center gap-3 rounded-[var(--tf-r-md)] border transition-all duration-300 active:scale-[0.98] ${
                 isCompact
-                  ? "justify-center border-transparent bg-transparent p-2 hover:bg-slate-200/50 dark:hover:bg-slate-800/50"
+                  ? "justify-center border-transparent bg-transparent p-2 hover:bg-[var(--tf-bg-3)]"
                   : open
-                  ? "border border-slate-300 bg-slate-50 p-2 shadow-sm dark:border-slate-600 dark:bg-slate-800"
-                  : "border border-slate-200 bg-white p-2 shadow-sm hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md dark:border-slate-700/80 dark:bg-slate-900 dark:hover:border-slate-600"
+                    ? "tf-bd-strong tf-bg-2 p-2"
+                    : "tf-bd tf-bg-1 p-2 hover:border-[var(--tf-border-strong)] hover:bg-[var(--tf-bg-2)]"
               }`}
             >
-              <div className="relative shrink-0 transition-all duration-300 group-hover:scale-105 group-hover:-translate-y-0.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-[11px] font-bold text-indigo-700 transition-colors duration-300 group-hover:bg-indigo-100 dark:bg-indigo-500/20 dark:text-indigo-300 dark:group-hover:bg-indigo-500/40">
+              <div className="relative shrink-0 transition-all duration-300 group-hover:scale-105">
+                <div className="tf-bg-3 tf-text flex h-8 w-8 items-center justify-center rounded-[var(--tf-r-sm)] text-[11px] font-bold">
                   {userInitials}
                 </div>
 
-                <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500 dark:border-slate-900 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse-slow" />
+                <div
+                  className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2"
+                  style={{
+                    backgroundColor: "var(--tf-success-dot)",
+                    borderColor: "var(--tf-bg-1)",
+                  }}
+                />
               </div>
 
               <div
@@ -517,17 +531,17 @@ function DashboardLayout({ children }) {
                   isCompact ? "hidden opacity-0" : "opacity-100"
                 }`}
               >
-                <p className="truncate text-[13px] font-semibold leading-tight text-slate-900 dark:text-slate-100">
+                <p className="tf-text truncate text-[13px] font-semibold leading-tight">
                   {user?.name || "User"}
                 </p>
 
-                <p className="mt-0.5 truncate text-[11px] text-slate-500 dark:text-slate-400">
+                <p className="tf-text-muted mt-0.5 truncate text-[11px]">
                   {user?.email || "user@taskflow.io"}
                 </p>
               </div>
 
               <span
-                className={`shrink-0 text-slate-400 transition-opacity duration-300 dark:text-slate-500 ${
+                className={`tf-text-muted shrink-0 transition-opacity duration-300 ${
                   isCompact ? "hidden opacity-0" : "opacity-100"
                 } ${open ? "rotate-180" : ""}`}
               >
@@ -536,32 +550,32 @@ function DashboardLayout({ children }) {
             </div>
           )}
         >
-          <div className="mb-1 flex items-center gap-3 px-3 py-2">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-[13px] font-bold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
+          <div className="mb-1 flex items-center gap-3 px-2.5 py-2">
+            <div className="tf-bg-3 tf-text flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--tf-r-md)] text-[13px] font-bold">
               {userInitials}
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[14px] font-bold leading-tight text-slate-900 dark:text-white">
+              <p className="tf-text truncate text-[13px] font-semibold leading-tight">
                 {user?.name || "User"}
               </p>
 
-              <p className="mt-0.5 truncate text-[12px] text-slate-500 dark:text-slate-400">
+              <p className="tf-text-muted mt-0.5 truncate text-[12px]">
                 {user?.email || "user@taskflow.io"}
               </p>
             </div>
           </div>
 
-          <div className="my-1 border-t border-slate-100 dark:border-slate-800/80" />
+          <AppDropdown.Separator />
 
           <AppDropdown.Item onClick={() => navigate("/settings")}>
             <Settings size={15} />
-            <span className="ml-2">Profile & Settings</span>
+            Profile & Settings
           </AppDropdown.Item>
 
           <AppDropdown.Item onClick={() => navigate('/workspaces')}>
             <Building2 size={15} />
-            <span className="ml-2">Switch Workspace</span>
+            Switch Workspace
           </AppDropdown.Item>
 
           <AppDropdown.Item
@@ -591,31 +605,28 @@ function DashboardLayout({ children }) {
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
 
-            <span className="ml-2">Change Password</span>
+            Change Password
           </AppDropdown.Item>
 
-          <AppDropdown.Item onClick={() => setIsDarkMode((prev) => !prev)}>
+          <AppDropdown.Item onClick={toggleTheme}>
             {isDarkMode ? (
               <>
                 <Sun size={15} />
-                <span className="ml-2">Switch to Light Mode</span>
+                Switch to Light Mode
               </>
             ) : (
               <>
                 <Moon size={15} />
-                <span className="ml-2">Switch to Dark Mode</span>
+                Switch to Dark Mode
               </>
             )}
           </AppDropdown.Item>
 
-          <div className="my-1 border-t border-slate-100 dark:border-slate-800/80" />
+          <AppDropdown.Separator />
 
-          <AppDropdown.Item
-            onClick={handleLogout}
-            className="text-red-600 hover:!bg-red-50 dark:text-red-400 dark:hover:!bg-red-950/30"
-          >
+          <AppDropdown.Item onClick={handleLogout} danger>
             <LogOut size={15} />
-            <span className="ml-2">Logout</span>
+            Log out
           </AppDropdown.Item>
         </AppDropdown>
       </div>
@@ -625,63 +636,114 @@ function DashboardLayout({ children }) {
   /* ── Render ──────────────────────────────────────────────────── */
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <div className="relative flex min-h-screen">
+    <div className="tf-bg-app tf-text relative min-h-screen">
+      <AppBackground />
+
+      <div className="relative z-10 flex min-h-screen">
+        {/* Floating glass rail — detached from the viewport edge so it
+            reads as a panel suspended over the background. */}
         <aside
-          className={`sticky top-0 z-40 hidden h-screen shrink-0 self-start flex-col border-r border-slate-200 bg-slate-50 transition-[width,box-shadow,border-color] duration-300 ease-in-out dark:border-slate-800/80 dark:bg-slate-950 lg:flex ${
-            isCompact
-              ? "w-[68px]"
-              : "w-[260px] shadow-2xl lg:shadow-[4px_0_24px_rgba(0,0,0,0.05)] dark:lg:shadow-[4px_0_24px_rgba(0,0,0,0.4)]"
+          className={`sticky top-0 z-40 hidden h-screen shrink-0 self-start p-3 transition-[width] duration-300 ease-out lg:flex ${
+            isCompact ? "w-[86px]" : "w-[288px]"
           }`}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
-          {sidebarContent}
+          <div className="tf-surface tf-hairline tf-elev-3 relative flex h-full w-full flex-col overflow-hidden rounded-2xl">
+            {renderSidebar("desktop")}
+          </div>
         </aside>
 
-        {/* Mobile sidebar overlay */}
-        {mobileOpen && (
-          <>
-            <button
-              type="button"
-              aria-label="Close sidebar overlay"
-              className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm lg:hidden"
-              onClick={() => setMobileOpen(false)}
-            />
+        {/* Mobile drawer */}
+        <AnimatePresence>
+          {mobileOpen && (
+            <>
+              <motion.button
+                type="button"
+                aria-label="Close sidebar overlay"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={easeOutFast}
+                className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-md lg:hidden"
+                onClick={() => setMobileOpen(false)}
+              />
 
-            <aside
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-              className="fixed inset-y-0 left-0 z-50 w-[280px] h-screen h-[100dvh] bg-slate-50 shadow-2xl dark:bg-slate-950 lg:hidden flex flex-col"
-            >
-              {sidebarContent}
-            </aside>
-          </>
-        )}
+              <motion.aside
+                ref={mobileDrawerRef}
+                initial={{ x: -24, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -24, opacity: 0 }}
+                transition={springSoft}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onKeyDown={trapMobileDrawerFocus}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Main navigation"
+                tabIndex={-1}
+                className="fixed inset-y-0 left-0 z-50 flex h-dvh w-[292px] flex-col p-3 lg:hidden"
+              >
+                <div className="tf-surface tf-hairline tf-elev-4 relative flex h-full w-full flex-col overflow-hidden rounded-2xl">
+                  {renderSidebar("mobile")}
+                </div>
+              </motion.aside>
+            </>
+          )}
+        </AnimatePresence>
 
         {/* Main content */}
-        <div className="flex flex-1 flex-col min-w-0 max-w-full overflow-x-hidden">
-          {/* Mobile header */}
-          <div className="flex h-14 items-center gap-3 border-b border-slate-200 bg-white px-4 shadow-sm dark:border-slate-800/80 dark:bg-slate-900 lg:hidden">
-            <button
-              type="button"
-              onClick={() => setMobileOpen(true)}
-              className="rounded-md p-1.5 text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
-              aria-label="Open sidebar"
-            >
-              <Menu size={20} />
-            </button>
+        <div className="flex min-w-0 max-w-full flex-1 flex-col overflow-x-hidden">
+          {/* Floating glass topbar */}
+          <div className="sticky top-0 z-30 p-3 lg:hidden">
+            <div className="tf-surface tf-hairline tf-elev-2 flex h-14 items-center gap-3 rounded-2xl px-3">
+              <button
+                ref={mobileTriggerRef}
+                type="button"
+                onClick={() => setMobileOpen(true)}
+                className="tf-btn-icon tf-size-sm"
+                aria-label="Open sidebar"
+              >
+                <Menu size={20} />
+              </button>
 
-            <BrandLogo size="sm" />
+              <BrandLogo size="sm" />
 
-            <span className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">
-              TaskFlow Pro
-            </span>
+              <span className="tf-text text-sm font-bold tracking-tight">
+                TaskFlow Pro
+              </span>
+
+              {/* Search and theme are reachable from the rail on desktop;
+                  on mobile the rail is closed, so they live here. */}
+              <div className="ml-auto flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setIsSearchOpen(true)}
+                  className="tf-btn-icon tf-size-sm"
+                  aria-label="Search"
+                >
+                  <Search size={18} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className="tf-btn-icon tf-size-sm"
+                  aria-label={
+                    isDarkMode ? "Switch to light mode" : "Switch to dark mode"
+                  }
+                >
+                  {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+                </button>
+              </div>
+            </div>
           </div>
 
-          <main className="flex-1 p-4 md:p-6 lg:p-8">
-            {children}
+          {/* Capped so the grid does not stretch into unreadable line
+              lengths on wide monitors, and never flush to the edge. */}
+          <main className="flex-1 p-4 md:p-6 lg:py-7 lg:pl-5 lg:pr-7">
+            <div className="mx-auto w-full max-w-[1560px]">{children}</div>
           </main>
         </div>
       </div>

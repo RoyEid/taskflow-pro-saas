@@ -10,7 +10,7 @@ export default function PasswordStrengthIndicator({ password, confirmPassword })
   return (
     <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-900/50">
       <div className="mb-2 flex items-center justify-between text-[12px]">
-        <span className="font-semibold text-slate-700 dark:text-slate-300">
+        <span className="font-semibold tf-text-secondary">
           Security Check
         </span>
 
@@ -41,7 +41,7 @@ export default function PasswordStrengthIndicator({ password, confirmPassword })
             className={`flex items-center gap-1.5 text-[12px] ${
               rule.passed
                 ? "text-emerald-600 dark:text-emerald-400"
-                : "text-slate-500 dark:text-slate-400"
+                : "tf-text-muted"
             }`}
           >
             {rule.passed ? <CheckCircle2 size={14} /> : <Circle size={14} />}
@@ -53,7 +53,7 @@ export default function PasswordStrengthIndicator({ password, confirmPassword })
             className={`flex items-center gap-1.5 text-[12px] col-span-2 ${
               passwordsMatch
                 ? "text-emerald-600 dark:text-emerald-400"
-                : "text-slate-500 dark:text-slate-400"
+                : "tf-text-muted"
             }`}
           >
             {passwordsMatch ? <CheckCircle2 size={14} /> : <Circle size={14} />}

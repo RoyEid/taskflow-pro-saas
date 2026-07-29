@@ -12,7 +12,7 @@ import {
   acceptInvitationById,
   declineInvitationById,
 } from "../services/memberService";
-import LoadingState from "../components/LoadingState";
+import CardSkeleton from "../components/ui/CardSkeleton";
 import EmptyState from "../components/EmptyState";
 import Badge from "../components/Badge";
 import PageHeader from "../components/PageHeader";
@@ -191,6 +191,25 @@ function Dashboard() {
 
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [projectFilter, setProjectFilter] = useState("all");
+
+  /*
+   * The header's range picker used to call setDateRange directly, so the
+   * choice only lived in component state. On reload the saved settings won
+   * and the range silently snapped back - the "settings don't reload
+   * correctly" symptom. Both entry points now write to the same key.
+   */
+  const changeDateRange = useCallback((range) => {
+    setDateRange(range);
+    try {
+      const current = getSavedDashboardSettings();
+      localStorage.setItem(
+        "taskflow_dashboard_settings",
+        JSON.stringify({ ...current, dateRange: range }),
+      );
+    } catch {
+      // Storage blocked or full - the in-session selection still applies.
+    }
+  }, []);
 
   const loadDashboard = useCallback(async () => {
     try {
@@ -630,7 +649,7 @@ function Dashboard() {
 
     return (
       <div className="mb-8 space-y-4">
-        <h3 className="text-[16px] font-bold tracking-tight text-slate-900 dark:text-white">
+        <h3 className="text-[16px] font-bold tracking-tight tf-text">
           Pending Workspace Invitations
         </h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -644,20 +663,20 @@ function Dashboard() {
                   <Building size={20} />
                 </div>
                 <div className="truncate">
-                  <h4 className="truncate text-[14px] font-bold text-slate-900 dark:text-white">
+                  <h4 className="truncate text-[14px] font-bold tf-text">
                     {invite.workspace?.name}
                   </h4>
-                  <p className="truncate text-[12px] text-slate-500 dark:text-slate-400">
+                  <p className="truncate text-[12px] tf-text-muted">
                     Invited by {invite.invitedBy?.name}
                   </p>
                 </div>
               </div>
               <div className="mt-4 flex items-center justify-between">
-                <span className="text-[12px] font-medium text-slate-600 dark:text-slate-300">
+                <span className="text-[12px] font-medium tf-text-secondary">
                   Role: <strong className="capitalize">{invite.role}</strong>
                 </span>
                 {invite.expiresAt && (
-                  <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                  <span className="text-[11px] tf-text-subtle">
                     Expires: {new Date(invite.expiresAt).toLocaleDateString()}
                   </span>
                 )}
@@ -667,7 +686,7 @@ function Dashboard() {
                   type="button"
                   onClick={() => handleAcceptInvite(invite._id)}
                   disabled={invitationActionLoadingId === invite._id}
-                  className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 py-2 text-[13px] font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                  className="tf-btn-base tf-btn-primary flex-1"
                 >
                   <Check size={14} /> Accept
                 </button>
@@ -726,9 +745,14 @@ function Dashboard() {
   if (loading && !data) {
     return (
       <DashboardLayout>
-        <div className="mt-20">
-          <LoadingState message="Loading dashboard..." />
-        </div>
+        <PageHeader
+          title="Dashboard"
+          subtitle={`Loading insights for ${workspace?.name || "this workspace"}…`}
+        />
+        <CardSkeleton
+          count={4}
+          className="grid-cols-1 sm:grid-cols-2 xl:grid-cols-4"
+        />
       </DashboardLayout>
     );
   }
@@ -752,26 +776,11 @@ function Dashboard() {
     <DashboardLayout>
       {renderPendingInvitations()}
 
-      <header className="mb-4 sm:mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <div className="hidden sm:flex mb-3 items-center gap-2 text-[12px] font-medium text-slate-500 dark:text-slate-400">
-            <span className="cursor-pointer hover:text-slate-700 dark:hover:text-slate-200">
-              Home
-            </span>
-            <span className="text-slate-300 dark:text-slate-600">/</span>
-            <span className="text-slate-900 dark:text-white">Dashboard</span>
-          </div>
-
-          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-            Hello, {user?.name || "Roy Eid"} 👋
-          </h2>
-
-          <p className="mt-1 text-[13px] sm:text-[14px] text-slate-500 dark:text-slate-400">
-            Here are the latest insights from your workspace activity in{" "}
-            {workspace?.name || "this workspace"}.
-          </p>
-        </div>
-
+      <PageHeader
+        breadcrumb={<span>Home / Dashboard</span>}
+        title={`Hello, ${user?.name || "Roy Eid"} 👋`}
+        subtitle={`Here are the latest insights from your workspace activity in ${workspace?.name || "this workspace"}.`}
+      >
         <div className="flex flex-col gap-3.5 w-full lg:w-auto sm:flex-row sm:items-center">
           {/* Row 1 for mobile (Bell, Settings, Menu) */}
           <div className="flex items-center justify-end gap-2.5 sm:gap-3 w-full sm:w-auto order-1 sm:order-2">
@@ -782,7 +791,7 @@ function Dashboard() {
             <button
               type="button"
               onClick={() => navigate("/settings")}
-              className="group flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition-all duration-300 hover:bg-slate-50 hover:shadow-sm active:scale-[0.98] dark:border-slate-700/80 dark:bg-slate-900 dark:hover:bg-slate-800"
+              className="group flex h-10 w-10 shrink-0 items-center justify-center tf-card tf-btn rounded-xl text-slate-500 active:scale-[0.98]"
             >
               <SettingsIcon
                 size={18}
@@ -865,7 +874,7 @@ function Dashboard() {
               {dateRanges.map((range) => (
                 <AppDropdown.Item
                   key={range}
-                  onClick={() => setDateRange(range)}
+                  onClick={() => changeDateRange(range)}
                   className={
                     dateRange === range
                       ? "bg-slate-50 font-semibold text-indigo-600 dark:bg-slate-800 dark:text-indigo-400"
@@ -878,10 +887,10 @@ function Dashboard() {
             </AppDropdown>
           </div>
         </div>
-      </header>
+      </PageHeader>
 
       {error && (
-        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
+        <div className="tf-alert tf-alert-error mb-6" role="alert">
           {error}
         </div>
       )}
@@ -892,7 +901,7 @@ function Dashboard() {
             <button
               type="button"
               onClick={() => navigate("/tasks")}
-              className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-xs sm:text-[13px] font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 active:scale-95 dark:bg-indigo-500 dark:hover:bg-indigo-600 h-10"
+              className="tf-btn-base tf-btn-primary w-full text-xs focus:ring-2 focus:ring-offset-2"
             >
               <Plus size={14} className="shrink-0" />
               New Task
@@ -945,17 +954,17 @@ function Dashboard() {
           <Link
             to={card.link}
             key={card.title}
-            className={`group block w-full min-w-0 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-md dark:border-slate-800/80 dark:bg-slate-900 dark:hover:border-slate-700 animate-fade-in-up stagger-${
+            className={`group block w-full min-w-0 tf-card tf-card-hover rounded-2xl p-4 sm:p-5 hover:border-amber-500/35 dark:hover:border-amber-400/30 animate-fade-in-up stagger-${
               (index % 5) + 1
             }`}
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[13px] font-medium text-slate-500 dark:text-slate-400">
+                <p className="truncate text-[13px] font-medium tf-text-muted">
                   {card.title}
                 </p>
 
-                <h3 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 dark:text-white truncate">
+                <h3 className="mt-2 text-2xl font-bold tracking-tight tf-text truncate">
                   <AnimatedNumber value={card.value} />
                 </h3>
               </div>
@@ -983,7 +992,7 @@ function Dashboard() {
                 {card.change}
               </span>
 
-              <span className="text-[12px] text-slate-400 dark:text-slate-500">
+              <span className="text-[12px] tf-text-subtle">
                 {card.changeLabel}
               </span>
             </div>
@@ -994,18 +1003,18 @@ function Dashboard() {
       <section className="mb-6 grid grid-cols-1 gap-5 xl:grid-cols-3">
         {settings.showTrendChart && (
           <div
-            className={`rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800/80 dark:bg-slate-900 animate-fade-in-up stagger-3 ${
+            className={`tf-card rounded-2xl p-4 sm:p-6 animate-fade-in-up stagger-3 ${
               settings.showLatestUpdates ? "xl:col-span-2" : "xl:col-span-3"
             }`}
           >
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-[15px] font-bold tracking-tight text-slate-900 dark:text-white">
+                <h3 className="text-[15px] font-bold tracking-tight tf-text">
                   Task Volume Trend
                 </h3>
 
                 <div className="mt-1.5 flex flex-wrap items-center gap-3">
-                  <span className="text-2xl font-bold text-slate-900 dark:text-white">
+                  <span className="text-2xl font-bold tf-text">
                     <AnimatedNumber value={getNumber(stats.tasks?.newLast30)} />{" "}
                     <span className="text-xs font-normal text-slate-500">
                       Total
@@ -1047,7 +1056,7 @@ function Dashboard() {
                 {dateRanges.map((range) => (
                   <AppDropdown.Item
                     key={range}
-                    onClick={() => setDateRange(range)}
+                    onClick={() => changeDateRange(range)}
                     className={
                       dateRange === range
                         ? "bg-slate-50 dark:bg-slate-800/50"
@@ -1061,7 +1070,7 @@ function Dashboard() {
             </div>
 
             <div className="relative mt-8">
-              <div className="pointer-events-none absolute right-0 top-0 flex h-full flex-col justify-between py-1 text-[11px] font-medium text-slate-400 dark:text-slate-500">
+              <div className="pointer-events-none absolute right-0 top-0 flex h-full flex-col justify-between py-1 text-[11px] font-medium tf-text-subtle">
                 <span>{formatTick(maxChartValue)}</span>
                 <span>{formatTick(maxChartValue * 0.75)}</span>
                 <span>{formatTick(maxChartValue * 0.5)}</span>
@@ -1119,7 +1128,7 @@ function Dashboard() {
                 {chartBars.map((bar, index) => (
                   <div
                     key={`${bar.label}-label-${index}`}
-                    className="flex-1 truncate text-center text-[9px] sm:text-[11px] font-medium text-slate-400 dark:text-slate-500"
+                    className="flex-1 truncate text-center text-[9px] sm:text-[11px] font-medium tf-text-subtle"
                     title={bar.title}
                   >
                     {bar.label}
@@ -1131,14 +1140,15 @@ function Dashboard() {
         )}
 
         {settings.showLatestUpdates && (
-          <div className="flex flex-col rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800/80 dark:bg-slate-900 animate-fade-in-up stagger-4">
+          <div className="flex flex-col rounded-2xl tf-card animate-fade-in-up stagger-4">
             <div className="flex items-center justify-between border-b border-slate-100 p-4 sm:p-5 dark:border-slate-800/60">
-              <h3 className="text-[15px] font-bold tracking-tight text-slate-900 dark:text-white truncate pr-2">
+              <h3 className="text-[15px] font-bold tracking-tight tf-text truncate pr-2">
                 Latest Updates
               </h3>
               <input
                 type="text"
                 placeholder="Search..."
+                aria-label="Search recent projects"
                 value={activitySearch}
                 onChange={(event) => setActivitySearch(event.target.value)}
                 className="h-8 w-28 sm:w-36 rounded-md border border-slate-200 bg-slate-50 px-2 text-[12px] text-slate-700 outline-none transition focus:border-indigo-400 focus:bg-white dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-300 dark:focus:border-indigo-500 dark:focus:bg-slate-900 shrink-0"
@@ -1171,11 +1181,11 @@ function Dashboard() {
             <div className="flex-1 p-5">
               <div className="space-y-2">
                 {latestUpdates.length === 0 ? (
-                  <div className="flex h-40 flex-col items-center justify-center text-center text-slate-500 dark:text-slate-400">
+                  <div className="flex h-40 flex-col items-center justify-center text-center tf-text-muted">
                     <div className="mb-3 rounded-full bg-slate-100 p-3 dark:bg-slate-800">
                       <Calendar size={20} />
                     </div>
-                    <p className="text-[13px] font-medium text-slate-700 dark:text-slate-300">
+                    <p className="text-[13px] font-medium tf-text-secondary">
                       No activity found
                     </p>
                     <p className="text-[12px]">
@@ -1200,11 +1210,11 @@ function Dashboard() {
                       </div>
 
                       <div>
-                        <p className="text-[13px] font-semibold leading-tight text-slate-900 dark:text-white">
+                        <p className="text-[13px] font-semibold leading-tight tf-text">
                           {update.title}
                         </p>
 
-                        <p className="mt-0.5 text-[12px] text-slate-500 dark:text-slate-400">
+                        <p className="mt-0.5 text-[12px] tf-text-muted">
                           {update.desc}
                         </p>
 
@@ -1232,9 +1242,9 @@ function Dashboard() {
       </section>
 
       <section className="mb-6 grid grid-cols-1 gap-5 xl:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800/80 dark:bg-slate-900 animate-fade-in-up stagger-5">
+        <div className="rounded-2xl tf-card animate-fade-in-up stagger-5">
           <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5 dark:border-slate-800/60">
-            <h3 className="text-[15px] font-bold tracking-tight text-slate-900 dark:text-white">
+            <h3 className="text-[15px] font-bold tracking-tight tf-text">
               My Tasks
             </h3>
             <Link
@@ -1255,7 +1265,7 @@ function Dashboard() {
                     className="flex flex-col gap-2 border-b border-slate-100 p-5 transition-colors last:border-0 hover:bg-slate-50 dark:border-slate-800/60 dark:hover:bg-slate-800/50"
                   >
                     <div className="flex items-center justify-between">
-                      <p className="truncate pr-4 text-[13px] font-semibold text-slate-900 dark:text-white">
+                      <p className="truncate pr-4 text-[13px] font-semibold tf-text">
                         {task.title || "Untitled task"}
                       </p>
                       <Badge
@@ -1306,9 +1316,9 @@ function Dashboard() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800/80 dark:bg-slate-900 animate-fade-in-up stagger-5">
+        <div className="rounded-2xl tf-card animate-fade-in-up stagger-5">
           <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5 dark:border-slate-800/60">
-            <h3 className="text-[15px] font-bold tracking-tight text-slate-900 dark:text-white">
+            <h3 className="text-[15px] font-bold tracking-tight tf-text">
               Due Soon
             </h3>
             <Link
@@ -1338,7 +1348,7 @@ function Dashboard() {
                       className="flex flex-col gap-2 border-b border-slate-100 p-5 transition-colors last:border-0 hover:bg-slate-50 dark:border-slate-800/60 dark:hover:bg-slate-800/50"
                     >
                       <div className="flex items-center justify-between">
-                        <p className="truncate pr-4 text-[13px] font-semibold text-slate-900 dark:text-white">
+                        <p className="truncate pr-4 text-[13px] font-semibold tf-text">
                           {task.title || "Untitled task"}
                         </p>
                         <span
@@ -1398,9 +1408,9 @@ function Dashboard() {
       </section>
 
       {settings.showRecentProjects && (
-        <section className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800/80 dark:bg-slate-900 animate-fade-in-up stagger-5">
+        <section className="rounded-2xl tf-card animate-fade-in-up stagger-5">
           <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5 dark:border-slate-800/60">
-            <h3 className="text-[15px] font-bold tracking-tight text-slate-900 dark:text-white">
+            <h3 className="text-[15px] font-bold tracking-tight tf-text">
               Recent Projects
             </h3>
 
@@ -1472,7 +1482,7 @@ function Dashboard() {
             {/* Mobile Card Layout */}
             <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
               {!filteredRecentProjects.length ? (
-                <div className="p-6 text-center text-sm text-slate-500 dark:text-slate-400">
+                <div className="p-6 text-center text-sm tf-text-muted">
                   No projects found.
                 </div>
               ) : (
@@ -1489,7 +1499,7 @@ function Dashboard() {
                           to={
                             projectId ? `/projects/${projectId}` : "/projects"
                           }
-                          className="flex items-center gap-2 text-[13px] font-semibold text-slate-900 dark:text-slate-100 transition hover:text-indigo-600 dark:hover:text-indigo-400 truncate pr-2"
+                          className="flex items-center gap-2 text-[13px] font-semibold tf-text transition hover:text-indigo-600 dark:hover:text-indigo-400 truncate pr-2"
                         >
                           <Briefcase
                             size={14}
@@ -1508,7 +1518,7 @@ function Dashboard() {
                         <Badge variant={project?.priority || "medium"} dot />
                       </div>
 
-                      <div className="mt-1 flex justify-end text-[11px] text-slate-500 dark:text-slate-500">
+                      <div className="mt-1 flex justify-end text-[11px] tf-text-muted">
                         Created {getSafeDateLabel(project?.createdAt)}
                       </div>
                     </div>
@@ -1518,27 +1528,27 @@ function Dashboard() {
             </div>
 
             {/* Desktop Table Layout */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full min-w-[700px] border-collapse text-left">
+            <div className="tf-scroll-x hidden md:block">
+              <table className="tf-table min-w-[700px]">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50/50 dark:border-slate-800/60 dark:bg-slate-900/50">
-                    <th className="px-6 py-3.5 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
+                    <th className="px-6 py-3.5 text-[12px] font-semibold tf-text-muted">
                       Project Name
                     </th>
 
-                    <th className="px-6 py-3.5 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
+                    <th className="px-6 py-3.5 text-[12px] font-semibold tf-text-muted">
                       Client
                     </th>
 
-                    <th className="px-6 py-3.5 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
+                    <th className="px-6 py-3.5 text-[12px] font-semibold tf-text-muted">
                       Status
                     </th>
 
-                    <th className="px-6 py-3.5 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
+                    <th className="px-6 py-3.5 text-[12px] font-semibold tf-text-muted">
                       Priority
                     </th>
 
-                    <th className="px-6 py-3.5 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
+                    <th className="px-6 py-3.5 text-[12px] font-semibold tf-text-muted">
                       Created Date
                     </th>
                   </tr>
@@ -1549,7 +1559,7 @@ function Dashboard() {
                     <tr>
                       <td
                         colSpan="5"
-                        className="px-6 py-8 text-center text-sm text-slate-500 dark:text-slate-400"
+                        className="px-6 py-8 text-center text-sm tf-text-muted"
                       >
                         No projects found.
                       </td>
@@ -1563,7 +1573,7 @@ function Dashboard() {
                           key={projectId || project?.name}
                           className="border-b border-slate-100 transition last:border-b-0 hover:bg-slate-50 dark:border-slate-800/60 dark:hover:bg-slate-800/40"
                         >
-                          <td className="px-6 py-4 text-[13px] font-semibold text-slate-900 dark:text-slate-100">
+                          <td className="px-6 py-4 text-[13px] font-semibold tf-text">
                             <Link
                               to={
                                 projectId
@@ -1577,7 +1587,7 @@ function Dashboard() {
                             </Link>
                           </td>
 
-                          <td className="px-6 py-4 text-[13px] font-medium text-slate-600 dark:text-slate-400">
+                          <td className="px-6 py-4 text-[13px] font-medium tf-text-secondary">
                             {project?.client?.name || "N/A"}
                           </td>
 
@@ -1592,7 +1602,7 @@ function Dashboard() {
                             />
                           </td>
 
-                          <td className="px-6 py-4 text-[13px] text-slate-500 dark:text-slate-400">
+                          <td className="px-6 py-4 text-[13px] tf-text-muted">
                             {getSafeDateLabel(project?.createdAt)}
                           </td>
                         </tr>

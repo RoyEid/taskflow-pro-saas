@@ -7,6 +7,7 @@ import { getTasks } from "../services/taskService";
 import Badge from "../components/Badge";
 import LoadingState from "../components/LoadingState";
 import EmptyState from "../components/EmptyState";
+import PageHeader from "../components/PageHeader";
 import {
   ArrowLeft,
   Briefcase,
@@ -194,48 +195,42 @@ function ProjectDetail() {
 
   return (
     <DashboardLayout>
-      <div className="mb-6">
-        <Link
-          to="/projects"
-          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-500 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
-        >
-          <ArrowLeft size={14} />
-          Back to Projects
-        </Link>
-      </div>
-
-      <header className="flex flex-col gap-5 rounded-2xl border border-slate-200 bg-white p-7 shadow-sm dark:border-slate-800/80 dark:bg-slate-900 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-              {project?.name || "Untitled Project"}
-            </h2>
-
+      <PageHeader
+        breadcrumb={
+          <Link
+            to="/projects"
+            className="inline-flex items-center gap-1.5 transition hover:text-[var(--tf-fg)]"
+          >
+            <ArrowLeft size={14} />
+            Projects
+          </Link>
+        }
+        title={project?.name || "Untitled Project"}
+        subtitle={
+          project?.client ? (
+            <span className="inline-flex items-center gap-1.5">
+              <Briefcase size={14} />
+              Client: {project.client?.name || "Unnamed Client"}
+            </span>
+          ) : (
+            "Project overview, progress, and tasks."
+          )
+        }
+        toolbar={
+          <div className="flex flex-wrap items-center gap-2">
             <Badge variant={project?.status || "active"} />
             <Badge variant={project?.priority || "medium"} dot />
           </div>
-
-          {project?.client && (
-            <div className="mt-3 flex items-center gap-1.5 text-[13px] text-slate-500 dark:text-slate-400">
-              <Briefcase size={14} />
-              Client:{" "}
-              <span className="font-medium text-slate-700 dark:text-slate-300">
-                {project.client?.name || "Unnamed Client"}
-              </span>
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Link
-            to={`/tasks?project=${projectRealId || projectId}`}
-            className="flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-[13px] font-semibold text-white shadow-sm transition hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
-          >
-            <Columns size={16} />
-            View Board
-          </Link>
-        </div>
-      </header>
+        }
+      >
+        <Link
+          to={`/tasks?project=${projectRealId || projectId}`}
+          className="tf-btn-base tf-btn-primary"
+        >
+          <Columns size={16} />
+          View Board
+        </Link>
+      </PageHeader>
 
       <div className="mt-8 border-b border-slate-200 dark:border-slate-800/60">
         <nav className="-mb-px flex gap-8 px-2">
@@ -260,19 +255,19 @@ function ProjectDetail() {
         {activeTab === "overview" && (
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="space-y-6 lg:col-span-2">
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-7 shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
-                <h3 className="text-[15px] font-bold text-slate-900 dark:text-white">
+              <div className="tf-card rounded-2xl p-4 sm:p-7">
+                <h3 className="text-[15px] font-bold tf-text">
                   Description
                 </h3>
 
-                <p className="mt-4 whitespace-pre-wrap text-[14px] leading-relaxed text-slate-600 dark:text-slate-400">
+                <p className="mt-4 whitespace-pre-wrap text-[14px] leading-relaxed tf-text-secondary">
                   {project?.description || "No description provided."}
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-7 shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
+              <div className="tf-card rounded-2xl p-4 sm:p-7">
                 <div className="mb-5 flex items-center justify-between">
-                  <h3 className="flex items-center gap-2 text-[15px] font-bold text-slate-900 dark:text-white">
+                  <h3 className="flex items-center gap-2 text-[15px] font-bold tf-text">
                     <BarChart3 size={16} className="text-slate-400" />
                     Task Progress
                   </h3>
@@ -291,18 +286,18 @@ function ProjectDetail() {
 
                 <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="rounded-xl border border-slate-100 p-4 dark:border-slate-800/60">
-                    <p className="flex items-center gap-1.5 text-[12px] font-medium text-slate-500 dark:text-slate-400">
+                    <p className="flex items-center gap-1.5 text-[12px] font-medium tf-text-muted">
                       <ListTodo size={14} />
                       To Do
                     </p>
 
-                    <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
+                    <p className="mt-2 text-2xl font-bold tf-text">
                       {taskStats.todoTasks}
                     </p>
                   </div>
 
                   <div className="rounded-xl border border-slate-100 p-4 dark:border-slate-800/60">
-                    <p className="flex items-center gap-1.5 text-[12px] font-medium text-slate-500 dark:text-slate-400">
+                    <p className="flex items-center gap-1.5 text-[12px] font-medium tf-text-muted">
                       <Timer size={14} />
                       In Progress
                     </p>
@@ -313,7 +308,7 @@ function ProjectDetail() {
                   </div>
 
                   <div className="rounded-xl border border-slate-100 p-4 dark:border-slate-800/60">
-                    <p className="flex items-center gap-1.5 text-[12px] font-medium text-slate-500 dark:text-slate-400">
+                    <p className="flex items-center gap-1.5 text-[12px] font-medium tf-text-muted">
                       <CheckCircle2 size={14} />
                       Done
                     </p>
@@ -327,14 +322,14 @@ function ProjectDetail() {
             </div>
 
             <div className="space-y-6">
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-7 shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
-                <h3 className="mb-5 text-[15px] font-bold text-slate-900 dark:text-white">
+              <div className="tf-card rounded-2xl p-4 sm:p-7">
+                <h3 className="mb-5 text-[15px] font-bold tf-text">
                   Project Details
                 </h3>
 
                 <div className="space-y-5 text-[13px]">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-slate-800/60">
-                    <p className="text-slate-500 dark:text-slate-400">
+                    <p className="tf-text-muted">
                       Status
                     </p>
 
@@ -344,7 +339,7 @@ function ProjectDetail() {
                   </div>
 
                   <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-slate-800/60">
-                    <p className="text-slate-500 dark:text-slate-400">
+                    <p className="tf-text-muted">
                       Priority
                     </p>
 
@@ -354,7 +349,7 @@ function ProjectDetail() {
                   </div>
 
                   <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-slate-800/60">
-                    <p className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                    <p className="flex items-center gap-1.5 tf-text-muted">
                       <Calendar size={14} />
                       Due Date
                     </p>
@@ -367,7 +362,7 @@ function ProjectDetail() {
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <p className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                    <p className="flex items-center gap-1.5 tf-text-muted">
                       <Clock size={14} />
                       Created
                     </p>
@@ -383,7 +378,7 @@ function ProjectDetail() {
         )}
 
         {activeTab === "tasks" && (
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
+          <div className="rounded-2xl tf-card">
             {tasks.length === 0 ? (
               <div className="py-16">
                 <EmptyState
@@ -416,17 +411,17 @@ function ProjectDetail() {
                                   }`
                                 : `/tasks?project=${projectRealId || projectId}`
                             }
-                            className="text-[14px] font-semibold text-slate-900 dark:text-slate-100 transition hover:text-indigo-600 dark:hover:text-indigo-400 truncate pr-2"
+                            className="text-[14px] font-semibold tf-text transition hover:text-indigo-600 dark:hover:text-indigo-400 truncate pr-2"
                           >
                             {task?.title || "Untitled Task"}
                           </Link>
                           <Badge variant={task?.status || "todo"} />
                         </div>
 
-                        <div className="mt-2 flex items-center justify-between text-[12px] text-slate-505">
+                        <div className="mt-2 flex items-center justify-between text-[12px] tf-text-muted">
                           <div className="flex items-center gap-1">
                             <Badge variant={task?.priority || "medium"} dot />
-                            <span className="capitalize text-slate-600 dark:text-slate-400">{task?.priority || "medium"}</span>
+                            <span className="capitalize tf-text-secondary">{task?.priority || "medium"}</span>
                           </div>
                           <div className="text-slate-400">
                             {task?.dueDate ? getSafeDateLabel(task.dueDate) : "—"}
@@ -438,23 +433,23 @@ function ProjectDetail() {
                 </div>
 
                 {/* Desktop Table Layout */}
-                <div className="hidden md:block overflow-x-auto">
-                  <table className="w-full min-w-[700px] border-collapse text-left">
+                <div className="tf-scroll-x hidden md:block">
+                  <table className="tf-table min-w-[700px]">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50/50 dark:border-slate-800/60 dark:bg-slate-900/50">
-                      <th className="px-6 py-4 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
+                      <th className="px-6 py-4 text-[12px] font-semibold tf-text-muted">
                         Task Name
                       </th>
 
-                      <th className="px-6 py-4 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
+                      <th className="px-6 py-4 text-[12px] font-semibold tf-text-muted">
                         Status
                       </th>
 
-                      <th className="px-6 py-4 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
+                      <th className="px-6 py-4 text-[12px] font-semibold tf-text-muted">
                         Priority
                       </th>
 
-                      <th className="px-6 py-4 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
+                      <th className="px-6 py-4 text-[12px] font-semibold tf-text-muted">
                         Due Date
                       </th>
                     </tr>
@@ -469,7 +464,7 @@ function ProjectDetail() {
                           key={taskId || task?.title}
                           className="border-b border-slate-100 transition last:border-b-0 hover:bg-slate-50 dark:border-slate-800/60 dark:hover:bg-slate-800/40"
                         >
-                          <td className="px-6 py-4 text-[14px] font-semibold text-slate-900 dark:text-slate-100">
+                          <td className="px-6 py-4 text-[14px] font-semibold tf-text">
                             <Link
                               to={
                                 taskId
@@ -492,7 +487,7 @@ function ProjectDetail() {
                             <Badge variant={task?.priority || "medium"} dot />
                           </td>
 
-                          <td className="px-6 py-4 text-[13px] text-slate-500 dark:text-slate-400">
+                          <td className="px-6 py-4 text-[13px] tf-text-muted">
                             {task?.dueDate
                               ? getSafeDateLabel(task.dueDate)
                               : "—"}

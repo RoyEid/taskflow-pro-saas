@@ -8,6 +8,7 @@ import AppSelect from "../components/ui/AppSelect";
 import { Edit2, Trash2 } from "lucide-react";
 import Modal from "../components/Modal";
 import ConfirmDialog from "../components/ConfirmDialog";
+import PageHeader from "../components/PageHeader";
 
 function getSafeDateLabel(value) {
   const date = value ? new Date(value) : null;
@@ -156,23 +157,19 @@ function Feedback() {
 
   return (
     <DashboardLayout>
-      <header className="mb-8">
-        <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-          Feedback
-        </h2>
-        <p className="mt-1 text-[14px] text-slate-500 dark:text-slate-400">
-          Help us improve TaskFlow Pro by sharing your thoughts.
-        </p>
-      </header>
+      <PageHeader
+        title="Feedback"
+        subtitle="Help us improve TaskFlow Pro by sharing your thoughts."
+      />
 
-      <div className="grid gap-8 lg:grid-cols-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="grid gap-8 lg:grid-cols-2">
         {/* Form Section */}
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800/80 dark:bg-slate-900 h-fit">
-          <div className="border-b border-slate-200 px-4 py-4 sm:px-7 sm:py-6 dark:border-slate-800/60">
-            <h3 className="text-[16px] font-bold text-slate-900 dark:text-white">
+        <div className="overflow-hidden rounded-2xl tf-card-base h-fit">
+          <div className="tf-bd border-b px-4 py-4 sm:px-7 sm:py-6">
+            <h3 className="text-[16px] font-bold tf-text">
               Submit Feedback
             </h3>
-            <p className="mt-1.5 text-[13px] text-slate-500 dark:text-slate-400">
+            <p className="mt-1.5 text-[13px] tf-text-muted">
               We read every piece of feedback to make the product better.
             </p>
           </div>
@@ -187,39 +184,41 @@ function Feedback() {
             />
 
             {formData.category === "Other" && (
-              <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                <label className="mb-2 block text-[13px] font-medium text-slate-700 dark:text-slate-300">
+              <div>
+                <label className="tf-label" htmlFor="feedback-other-category">
                   Please specify *
                 </label>
                 <input
+                  id="feedback-other-category"
                   type="text"
                   value={formData.otherCategory}
                   onChange={(e) => setFormData({ ...formData, otherCategory: e.target.value })}
                   placeholder="What kind of feedback?"
-                  className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] text-slate-800 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500"
+                  className="tf-field w-full"
                   required
                 />
               </div>
             )}
 
             <div>
-              <label className="mb-2 block text-[13px] font-medium text-slate-700 dark:text-slate-300">
+              <label className="tf-label" htmlFor="feedback-message">
                 Message *
               </label>
               <textarea
+                id="feedback-message"
                 value={formData.message}
                 onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                 placeholder="What's on your mind?"
                 rows={5}
-                className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-3 text-[13px] text-slate-800 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500"
+                className="tf-field w-full"
               />
             </div>
 
             <div>
-              <label className="mb-2 block text-[13px] font-medium text-slate-700 dark:text-slate-300">
+              <p className="tf-label" id="feedback-rating-label">
                 Rating (Optional)
-              </label>
-              <div className="flex gap-2">
+              </p>
+              <div className="flex gap-2" role="group" aria-labelledby="feedback-rating-label">
                 {[1, 2, 3, 4, 5].map((num) => (
                   <button
                     key={num}
@@ -227,8 +226,8 @@ function Feedback() {
                     onClick={() => setFormData({ ...formData, rating: num === formData.rating ? "" : num })}
                     className={`flex h-10 w-10 items-center justify-center rounded-lg border text-[14px] font-semibold transition ${
                       formData.rating === num
-                        ? "border-indigo-600 bg-indigo-50 text-indigo-700 dark:border-indigo-500 dark:bg-indigo-500/20 dark:text-indigo-400"
-                        : "border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
+                        ? "tf-btn-primary"
+                        : "tf-btn-ghost tf-bg-2"
                     }`}
                   >
                     {num}
@@ -241,7 +240,7 @@ function Feedback() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="h-10 rounded-lg bg-indigo-600 px-6 py-2.5 text-[13px] font-semibold text-white shadow-sm transition-all duration-300 hover:bg-indigo-700 hover:shadow-md active:scale-[0.98] disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                className="tf-btn-base tf-btn-primary"
               >
                 {submitting ? "Submitting..." : "Submit Feedback"}
               </button>
@@ -250,40 +249,40 @@ function Feedback() {
         </div>
 
         {/* Recent Feedback Section */}
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800/80 dark:bg-slate-900 h-fit max-h-[800px] flex flex-col">
-          <div className="border-b border-slate-200 px-4 py-4 sm:px-7 sm:py-6 dark:border-slate-800/60 shrink-0">
-            <h3 className="text-[16px] font-bold text-slate-900 dark:text-white">
+        <div className="overflow-hidden rounded-2xl tf-card-base h-fit max-h-[800px] flex flex-col">
+          <div className="tf-bd border-b px-4 py-4 sm:px-7 sm:py-6 shrink-0">
+            <h3 className="text-[16px] font-bold tf-text">
               My Recent Feedback
             </h3>
-            <p className="mt-1.5 text-[13px] text-slate-500 dark:text-slate-400">
+            <p className="mt-1.5 text-[13px] tf-text-muted">
               A history of your submitted feedback.
             </p>
           </div>
 
           <div className="overflow-y-auto p-4 sm:p-7">
             {loadingRecent ? (
-              <p className="text-[13px] text-slate-500 dark:text-slate-400 text-center py-10">Loading...</p>
+              <p className="text-[13px] tf-text-muted text-center py-10">Loading...</p>
             ) : recentFeedback.length === 0 ? (
-              <p className="text-[13px] text-slate-500 dark:text-slate-400 text-center py-10">You haven't submitted any feedback yet.</p>
+              <p className="text-[13px] tf-text-muted text-center py-10">You haven't submitted any feedback yet.</p>
             ) : (
               <div className="space-y-4">
                 {recentFeedback.map((fb) => {
                   const canModify = fb.status === "new";
                   return (
-                    <div key={fb._id} className="rounded-xl border border-slate-100 p-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-md dark:border-slate-800/60 group animate-in fade-in zoom-in-95">
+                    <div key={fb._id} className="rounded-xl tf-card-base p-4 group">
                       <div className="flex items-start justify-between mb-2">
                         <Badge variant={fb.category === 'Bug' ? 'high' : 'medium'}>
                           {fb.category === "Other" && fb.otherCategory ? `Other: ${fb.otherCategory}` : fb.category}
                         </Badge>
                         <div className="flex items-center gap-3">
-                          <span className="text-[11px] text-slate-400">{getSafeDateLabel(fb.createdAt)}</span>
+                          <span className="text-[11px] tf-text-subtle">{getSafeDateLabel(fb.createdAt)}</span>
                           <div className="flex items-center gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                               type="button"
                               onClick={() => handleOpenEdit(fb)}
                               disabled={!canModify}
                               title={!canModify ? "Reviewed feedback can no longer be changed" : "Edit"}
-                              className="text-slate-400 hover:text-indigo-600 disabled:hover:text-slate-400 disabled:opacity-50 dark:hover:text-indigo-400 p-1 rounded-md"
+                              className="tf-btn-icon tf-size-sm"
                             >
                               <Edit2 size={14} />
                             </button>
@@ -292,18 +291,18 @@ function Feedback() {
                               onClick={() => handleOpenDelete(fb)}
                               disabled={!canModify}
                               title={!canModify ? "Reviewed feedback can no longer be changed" : "Delete"}
-                              className="text-slate-400 hover:text-red-600 disabled:hover:text-slate-400 disabled:opacity-50 dark:hover:text-red-400"
+                              className="tf-btn-icon tf-size-sm tf-text-danger"
                             >
                               <Trash2 size={14} />
                             </button>
                           </div>
                         </div>
                       </div>
-                      <p className="text-[13px] text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+                      <p className="text-[13px] tf-text-secondary whitespace-pre-wrap">
                         {fb.message}
                       </p>
                       <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800/60">
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                        <div className="text-[11px] tf-text-muted">
                           Status: <strong className="capitalize">{fb.status}</strong>
                         </div>
                         {fb.rating && (
@@ -339,38 +338,40 @@ function Feedback() {
 
             {editingItem.category === "Other" && (
               <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                <label className="mb-2 block text-[13px] font-medium text-slate-700 dark:text-slate-300">
+                <label className="tf-label" htmlFor="edit-feedback-other-category">
                   Please specify *
                 </label>
                 <input
+                  id="edit-feedback-other-category"
                   type="text"
                   value={editingItem.otherCategory || ""}
                   onChange={(e) => setEditingItem({ ...editingItem, otherCategory: e.target.value })}
                   placeholder="What kind of feedback?"
-                  className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] text-slate-800 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500"
+                  className="tf-field w-full"
                   required
                 />
               </div>
             )}
 
             <div>
-              <label className="mb-2 block text-[13px] font-medium text-slate-700 dark:text-slate-300">
+              <label className="tf-label" htmlFor="edit-feedback-message">
                 Message *
               </label>
               <textarea
+                id="edit-feedback-message"
                 value={editingItem.message}
                 onChange={(e) => setEditingItem({ ...editingItem, message: e.target.value })}
                 placeholder="What's on your mind?"
                 rows={4}
-                className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-3 text-[13px] text-slate-800 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500"
+                className="tf-field w-full"
               />
             </div>
 
             <div>
-              <label className="mb-2 block text-[13px] font-medium text-slate-700 dark:text-slate-300">
+              <p className="tf-label" id="edit-feedback-rating-label">
                 Rating (Optional)
-              </label>
-              <div className="flex gap-2">
+              </p>
+              <div className="flex gap-2" role="group" aria-labelledby="edit-feedback-rating-label">
                 {[1, 2, 3, 4, 5].map((num) => (
                   <button
                     key={num}
@@ -393,14 +394,14 @@ function Feedback() {
                 type="button"
                 onClick={() => setEditModalOpen(false)}
                 disabled={updating}
-                className="h-10 rounded-lg border border-slate-200 px-4 py-2 text-[13px] font-medium text-slate-600 transition-all duration-300 hover:bg-slate-50 active:scale-[0.98] disabled:opacity-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
+                className="tf-btn-base tf-btn-secondary"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={updating}
-                className="h-10 rounded-lg bg-indigo-600 px-4 py-2 text-[13px] font-semibold text-white shadow-sm transition-all duration-300 hover:bg-indigo-700 hover:shadow-md active:scale-[0.98] disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                className="tf-btn-base tf-btn-primary"
               >
                 {updating ? "Saving..." : "Save Changes"}
               </button>

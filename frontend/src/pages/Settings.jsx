@@ -1,25 +1,16 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import DashboardLayout from "../layouts/DashboardLayout";
 import useAuth from "../context/useAuth";
+import useTheme from "../context/useTheme";
 import useWorkspace from "../context/useWorkspace";
 import { showSuccess, showError, confirmAction } from "../utils/alerts";
 import { changePassword, updateProfile } from "../services/authService";
-import { Sun, Moon, LogOut, Mail, Info } from "lucide-react";
+import { Sun, Moon, Mail, Info } from "lucide-react";
 import { checkPasswordRules } from "../utils/passwordValidation";
 import PasswordStrengthIndicator from "../components/PasswordStrengthIndicator";
 import PasswordInput from "../components/ui/PasswordInput";
+import PageHeader from "../components/PageHeader";
 
-function getInitialTheme() {
-  const savedTheme = localStorage.getItem("theme");
-
-  if (savedTheme === "dark" || savedTheme === "light") {
-    return savedTheme;
-  }
-
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
-}
 
 function getSafeDateLabel(value) {
   const date = value ? new Date(value) : null;
@@ -45,7 +36,7 @@ function Settings() {
 
   const [updatingProfile, setUpdatingProfile] = useState(false);
 
-  const [theme, setTheme] = useState(getInitialTheme);
+  const { isDarkMode, toggleTheme } = useTheme();
 
   const [passwords, setPasswords] = useState({
     currentPassword: "",
@@ -57,20 +48,6 @@ function Settings() {
   const [changingPassword, setChangingPassword] = useState(false);
 
 
-
-  useEffect(() => {
-    if (theme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-
-    localStorage.setItem("theme", theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme((currentTheme) => (currentTheme === "dark" ? "light" : "dark"));
-  };
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
@@ -162,43 +139,35 @@ function Settings() {
 
   return (
     <DashboardLayout>
-      <header className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-            Settings
-          </h2>
-
-          <p className="mt-1 text-[14px] text-slate-500 dark:text-slate-400">
-            Manage your account preferences and app settings.
-          </p>
-        </div>
-      </header>
+      <PageHeader
+        title="Settings"
+        subtitle="Manage your account preferences and app settings."
+      />
 
       <div className="mt-8 grid gap-8 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
-            <div className="border-b border-slate-200 px-4 py-4 sm:px-7 sm:py-6 dark:border-slate-800/60">
-              <h3 className="text-[16px] font-bold text-slate-900 dark:text-white">
+        <div className="space-y-6 lg:col-span-2">          <div className="overflow-hidden rounded-2xl tf-card-base">
+            <div className="tf-bd border-b px-4 py-4 sm:px-7 sm:py-6">
+              <h3 className="text-[16px] font-bold tf-text">
                 Profile Information
               </h3>
 
-              <p className="mt-1.5 text-[13px] text-slate-500 dark:text-slate-400">
+              <p className="mt-1.5 text-[13px] tf-text-muted">
                 Your personal account details.
               </p>
             </div>
 
             <div className="space-y-6 px-4 py-5 sm:px-7 sm:py-7">
               <div className="flex items-center gap-5">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50 text-2xl font-bold text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl tf-bg-3 text-2xl font-bold tf-text-accent">
                   {getUserInitial(user)}
                 </div>
 
                 <div>
-                  <h4 className="text-[15px] font-semibold text-slate-900 dark:text-white">
+                  <h4 className="text-[15px] font-semibold tf-text">
                     {user?.name || "User"}
                   </h4>
 
-                  <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
+                  <p className="mt-0.5 text-[13px] tf-text-muted">
                     {user?.email || "No email"}
                   </p>
                 </div>
@@ -206,15 +175,16 @@ function Settings() {
 
               <form
                 onSubmit={handleUpdateProfile}
-                className="border-t border-slate-100 pt-5 dark:border-slate-800/60"
+                className="tf-bd border-t pt-5"
               >
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                   <div>
-                    <label className="mb-2 block text-[13px] font-medium text-slate-700 dark:text-slate-300">
+                    <label className="tf-label" htmlFor="settings-full-name">
                       Full Name
                     </label>
 
                     <input
+                      id="settings-full-name"
                       type="text"
                       value={profileData.name}
                       onChange={(e) =>
@@ -223,23 +193,24 @@ function Settings() {
                           name: e.target.value,
                         }))
                       }
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                      className="tf-field w-full"
                     />
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-[13px] font-medium text-slate-700 dark:text-slate-300">
+                    <label className="tf-label" htmlFor="settings-email">
                       Email Address
                     </label>
 
                     <input
+                      id="settings-email"
                       type="email"
                       value={user?.email || ""}
                       disabled
-                      className="h-10 w-full cursor-not-allowed rounded-lg border border-slate-200 bg-slate-50 px-3.5 text-[13px] text-slate-500 shadow-sm outline-none dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400"
+                      className="tf-field w-full cursor-not-allowed"
                     />
 
-                    <p className="mt-1.5 text-[11px] text-slate-500">
+                    <p className="tf-help mt-1.5">
                       Email address is used for login and cannot be changed yet.
                     </p>
                   </div>
@@ -249,7 +220,7 @@ function Settings() {
                   <button
                     type="submit"
                     disabled={updatingProfile}
-                    className="h-10 rounded-lg bg-indigo-600 px-5 py-2.5 text-[13px] font-semibold text-white shadow-sm transition-all duration-300 hover:bg-indigo-700 hover:shadow-md active:scale-[0.98] disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                    className="tf-btn-base tf-btn-primary"
                   >
                     {updatingProfile ? "Saving..." : "Save Profile"}
                   </button>
@@ -260,28 +231,29 @@ function Settings() {
 
           <div
             id="change-password-section"
-            className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800/80 dark:bg-slate-900"
+            className="overflow-hidden rounded-2xl tf-card-base"
           >
-            <div className="border-b border-slate-200 px-4 py-4 sm:px-7 sm:py-6 dark:border-slate-800/60">
-              <h3 className="text-[16px] font-bold text-slate-900 dark:text-white">
+            <div className="tf-bd border-b px-4 py-4 sm:px-7 sm:py-6">
+              <h3 className="text-[16px] font-bold tf-text">
                 Change Password
               </h3>
 
-              <p className="mt-1.5 text-[13px] text-slate-500 dark:text-slate-400">
+              <p className="mt-1.5 text-[13px] tf-text-muted">
                 Update your password to keep your account secure.
               </p>
-            </div>            <div className="px-4 py-5 sm:px-7 sm:py-7">
+            </div>
+            <div className="px-4 py-5 sm:px-7 sm:py-7">
               {user?.provider && user.provider !== "local" ? (
-                <div className="rounded-xl border border-indigo-100/80 bg-indigo-50/20 p-5 dark:border-indigo-900/30 dark:bg-indigo-950/10">
+                <div className="tf-alert tf-alert-info p-5">
                   <div className="flex items-start space-x-3.5">
-                    <div className="mt-0.5 rounded-lg bg-indigo-50 p-2 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-400">
+                    <div className="mt-0.5 rounded-lg tf-bg-3 p-2 tf-text-info">
                       <Info className="h-5 w-5" />
                     </div>
                     <div>
-                      <h4 className="text-[14px] font-bold text-slate-900 dark:text-white">
+                      <h4 className="text-[14px] font-bold tf-text">
                         Account Managed by Provider
                       </h4>
-                      <p className="mt-1 text-[13px] leading-relaxed text-slate-500 dark:text-slate-400">
+                      <p className="mt-1 text-[13px] leading-relaxed tf-text-muted">
                         Your account is managed through {user.provider === "github" ? "GitHub" : "Google"} sign-in. Password changes must be handled from your provider account.
                       </p>
                     </div>
@@ -290,7 +262,7 @@ function Settings() {
               ) : (
                 <>
                   {passwordError && (
-                    <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
+                    <div className="tf-alert tf-alert-error mb-5" role="alert">
                       {passwordError}
                     </div>
                   )}
@@ -308,7 +280,7 @@ function Settings() {
                       placeholder="••••••••"
                       required
                       autoComplete="current-password"
-                      inputClassName="h-10 w-full rounded-lg border border-slate-200 bg-white pl-3.5 pr-11 text-[13px] text-slate-850 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                      inputClassName="tf-field w-full pl-3.5 pr-11"
                     />
 
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -324,7 +296,7 @@ function Settings() {
                         placeholder="••••••••"
                         required
                         autoComplete="new-password"
-                        inputClassName="h-10 w-full rounded-lg border border-slate-200 bg-white pl-3.5 pr-11 text-[13px] text-slate-855 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                        inputClassName="tf-field w-full pl-3.5 pr-11"
                       />
 
                       <PasswordInput
@@ -339,7 +311,7 @@ function Settings() {
                         placeholder="••••••••"
                         required
                         autoComplete="new-password"
-                        inputClassName="h-10 w-full rounded-lg border border-slate-200 bg-white pl-3.5 pr-11 text-[13px] text-slate-855 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                        inputClassName="tf-field w-full pl-3.5 pr-11"
                       />
                     </div>
 
@@ -362,7 +334,7 @@ function Settings() {
                           !checkPasswordRules(passwords.newPassword).allPassed ||
                           passwords.newPassword !== passwords.confirmPassword
                         }
-                        className="h-10 rounded-lg bg-indigo-600 px-5 py-2.5 text-[13px] font-semibold text-white shadow-sm transition-all duration-300 hover:bg-indigo-700 hover:shadow-md active:scale-[0.98] disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                        className="tf-btn-base tf-btn-primary"
                       >
                         {changingPassword ? "Updating..." : "Update Password"}
                       </button>
@@ -373,13 +345,13 @@ function Settings() {
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
-            <div className="border-b border-slate-200 px-4 py-4 sm:px-7 sm:py-6 dark:border-slate-800/60">
-              <h3 className="text-[16px] font-bold text-slate-900 dark:text-white">
+          <div className="overflow-hidden rounded-2xl tf-card-base">
+            <div className="tf-bd border-b px-4 py-4 sm:px-7 sm:py-6">
+              <h3 className="text-[16px] font-bold tf-text">
                 App Preferences
               </h3>
 
-              <p className="mt-1.5 text-[13px] text-slate-500 dark:text-slate-400">
+              <p className="mt-1.5 text-[13px] tf-text-muted">
                 Customize your app experience.
               </p>
             </div>
@@ -387,11 +359,11 @@ function Settings() {
             <div className="px-4 py-5 sm:px-7 sm:py-7">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-[14px] font-medium text-slate-900 dark:text-white">
+                  <h4 className="text-[14px] font-medium tf-text">
                     Theme
                   </h4>
 
-                  <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
+                  <p className="mt-0.5 text-[13px] tf-text-muted">
                     Switch between light and dark mode.
                   </p>
                 </div>
@@ -399,9 +371,10 @@ function Settings() {
                 <button
                   type="button"
                   onClick={toggleTheme}
-                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-all duration-300 hover:scale-110 hover:bg-slate-50 hover:text-slate-900 active:scale-95 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white"
+                  className="tf-btn-icon"
+                  aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
                 >
-                  {theme === "dark" ? (
+                  {isDarkMode ? (
                     <Sun
                       size={18}
                       className="rotate-0 transition-transform duration-500 hover:rotate-180"
@@ -419,69 +392,68 @@ function Settings() {
         </div>
 
         <div className="space-y-6">
-          <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
-            <h3 className="mb-4 text-[15px] font-bold text-slate-900 dark:text-white">
+          <div className="tf-card-base rounded-2xl p-7">
+            <h3 className="mb-4 text-[15px] font-bold tf-text">
               Workspace Info
             </h3>
 
             {workspace ? (
               <div className="space-y-3 text-[13px]">
                 <div className="flex items-start justify-between">
-                  <span className="text-slate-500 dark:text-slate-400">
+                  <span className="tf-text-muted">
                     Current
                   </span>
 
-                  <span className="text-right font-medium text-slate-900 dark:text-white">
+                  <span className="text-right font-medium tf-text">
                     {workspace?.name || "Unnamed Workspace"}
                   </span>
                 </div>
 
-                <div className="flex items-start justify-between border-t border-slate-100 pt-3 dark:border-slate-800/60">
-                  <span className="text-slate-500 dark:text-slate-400">
+                <div className="flex items-start justify-between tf-bd border-t pt-3">
+                  <span className="tf-text-muted">
                     Created
                   </span>
 
-                  <span className="font-medium text-slate-900 dark:text-white">
+                  <span className="font-medium tf-text">
                     {getSafeDateLabel(workspace?.createdAt)}
                   </span>
                 </div>
               </div>
             ) : (
-              <p className="text-[13px] text-slate-500">
+              <p className="text-[13px] tf-text-muted">
                 No workspace selected.
               </p>
             )}
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm dark:border-slate-800/80 dark:bg-slate-900">
+          <div className="tf-card-base rounded-2xl p-7">
             <div className="mb-4 flex items-center gap-2">
-              <Mail size={18} className="text-indigo-500" />
-              <h3 className="text-[15px] font-bold text-slate-900 dark:text-white">
+              <Mail size={18} className="tf-text-accent" />
+              <h3 className="text-[15px] font-bold tf-text">
                 Notifications Info
               </h3>
             </div>
 
-            <p className="text-[13px] leading-relaxed text-slate-500 dark:text-slate-400">
+            <p className="text-[13px] leading-relaxed tf-text-muted">
               Important account, workspace, feedback, and support emails are sent automatically. Task activity notifications appear in the app.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-red-200 bg-white p-7 shadow-sm dark:border-red-900/30 dark:bg-slate-900">
-            <h3 className="mb-2 text-[15px] font-bold text-red-600 dark:text-red-400">
+          <div className="tf-card-base rounded-2xl border-rose-300/60 p-7 dark:border-rose-900/40">
+            <h3 className="mb-2 text-[15px] font-bold tf-text-danger">
               Danger Zone
             </h3>
 
-            <p className="mb-5 text-[13px] text-slate-500 dark:text-slate-400">
+            <p className="mb-5 text-[13px] tf-text-muted">
               Sign out of your account on this device.
             </p>
 
             <button
               type="button"
               onClick={handleSignOut}
-              className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-red-50 py-2.5 text-[13px] font-semibold text-red-600 transition hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950/60"
+              className="tf-btn-base tf-btn-danger w-full"
             >
-              <LogOut size={16} />
-              Sign Out
+              Sign out
             </button>
           </div>
         </div>

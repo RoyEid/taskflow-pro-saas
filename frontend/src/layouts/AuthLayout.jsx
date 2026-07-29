@@ -1,39 +1,57 @@
 import { Link } from "react-router";
+import { motion } from "motion/react";
 import BrandLogo from "../components/ui/BrandLogo";
+import AppBackground from "../components/ui3d/AppBackground";
+import Surface from "../components/ui3d/Surface";
+import { easeOut } from "../components/ui3d/motionTokens";
 
+/* Shared shell for sign-in, sign-up, verification, and password reset.
+
+   The card deliberately does not tilt on pointer move — rotating a panel
+   while someone types into it is distracting. Depth here comes from
+   elevation, the gradient hairline, and the entrance. */
 function AuthLayout({ children, title, subtitle }) {
   return (
-    <div className="relative flex min-h-screen flex-col justify-center items-center bg-slate-50 py-12 px-6 dark:bg-slate-950 sm:px-8 lg:px-8 overflow-y-auto">
-      {/* Decorative gradient background */}
-      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-        <div className="absolute -left-[10%] -top-[30%] h-[70%] w-[70%] rounded-full bg-stone-300/20 blur-[120px] dark:bg-stone-700/10" />
-        <div className="absolute -right-[10%] top-[20%] h-[60%] w-[60%] rounded-full bg-stone-200/20 blur-[120px] dark:bg-stone-800/10" />
-      </div>
+    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-y-auto tf-bg-app px-5 py-12 sm:px-8">
+      <AppBackground variant="marketing" />
 
-      <div className="relative z-10 w-full max-w-md my-auto">
-        {/* Header / Logo */}
-        <div className="mb-6 sm:mb-8 flex flex-col items-center text-center">
+      <div className="relative z-10 my-auto w-full max-w-md">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={easeOut}
+          className="mb-7 flex flex-col items-center text-center sm:mb-8"
+        >
           <Link to="/" className="group flex flex-col items-center">
-            <div className="flex items-center justify-center transition-transform duration-300 group-hover:scale-105">
+            <motion.span
+              whileHover={{ y: -3, rotate: -2 }}
+              transition={{ type: "spring", stiffness: 340, damping: 20 }}
+              className="flex items-center justify-center"
+            >
               <BrandLogo size="auth" />
-            </div>
+            </motion.span>
 
-            <h1 className="mt-4 sm:mt-6 text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            <h1 className="mt-5 text-2xl font-extrabold tracking-tight tf-text sm:mt-6 sm:text-[32px]">
               {title}
             </h1>
           </Link>
 
           {subtitle && (
-            <p className="mt-2.5 text-[15px] text-slate-500 dark:text-slate-400">
+            <p className="mt-2.5 text-[15px] tf-text-muted">
               {subtitle}
             </p>
           )}
-        </div>
+        </motion.div>
 
-        {/* Glass Card */}
-        <div className="overflow-hidden rounded-3xl border border-white/40 bg-white/70 p-5 shadow-2xl backdrop-blur-xl transition-all dark:border-slate-800/60 dark:bg-slate-900/70 sm:p-10">
-          {children}
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 22, scale: 0.985 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ ...easeOut, delay: 0.08 }}
+        >
+          <Surface elevation={4} rounded="rounded-3xl" className="overflow-hidden p-5 sm:p-9">
+            {children}
+          </Surface>
+        </motion.div>
       </div>
     </div>
   );

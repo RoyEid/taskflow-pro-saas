@@ -37,29 +37,30 @@ export default function ActivityModal({ open, onClose, activities = [] }) {
             <div className="flex flex-col h-[75vh] max-h-[800px]">
                 
                 {/* Header Controls */}
-                <div className="p-4 sm:p-6 border-b border-slate-100 dark:border-slate-800/60 shrink-0 space-y-4">
+                <div className="p-4 sm:p-6 tf-bd border-b shrink-0 space-y-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         
                         <div className="relative flex-1 max-w-md">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Search className="h-4 w-4 text-slate-400" />
+                                <Search className="h-4 w-4 tf-text-subtle" />
                             </div>
                             <input
                                 type="text"
-                                className="block w-full pl-9 pr-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg leading-5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+                                className="tf-field tf-field-icon-start block w-full"
                                 placeholder="Search activity..."
+                                aria-label="Search workspace activity"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                             />
                         </div>
 
-                        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 hide-scrollbar">
+                        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
                             <button
                                 onClick={() => setFilter("all")}
                                 className={`px-3 py-1.5 rounded-full text-[13px] font-medium whitespace-nowrap transition-colors ${
                                     filter === "all" 
-                                        ? "bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900" 
-                                        : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
+                                        ? "tf-btn-primary" 
+                                        : "tf-btn-ghost tf-bg-2"
                                 }`}
                             >
                                 All Activity
@@ -68,8 +69,8 @@ export default function ActivityModal({ open, onClose, activities = [] }) {
                                 onClick={() => setFilter("tasks")}
                                 className={`px-3 py-1.5 rounded-full text-[13px] font-medium whitespace-nowrap transition-colors ${
                                     filter === "tasks" 
-                                        ? "bg-blue-500 text-white" 
-                                        : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
+                                        ? "tf-badge-info font-semibold" 
+                                        : "tf-btn-ghost tf-bg-2"
                                 }`}
                             >
                                 Tasks
@@ -78,8 +79,8 @@ export default function ActivityModal({ open, onClose, activities = [] }) {
                                 onClick={() => setFilter("projects")}
                                 className={`px-3 py-1.5 rounded-full text-[13px] font-medium whitespace-nowrap transition-colors ${
                                     filter === "projects" 
-                                        ? "bg-indigo-500 text-white" 
-                                        : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
+                                        ? "tf-badge-accent font-semibold" 
+                                        : "tf-btn-ghost tf-bg-2"
                                 }`}
                             >
                                 Projects
@@ -88,8 +89,8 @@ export default function ActivityModal({ open, onClose, activities = [] }) {
                                 onClick={() => setFilter("clients")}
                                 className={`px-3 py-1.5 rounded-full text-[13px] font-medium whitespace-nowrap transition-colors ${
                                     filter === "clients" 
-                                        ? "bg-amber-500 text-white" 
-                                        : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
+                                        ? "tf-badge-warning font-semibold" 
+                                        : "tf-btn-ghost tf-bg-2"
                                 }`}
                             >
                                 Clients
@@ -99,16 +100,16 @@ export default function ActivityModal({ open, onClose, activities = [] }) {
                 </div>
 
                 {/* List Area */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50/50 dark:bg-slate-900/50">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6 tf-bg-2">
                     {filteredActivities.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-center text-slate-500 dark:text-slate-400">
-                            <div className="mb-4 rounded-full bg-slate-100 p-4 dark:bg-slate-800">
-                                <Calendar size={24} className="text-slate-400" />
+                        <div className="h-full flex flex-col items-center justify-center text-center tf-text-muted">
+                            <div className="mb-4 rounded-full tf-bg-3 p-4">
+                                <Calendar size={24} className="tf-text-subtle" />
                             </div>
-                            <p className="text-[14px] font-medium text-slate-700 dark:text-slate-300">
+                            <p className="text-[14px] font-medium tf-text">
                                 No activity found
                             </p>
-                            <p className="text-[13px] mt-1 max-w-sm">
+                            <p className="text-[13px] mt-1 max-w-sm tf-text-muted">
                                 Try adjusting your filters or search terms to find what you're looking for.
                             </p>
                         </div>
@@ -117,21 +118,21 @@ export default function ActivityModal({ open, onClose, activities = [] }) {
                             {filteredActivities.map((activity) => (
                                 <div 
                                     key={activity.id}
-                                    className="flex items-start gap-4 p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow"
+                                    className="flex items-start gap-4 p-4 tf-card-base rounded-xl"
                                 >
                                     <div className={`p-2.5 rounded-xl shrink-0 ${activity.color}`}>
                                         {activity.icon}
                                     </div>
                                     <div className="flex-1 min-w-0 pt-0.5">
                                         <div className="flex items-center justify-between gap-2 mb-1">
-                                            <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                                            <p className="text-sm font-semibold tf-text truncate">
                                                 {activity.title}
                                             </p>
-                                            <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 shrink-0 whitespace-nowrap">
+                                            <span className="text-[11px] font-medium tf-text-muted shrink-0 whitespace-nowrap">
                                                 {activity.time}
                                             </span>
                                         </div>
-                                        <p className="text-sm text-slate-600 dark:text-slate-300 line-clamp-2">
+                                        <p className="text-sm tf-text-secondary line-clamp-2">
                                             {activity.desc}
                                         </p>
                                     </div>

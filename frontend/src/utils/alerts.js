@@ -1,18 +1,16 @@
 import Swal from "sweetalert2";
 
-// Configure default options to match the app's aesthetic
+// Configure alerts from the same semantic tokens as cards and dialogs.
 const getSwalConfig = () => {
-  const isDark = document.documentElement.classList.contains("dark");
-  
   return {
-    background: isDark ? "#18181b" : "#ffffff", // zinc-900 / white
-    color: isDark ? "#f4f4f5" : "#18181b", // zinc-100 / zinc-900
+    background: "var(--tf-bg-elevated)",
+    color: "var(--tf-fg)",
     customClass: {
-      popup: "rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl",
-      title: "text-lg font-bold text-zinc-900 dark:text-white mb-2",
-      htmlContainer: "text-[14px] text-zinc-600 dark:text-zinc-400 m-0 text-center",
-      confirmButton: "rounded-lg bg-zinc-900 px-5 py-2.5 text-[14px] font-semibold text-white transition hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200 shadow-sm mx-2",
-      cancelButton: "rounded-lg bg-white border border-zinc-200 px-5 py-2.5 text-[14px] font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 transition mx-2",
+      popup: "tf-card-elevated rounded-[var(--tf-r-xl)]",
+      title: "tf-title-section mb-2",
+      htmlContainer: "tf-body m-0 text-center",
+      confirmButton: "tf-btn-base tf-btn-primary mx-1",
+      cancelButton: "tf-btn-base tf-btn-secondary mx-1",
       actions: "mt-6 flex justify-center gap-2",
       icon: "border-0 p-0 m-0 mb-4 mx-auto",
     },
@@ -32,7 +30,7 @@ export const showSuccess = (message, title = "Success") => {
     title,
     text: message,
     icon: "success",
-    iconColor: "#10b981", // emerald-500
+    iconColor: "var(--tf-success)",
     confirmButtonText: "OK",
   });
 };
@@ -43,7 +41,7 @@ export const showError = (message, title = "Error") => {
     title,
     text: message,
     icon: "error",
-    iconColor: "#ef4444", // red-500
+    iconColor: "var(--tf-error)",
     confirmButtonText: "Close",
   });
 };
@@ -54,7 +52,7 @@ export const showWarning = (message, title = "Warning") => {
     title,
     text: message,
     icon: "warning",
-    iconColor: "#f59e0b", // amber-500
+    iconColor: "var(--tf-warning)",
     confirmButtonText: "OK",
   });
 };
@@ -65,7 +63,7 @@ export const confirmAction = ({ title, text, confirmButtonText = "Confirm" }) =>
     title,
     text,
     icon: "question",
-    iconColor: "#6366f1", // indigo-500
+    iconColor: "var(--tf-info)",
     showCancelButton: true,
     confirmButtonText,
     cancelButtonText: "Cancel",
@@ -80,14 +78,14 @@ export const confirmDelete = ({ title = "Are you sure?", text, confirmButtonText
     title,
     text,
     icon: "warning",
-    iconColor: "#ef4444", // red-500
+    iconColor: "var(--tf-error)",
     showCancelButton: true,
     confirmButtonText,
     cancelButtonText: "Cancel",
     reverseButtons: true,
     customClass: {
       ...config.customClass,
-      confirmButton: "rounded-lg bg-red-600 px-5 py-2.5 text-[14px] font-semibold text-white transition hover:bg-red-700 shadow-sm mx-2",
+      confirmButton: "tf-btn-base tf-btn-danger mx-1",
     },
   }).then((result) => result.isConfirmed);
 };

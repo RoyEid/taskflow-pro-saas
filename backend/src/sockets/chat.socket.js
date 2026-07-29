@@ -8,8 +8,8 @@ import {
     deleteWorkspaceMessage,
     editWorkspaceMessage,
     findActiveMembership,
-    getWorkspaceUnreadCount,
-    markWorkspaceChatRead,
+    markWorkspaceMessageReceiptsRead,
+    resetWorkspaceChatUnread,
     serializeMessage,
     serializeUser,
     updateUnreadForInactiveMembers,
@@ -187,6 +187,10 @@ const emitTyping = (socket, workspaceId, isTyping) => {
     });
 };
 
+const getJoinedMembership = (socket, workspaceId) => {
+    return socket.data.joinedWorkspaceMemberships?.get(String(workspaceId)) || null;
+};
+
 const registerChatSocket = (io) => {
     io.use(async (socket, next) => {
         try {
@@ -227,14 +231,17 @@ const registerChatSocket = (io) => {
 
                 socket.join(getWorkspaceRoom(workspaceId));
                 addPresence(workspaceId, socket);
+                socket.data.joinedWorkspaceMemberships =
+                    socket.data.joinedWorkspaceMemberships || new Map();
+                socket.data.joinedWorkspaceMemberships.set(String(workspaceId), membership);
 
-                const readState = await markWorkspaceChatRead(workspaceId, socket.user._id);
-
-                io.to(getWorkspaceRoom(workspaceId)).emit("messagesRead", {
+                // Persist the lightweight unread counter reset before telling the
+                // client it is connected. Updating per-message read receipts is
+                // the expensive part and continues below in the background.
+                const readState = await resetWorkspaceChatUnread(
                     workspaceId,
-                    user: serializeUser(socket.user),
-                    readAt: readState.readAt,
-                });
+                    socket.user._id
+                );
 
                 socket.emit("chatUnreadCount", {
                     workspaceId,
@@ -251,6 +258,29 @@ const registerChatSocket = (io) => {
                         unreadCount: 0,
                     });
                 }
+
+                // Persist read receipts after the client has joined. Updating every
+                // unread message can be expensive for long chats and should not
+                // delay presence, connection state, or the join acknowledgement.
+                void markWorkspaceMessageReceiptsRead(
+                    workspaceId,
+                    socket.user._id,
+                    readState.readAt
+                )
+                    .then(() => {
+                        io.to(getWorkspaceRoom(workspaceId)).emit("messagesRead", {
+                            workspaceId,
+                            user: serializeUser(socket.user),
+                            readAt: readState.readAt,
+                        });
+                    })
+                    .catch((error) => {
+                        console.error("Failed to persist workspace chat read state:", {
+                            workspaceId,
+                            userId: socket.user._id,
+                            message: error.message,
+                        });
+                    });
             } catch {
                 emitError(socket, callback, "Failed to join workspace chat", 500);
             }
@@ -260,7 +290,7 @@ const registerChatSocket = (io) => {
             try {
                 const workspaceId = payload.workspaceId;
                 const isTyping = Boolean(payload.isTyping);
-                const membership = await findActiveMembership(workspaceId, socket.user._id);
+                const membership = getJoinedMembership(socket, workspaceId);
 
                 if (!membership) {
                     emitError(socket, callback, "You are not a member of this workspace", 403);
@@ -372,22 +402,14 @@ const registerChatSocket = (io) => {
                     readUserIds: viewingUserIds,
                 });
 
-                const serializedMessage = serializeMessage(message);
+                const serializedMessage = serializeMessage(message, socket.user);
 
                 io.to(getWorkspaceRoom(workspaceId)).emit("receiveMessage", serializedMessage);
                 emitTyping(socket, workspaceId, false);
 
-                await updateUnreadForInactiveMembers({
-                    workspaceId,
-                    sender: socket.user,
-                    message,
-                    viewingUserIds,
-                });
-
-                const senderUnreadCount = await getWorkspaceUnreadCount(workspaceId, socket.user._id);
                 socket.emit("chatUnreadCount", {
                     workspaceId,
-                    unreadCount: senderUnreadCount,
+                    unreadCount: 0,
                 });
 
                 if (typeof callback === "function") {
@@ -396,6 +418,22 @@ const registerChatSocket = (io) => {
                         message: serializedMessage,
                     });
                 }
+
+                // Offline unread state, notifications, and email fan-out are
+                // secondary work. The saved message has already been broadcast,
+                // so none of this should hold the sender's acknowledgement open.
+                void updateUnreadForInactiveMembers({
+                    workspaceId,
+                    sender: socket.user,
+                    message,
+                    viewingUserIds,
+                }).catch((error) => {
+                    console.error("Failed to update offline chat recipients:", {
+                        workspaceId,
+                        messageId: message._id,
+                        message: error.message,
+                    });
+                });
             } catch {
                 emitError(socket, callback, "Failed to send message", 500);
             }
