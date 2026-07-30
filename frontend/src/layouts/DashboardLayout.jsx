@@ -453,12 +453,19 @@ function DashboardLayout({ children }) {
                         />
                       )}
 
-                      <div className="flex shrink-0 items-center justify-center">
+                      <div className="relative flex shrink-0 items-center justify-center">
                         <item.icon
                           size={18}
                           strokeWidth={2.2}
                           className={`transition-all duration-300 ${item.hoverClass}`}
                         />
+                        {isCompact && item.to === "/chat" && chatUnreadCount > 0 && (
+                          <span
+                            className="absolute -top-1.5 -right-2.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--tf-error-dot)] px-1 text-[9px] font-bold leading-none text-white shadow-sm ring-2 ring-[var(--tf-bg-sidebar)]"
+                          >
+                            {chatUnreadCount > 99 ? "99+" : chatUnreadCount}
+                          </span>
+                        )}
                       </div>
 
                       <span
@@ -469,11 +476,9 @@ function DashboardLayout({ children }) {
                         {item.label}
                       </span>
 
-                      {item.to === "/chat" && chatUnreadCount > 0 && (
+                      {!isCompact && item.to === "/chat" && chatUnreadCount > 0 && (
                         <span
-                          className={`ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--tf-error-dot)] px-1.5 text-[10px] font-bold leading-none text-white shadow-sm ${
-                            isCompact ? "absolute right-1 top-1" : ""
-                          }`}
+                          className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--tf-error-dot)] px-1.5 text-[10px] font-bold leading-none text-white shadow-sm"
                         >
                           {chatUnreadCount > 99 ? "99+" : chatUnreadCount}
                         </span>

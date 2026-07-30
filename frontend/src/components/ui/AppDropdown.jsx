@@ -36,7 +36,7 @@ export default function AppDropdown({
   widthClass = "w-56",
   gap = 8,
   /** Minimum distance the panel keeps from the viewport edge. */
-  padding = 12,
+  padding = 8,
 }) {
   return (
     <Menu as="div" className={`relative inline-block text-left ${containerClassName}`}>
@@ -54,7 +54,7 @@ export default function AppDropdown({
              * `--anchor-max-height` is computed by Floating UI from the space
              * actually available, so the panel can never run off screen.
              */
-            className={`tf-menu z-[70] ${widthClass} max-w-[calc(100vw-1.5rem)] max-h-[var(--anchor-max-height,80vh)] overflow-y-auto overscroll-contain focus:outline-none transition duration-100 ease-out data-[closed]:opacity-0 data-[closed]:scale-95 data-[leave]:duration-75 data-[leave]:ease-in ${className}`}
+            className={`tf-menu z-[70] ${widthClass} max-w-[calc(100vw-1rem)] max-h-[var(--anchor-max-height,80vh)] overflow-y-auto overscroll-contain focus:outline-none transition duration-100 ease-out data-[closed]:opacity-0 data-[closed]:scale-95 data-[leave]:duration-75 data-[leave]:ease-in ${className}`}
           >
             {typeof children === "function" ? children({ open, close }) : children}
           </MenuItems>

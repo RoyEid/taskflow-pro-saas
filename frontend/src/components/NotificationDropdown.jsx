@@ -21,18 +21,25 @@ export default function NotificationDropdown({ onOpenSettings }) {
 
   useEffect(() => {
     let mounted = true;
-    async function loadInitialCount() {
+    async function loadInitialData() {
       try {
-        const countRes = await getUnreadCount();
+        const [notifsRes, countRes] = await Promise.all([
+          getNotifications(),
+          getUnreadCount()
+        ]);
         if (mounted) {
-          setUnreadCount(countRes.data || 0);
+          const list = Array.isArray(notifsRes) ? notifsRes : (notifsRes?.data || []);
+          const count = typeof countRes === 'number' ? countRes : (countRes?.data || 0);
+          setNotifications(list);
+          const unreadListCount = list.filter(n => !n.read).length;
+          setUnreadCount(list.length === 0 ? 0 : Math.max(count, unreadListCount));
           setInitialLoaded(true);
         }
       } catch {
         // ignore
       }
     }
-    loadInitialCount();
+    loadInitialData();
     return () => { mounted = false; };
   }, []);
 
@@ -43,8 +50,11 @@ export default function NotificationDropdown({ onOpenSettings }) {
         getNotifications(),
         getUnreadCount()
       ]);
-      setNotifications(notifsRes.data || []);
-      setUnreadCount(countRes.data || 0);
+      const list = Array.isArray(notifsRes) ? notifsRes : (notifsRes?.data || []);
+      const count = typeof countRes === 'number' ? countRes : (countRes?.data || 0);
+      setNotifications(list);
+      const unreadListCount = list.filter(n => !n.read).length;
+      setUnreadCount(list.length === 0 ? 0 : Math.max(count, unreadListCount));
     } catch {
       console.error("Failed to load notifications");
     } finally {
@@ -140,7 +150,7 @@ export default function NotificationDropdown({ onOpenSettings }) {
   return (
     <AppDropdown
       align="right"
-      widthClass="w-[min(21.25rem,calc(100vw-1.5rem))]"
+      widthClass="w-[min(22.5rem,calc(100vw-1.25rem))]"
       className="!p-0"
       trigger={({ open }) => {
         // Fetching happens on the trigger's click rather than during render,
@@ -178,23 +188,24 @@ export default function NotificationDropdown({ onOpenSettings }) {
     >
       {({ close }) => (
         <>
-      <div className="flex items-center justify-between px-4 py-3 tf-bd border-b">
-        <div className="flex items-center gap-2">
-          <span className="text-[14px] font-bold tf-text">
+      <div className="flex items-center justify-between px-3.5 sm:px-4 py-2.5 tf-bd border-b gap-1.5">
+        <div className="flex shrink-0 items-center gap-1.5 min-w-0">
+          <span className="text-[13px] sm:text-[14px] font-bold tf-text whitespace-nowrap">
             Notifications
           </span>
           {unreadCount > 0 && (
-            <span className="tf-badge tf-badge-accent">
+            <span className="tf-badge tf-badge-accent text-[10px] px-1.5 py-0.5 shrink-0">
               {unreadCount}
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1">
+
+        <div className="flex shrink-0 items-center gap-0.5 sm:gap-1 min-w-0">
           {notifications.some(n => n.read) && (
             <button
               type="button"
               onClick={handleClearRead}
-              className="tf-btn-link mr-2 text-[11px] tf-text-muted hover:tf-text"
+              className="tf-btn-link text-[11px] tf-text-muted hover:tf-text whitespace-nowrap px-1"
             >
               Clear read
             </button>
@@ -203,9 +214,10 @@ export default function NotificationDropdown({ onOpenSettings }) {
             <button
               type="button"
               onClick={handleMarkAllRead}
-              className="tf-btn-link mr-1 text-[11px]"
+              className="tf-btn-link text-[11px] whitespace-nowrap px-1"
             >
-              Mark all read
+              <span className="hidden xs:inline">Mark all read</span>
+              <span className="xs:hidden">Mark read</span>
             </button>
           )}
           <button
@@ -214,18 +226,18 @@ export default function NotificationDropdown({ onOpenSettings }) {
               close();
               onOpenSettings?.();
             }}
-            className="tf-btn-icon tf-size-sm"
+            className="tf-btn-icon tf-size-sm shrink-0"
             title="Manage notification settings"
           >
-            <SettingsIcon size={16} />
+            <SettingsIcon size={15} />
           </button>
           <button
             type="button"
             onClick={close}
-            className="sm:hidden tf-btn-icon tf-size-sm"
+            className="sm:hidden tf-btn-icon tf-size-sm shrink-0"
             title="Close notifications"
           >
-            <X size={16} />
+            <X size={15} />
           </button>
         </div>
       </div>

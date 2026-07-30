@@ -1,11 +1,13 @@
 import api from "./api";
 
+const extractData = (response) => response.data?.data ?? response.data;
+
 /**
  * Get all notifications for current user
  */
 export const getNotifications = async () => {
   const response = await api.get("/notifications");
-  return response.data;
+  return extractData(response);
 };
 
 /**
@@ -13,7 +15,7 @@ export const getNotifications = async () => {
  */
 export const getUnreadCount = async () => {
   const response = await api.get("/notifications/unread-count");
-  return response.data;
+  return extractData(response);
 };
 
 /**
@@ -21,7 +23,7 @@ export const getUnreadCount = async () => {
  */
 export const markAsRead = async (id) => {
   const response = await api.patch(`/notifications/${id}/read`);
-  return response.data;
+  return extractData(response);
 };
 
 /**
@@ -29,7 +31,7 @@ export const markAsRead = async (id) => {
  */
 export const markAllAsRead = async () => {
   const response = await api.patch("/notifications/read-all");
-  return response.data;
+  return extractData(response);
 };
 
 /**
@@ -37,7 +39,7 @@ export const markAllAsRead = async () => {
  */
 export const deleteNotification = async (id) => {
   const response = await api.delete(`/notifications/${id}`);
-  return response.data;
+  return extractData(response);
 };
 
 /**
@@ -45,7 +47,7 @@ export const deleteNotification = async (id) => {
  */
 export const clearReadNotifications = async () => {
   const response = await api.delete("/notifications/clear-read");
-  return response.data;
+  return extractData(response);
 };
 
 /**
@@ -53,7 +55,7 @@ export const clearReadNotifications = async () => {
  */
 export const getPreferences = async () => {
   const response = await api.get("/notifications/preferences");
-  return response.data;
+  return extractData(response);
 };
 
 /**
@@ -61,5 +63,6 @@ export const getPreferences = async () => {
  */
 export const updatePreferences = async (preferences) => {
   const response = await api.put("/notifications/preferences", preferences);
-  return response.data;
+  return extractData(response);
 };
+

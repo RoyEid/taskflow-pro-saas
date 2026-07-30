@@ -132,7 +132,10 @@ function getManagedAttachmentUrl(url) {
       return null;
     }
 
-    return new URL(`${parsedUrl.pathname}${parsedUrl.search}`, apiOrigin).toString();
+    return new URL(
+      `${parsedUrl.pathname}${parsedUrl.search}`,
+      apiOrigin,
+    ).toString();
   } catch {
     return null;
   }
@@ -291,7 +294,10 @@ async function openFile(url) {
   }
 }
 
-const WAVEFORM_BARS = [35, 60, 45, 80, 55, 90, 70, 40, 65, 85, 50, 75, 40, 95, 60, 80, 45, 70, 50, 85, 40, 60, 75, 50];
+const WAVEFORM_BARS = [
+  35, 60, 45, 80, 55, 90, 70, 40, 65, 85, 50, 75, 40, 95, 60, 80, 45, 70, 50,
+  85, 40, 60, 75, 50,
+];
 
 function formatAudioTime(seconds) {
   if (!seconds || isNaN(seconds) || seconds < 0 || seconds === Infinity) {
@@ -352,14 +358,22 @@ function CustomAudioPlayer({ src, duration, isOwnMessage, isPreview = false }) {
   const handleTimeUpdate = () => {
     if (audioRef.current) {
       setCurrentTime(audioRef.current.currentTime);
-      if (!totalDuration && audioRef.current.duration && audioRef.current.duration !== Infinity) {
+      if (
+        !totalDuration &&
+        audioRef.current.duration &&
+        audioRef.current.duration !== Infinity
+      ) {
         setTotalDuration(audioRef.current.duration);
       }
     }
   };
 
   const handleLoadedMetadata = () => {
-    if (audioRef.current && audioRef.current.duration && audioRef.current.duration !== Infinity) {
+    if (
+      audioRef.current &&
+      audioRef.current.duration &&
+      audioRef.current.duration !== Infinity
+    ) {
       setTotalDuration(audioRef.current.duration);
     }
     setLoadError(false);
@@ -384,8 +398,8 @@ function CustomAudioPlayer({ src, duration, isOwnMessage, isPreview = false }) {
         isPreview
           ? "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700"
           : isOwnMessage
-          ? "bg-white/10 text-white backdrop-blur-xs"
-          : "bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200"
+            ? "bg-white/10 text-white backdrop-blur-xs"
+            : "bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200"
       }`}
     >
       <audio
@@ -448,7 +462,10 @@ function CustomAudioPlayer({ src, duration, isOwnMessage, isPreview = false }) {
           </button>
 
           <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <div className="flex h-6 items-center gap-0.5 cursor-pointer py-1" title="Seek audio">
+            <div
+              className="flex h-6 items-center gap-0.5 cursor-pointer py-1"
+              title="Seek audio"
+            >
               {WAVEFORM_BARS.map((heightPercent, idx) => {
                 const barFraction = (idx + 1) / WAVEFORM_BARS.length;
                 const isPlayed = barFraction <= progressFraction;
@@ -465,8 +482,8 @@ function CustomAudioPlayer({ src, duration, isOwnMessage, isPreview = false }) {
                           ? "bg-white opacity-100"
                           : "bg-indigo-600 dark:bg-indigo-400 opacity-100"
                         : isOwnMessage
-                        ? "bg-white/40 hover:bg-white/70"
-                        : "bg-slate-300 dark:bg-slate-700 hover:bg-slate-400"
+                          ? "bg-white/40 hover:bg-white/70"
+                          : "bg-slate-300 dark:bg-slate-700 hover:bg-slate-400"
                     }`}
                   />
                 );
@@ -532,7 +549,9 @@ function ChatImage({ src, alt, onOpen, isOwnMessage }) {
     return (
       <div
         className={`flex w-full max-w-full flex-col items-start gap-2 rounded-lg p-3 sm:max-w-sm ${
-          isOwnMessage ? "bg-white/10 text-white" : "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300"
+          isOwnMessage
+            ? "bg-white/10 text-white"
+            : "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300"
         }`}
       >
         <div className="flex items-center gap-2">
@@ -596,7 +615,7 @@ function ImageLightbox({ open, src, alt, onClose, onDownload }) {
         />
       )}
     </AnimatePresence>,
-    document.body
+    document.body,
   );
 }
 
@@ -607,7 +626,8 @@ function LightboxViewer({ src, alt, onClose, onDownload }) {
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === "Escape") onClose();
-      if (event.key === "+" || event.key === "=") setZoom((z) => Math.min(z + 0.5, 4));
+      if (event.key === "+" || event.key === "=")
+        setZoom((z) => Math.min(z + 0.5, 4));
       if (event.key === "-") setZoom((z) => Math.max(z - 0.5, 1));
     };
 
@@ -616,91 +636,93 @@ function LightboxViewer({ src, alt, onClose, onDownload }) {
   }, [onClose]);
 
   return (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={easeOutFast}
-          onClick={onClose}
-          role="dialog"
-          aria-modal="true"
-          aria-label={alt || "Image preview"}
-          className="fixed inset-0 z-[80] flex flex-col bg-slate-950/85 backdrop-blur-sm"
-        >
-          <div
-            className="flex shrink-0 items-center justify-between gap-3 p-3 text-white"
-            onClick={(event) => event.stopPropagation()}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={easeOutFast}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={alt || "Image preview"}
+      className="fixed inset-0 z-[80] flex flex-col bg-slate-950/85 backdrop-blur-sm"
+    >
+      <div
+        className="flex shrink-0 items-center justify-between gap-3 p-3 text-white"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <p className="min-w-0 truncate text-[13px] font-semibold">{alt}</p>
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.max(z - 0.5, 1))}
+            disabled={zoom <= 1}
+            aria-label="Zoom out"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-white/15 disabled:opacity-40"
           >
-            <p className="min-w-0 truncate text-[13px] font-semibold">{alt}</p>
-            <div className="flex shrink-0 items-center gap-1">
-              <button
-                type="button"
-                onClick={() => setZoom((z) => Math.max(z - 0.5, 1))}
-                disabled={zoom <= 1}
-                aria-label="Zoom out"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-white/15 disabled:opacity-40"
-              >
-                <ZoomOut size={17} />
-              </button>
-              <span className="w-12 text-center text-[12px] font-bold tabular-nums">
-                {Math.round(zoom * 100)}%
-              </span>
-              <button
-                type="button"
-                onClick={() => setZoom((z) => Math.min(z + 0.5, 4))}
-                disabled={zoom >= 4}
-                aria-label="Zoom in"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-white/15 disabled:opacity-40"
-              >
-                <ZoomIn size={17} />
-              </button>
-              <button
-                type="button"
-                onClick={onDownload}
-                aria-label="Download image"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-white/15"
-              >
-                <Download size={17} />
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label="Close preview"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-white/15"
-              >
-                <X size={18} />
-              </button>
-            </div>
-          </div>
+            <ZoomOut size={17} />
+          </button>
+          <span className="w-12 text-center text-[12px] font-bold tabular-nums">
+            {Math.round(zoom * 100)}%
+          </span>
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.min(z + 0.5, 4))}
+            disabled={zoom >= 4}
+            aria-label="Zoom in"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-white/15 disabled:opacity-40"
+          >
+            <ZoomIn size={17} />
+          </button>
+          <button
+            type="button"
+            onClick={onDownload}
+            aria-label="Download image"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-white/15"
+          >
+            <Download size={17} />
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close preview"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-white/15"
+          >
+            <X size={18} />
+          </button>
+        </div>
+      </div>
 
-          <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto p-4">
-            {status === "loading" && (
-              <Loader2 size={28} className="animate-spin text-white/70" />
-            )}
+      <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto p-4">
+        {status === "loading" && (
+          <Loader2 size={28} className="animate-spin text-white/70" />
+        )}
 
-            {status === "error" ? (
-              <div className="flex flex-col items-center gap-2 text-center text-white/80">
-                <AlertCircle size={28} />
-                <p className="text-[14px] font-semibold">Image could not be loaded</p>
-                <p className="max-w-xs text-[12px] text-white/60">
-                  The file may have been removed from the server.
-                </p>
-              </div>
-            ) : (
-              <img
-                src={src}
-                alt={alt}
-                onClick={(event) => event.stopPropagation()}
-                onLoad={() => setStatus("loaded")}
-                onError={() => setStatus("error")}
-                style={{ transform: `scale(${zoom})` }}
-                className={`max-h-full max-w-full origin-center object-contain transition-transform duration-200 ${
-                  status === "loading" ? "hidden" : ""
-                } ${zoom > 1 ? "cursor-grab" : "cursor-zoom-in"}`}
-              />
-            )}
+        {status === "error" ? (
+          <div className="flex flex-col items-center gap-2 text-center text-white/80">
+            <AlertCircle size={28} />
+            <p className="text-[14px] font-semibold">
+              Image could not be loaded
+            </p>
+            <p className="max-w-xs text-[12px] text-white/60">
+              The file may have been removed from the server.
+            </p>
           </div>
-        </motion.div>
+        ) : (
+          <img
+            src={src}
+            alt={alt}
+            onClick={(event) => event.stopPropagation()}
+            onLoad={() => setStatus("loaded")}
+            onError={() => setStatus("error")}
+            style={{ transform: `scale(${zoom})` }}
+            className={`max-h-full max-w-full origin-center object-contain transition-transform duration-200 ${
+              status === "loading" ? "hidden" : ""
+            } ${zoom > 1 ? "cursor-grab" : "cursor-zoom-in"}`}
+          />
+        )}
+      </div>
+    </motion.div>
   );
 }
 
@@ -1725,8 +1747,7 @@ function Chat() {
           const tempIdx = message.clientMessageId
             ? prev.findIndex(
                 (m) =>
-                  m._pending &&
-                  m.clientMessageId === message.clientMessageId,
+                  m._pending && m.clientMessageId === message.clientMessageId,
               )
             : -1;
 
@@ -2482,8 +2503,6 @@ function Chat() {
     return deleteMessageRequest(workspaceId, messageId);
   };
 
-
-
   const handleEditSubmit = async (e, message) => {
     e.preventDefault();
 
@@ -3116,7 +3135,10 @@ function Chat() {
                                         }`}
                                         aria-label={`Open ${message.fileName || "image"}`}
                                       >
-                                        <Maximize2 size={13} strokeWidth={2.5} />
+                                        <Maximize2
+                                          size={13}
+                                          strokeWidth={2.5}
+                                        />
                                         Open
                                       </button>
                                       <button
@@ -3167,7 +3189,9 @@ function Chat() {
                                     <div className="min-w-0 flex-1">
                                       <p
                                         className={`truncate text-[13px] font-semibold ${
-                                          isOwnMessage ? "text-white" : "tf-text"
+                                          isOwnMessage
+                                            ? "text-white"
+                                            : "tf-text"
                                         }`}
                                       >
                                         {message.fileName || "Document"}
@@ -3253,7 +3277,9 @@ function Chat() {
                               ) : messageKind === "audio" && mediaUrl ? (
                                 <CustomAudioPlayer
                                   src={mediaUrl}
-                                  duration={message.audioDuration || message.duration}
+                                  duration={
+                                    message.audioDuration || message.duration
+                                  }
                                   isOwnMessage={isOwnMessage}
                                 />
                               ) : shouldHighlightSearch ? (
@@ -3430,7 +3456,11 @@ function Chat() {
                         className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition-all active:scale-95 shadow-sm disabled:opacity-50"
                         title="Send voice note"
                       >
-                        {isUploading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} className="ml-0.5" />}
+                        {isUploading ? (
+                          <Loader2 size={16} className="animate-spin" />
+                        ) : (
+                          <Send size={16} className="ml-0.5" />
+                        )}
                       </button>
                     </div>
                   </div>
@@ -3573,14 +3603,13 @@ function Chat() {
         onClose={() => setPreviewImage(null)}
         onDownload={() => {
           setError("");
-          void downloadFile(
-            previewImage?.downloadUrl,
-            previewImage?.alt,
-          ).catch((downloadError) => {
-            setError(
-              downloadError?.message || "Image could not be downloaded.",
-            );
-          });
+          void downloadFile(previewImage?.downloadUrl, previewImage?.alt).catch(
+            (downloadError) => {
+              setError(
+                downloadError?.message || "Image could not be downloaded.",
+              );
+            },
+          );
         }}
       />
     </DashboardLayout>
