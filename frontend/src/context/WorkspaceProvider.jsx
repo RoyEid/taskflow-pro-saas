@@ -28,6 +28,18 @@ function normalizeWorkspaceList(data) {
   return [];
 }
 
+function getChatWorkspaceIdFromPath() {
+  const match = window.location.pathname.match(/^\/chat\/([^/]+)\/?$/);
+
+  if (!match?.[1]) return null;
+
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return match[1];
+  }
+}
+
 function WorkspaceProvider({ children }) {
   const { user } = useAuth();
 
@@ -109,16 +121,19 @@ function WorkspaceProvider({ children }) {
       if (cancelled) return;
 
       const savedWorkspaceId = localStorage.getItem("workspaceId");
+      const linkedWorkspaceId = getChatWorkspaceIdFromPath();
+      const preferredWorkspaceId = linkedWorkspaceId || savedWorkspaceId;
 
-      // Find if savedWorkspaceId matches one of the user's valid workspaces
+      // Email links can open a specific workspace chat. Prefer that workspace
+      // when it belongs to the signed-in user, then fall back to their saved one.
       const matchedWorkspace = userWorkspaces.find((w) => {
         const id = w?._id || w?.id || w?.workspace?._id || w?.workspace?.id;
-        return id === savedWorkspaceId;
+        return String(id) === String(preferredWorkspaceId);
       });
 
       if (matchedWorkspace) {
         const normalized = normalizeWorkspace(matchedWorkspace);
-        const normalizedId = getWorkspaceId(normalized) || savedWorkspaceId;
+        const normalizedId = getWorkspaceId(normalized) || preferredWorkspaceId;
         setWorkspaceState(normalized);
         const role =
           matchedWorkspace?.role ||

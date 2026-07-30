@@ -21,6 +21,14 @@ const CHAT_EMAIL_DELAY_MS = process.env.CHAT_EMAIL_DELAY_MS
 
 const emailQueue = new Map();
 
+const escapeEmailHtml = (value = "") =>
+    String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+
 export const serializeUser = (user) => {
     if (!user) return null;
 
@@ -503,7 +511,7 @@ export const deleteWorkspaceMessage = async ({
 const sendMissedChatEmail = async ({ recipient, workspace, message }) => {
     try {
         const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-        const chatLink = `${frontendUrl.replace(/\/$/, "")}/chat/${workspace._id}`;
+        const chatLink = `${frontendUrl.replace(/\/$/, "")}/chat/${encodeURIComponent(String(workspace._id))}`;
         
         let messagePreview = "Sent an attachment";
         if (message.messageType === "text" && message.content) {
@@ -517,16 +525,18 @@ const sendMissedChatEmail = async ({ recipient, workspace, message }) => {
             subject: `New unread messages in ${workspace.name}`,
             title: "New Chat Message",
             badge: "Missed Chat",
-            subtitle: `You have new unread messages in the ${workspace.name} workspace.`,
+            theme: "minimal",
+            subtitle: `You have new unread messages in the ${escapeEmailHtml(workspace.name)} workspace.`,
+            message: `Hello ${recipient.name},\n\nYou received a new message in the ${workspace.name} workspace:\n\n"${messagePreview}"\n\nOpen chat: ${chatLink}`,
             contentHtml: `
-                <p>Hello <strong>${recipient.name}</strong>,</p>
-                <p>You received a new message in the <strong>${workspace.name}</strong> workspace on TaskFlow Pro.</p>
-                <div style="margin: 16px 0; padding: 12px 16px; background-color: #1e293b; border-left: 4px solid #4f46e5; border-radius: 4px; color: #f8fafc; font-style: italic;">
-                    "${messagePreview}"
+                <p style="margin:0 0 16px;">Hello <strong>${escapeEmailHtml(recipient.name)}</strong>,</p>
+                <p style="margin:0 0 16px;">You received a new message in the <strong>${escapeEmailHtml(workspace.name)}</strong> workspace on TaskFlow Pro.</p>
+                <div style="margin:16px 0; padding:14px 16px; background-color:#f5f5f4; border:1px solid #e7e5e4; border-left:3px solid #a8a29e; border-radius:8px; color:#292524; font-style:italic;">
+                    &ldquo;${escapeEmailHtml(messagePreview)}&rdquo;
                 </div>
-                <p>Please open TaskFlow Pro to check your workspace chat when you are available.</p>
-                <div style="margin: 28px 0; text-align: center;">
-                    <a href="${chatLink}" target="_blank" style="display: inline-block; background-color: #4f46e5; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; font-weight: 700; text-decoration: none; padding: 14px 28px; border-radius: 8px; box-shadow: 0 4px 6px rgba(79, 70, 229, 0.2); transition: background-color 0.2s;">
+                <p style="margin:0;">Open TaskFlow Pro when you are ready to continue the conversation.</p>
+                <div style="margin:28px 0 8px; text-align:center;">
+                    <a href="${escapeEmailHtml(chatLink)}" target="_blank" rel="noopener noreferrer" style="display:inline-block; background-color:#1c1917; color:#ffffff; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size:14px; font-weight:700; text-decoration:none; padding:13px 26px; border-radius:8px;">
                         Open Chat
                     </a>
                 </div>

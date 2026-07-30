@@ -53,6 +53,42 @@ function getEmailType(subject = "") {
 
 function buildHtmlLayout(options) {
   const { subject, code, badge, title, subtitle, contentHtml, html } = options;
+  const useMinimalTheme = options.theme === "minimal";
+  const palette = useMinimalTheme
+    ? {
+        page: "#f5f5f4",
+        card: "#ffffff",
+        border: "#e7e5e4",
+        header: "#ffffff",
+        brand: "#1c1917",
+        tagline: "#78716c",
+        badgeBackground: "#f5f5f4",
+        badgeText: "#57534e",
+        title: "#1c1917",
+        subtitle: "#78716c",
+        content: "#44403c",
+        note: "#a8a29e",
+        footer: "#fafaf9",
+        footerPrimary: "#57534e",
+        footerSecondary: "#a8a29e",
+      }
+    : {
+        page: "#0f172a",
+        card: "#1e293b",
+        border: "#334155",
+        header: "linear-gradient(135deg,#171717,#292524)",
+        brand: "#ffffff",
+        tagline: "#A8A29E",
+        badgeBackground: "#334155",
+        badgeText: "#f8fafc",
+        title: "#f8fafc",
+        subtitle: "#94a3b8",
+        content: "#e2e8f0",
+        note: "#64748b",
+        footer: "#0f172a",
+        footerPrimary: "#94a3b8",
+        footerSecondary: "#64748b",
+      };
   
   // Resolve badge, title, subtitle
   let resolvedBadge = badge;
@@ -111,20 +147,20 @@ function buildHtmlLayout(options) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>${resolvedTitle}</title>
   </head>
-  <body style="margin:0; padding:0; background-color:#0f172a; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color:#f1f5f9;-webkit-font-smoothing:antialiased;">
-    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0f172a; padding:40px 16px;">
+  <body style="margin:0; padding:0; background-color:${palette.page}; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color:${palette.content};-webkit-font-smoothing:antialiased;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:${palette.page}; padding:${useMinimalTheme ? "28px 16px" : "40px 16px"};">
       <tr>
         <td align="center">
-          <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px; background-color:#1e293b; border-radius:16px; overflow:hidden; border:1px solid #334155; box-shadow:0 4px 6px -1px rgba(0,0,0,0.3), 0 2px 4px -1px rgba(0,0,0,0.2);">
+          <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px; background-color:${palette.card}; border-radius:16px; overflow:hidden; border:1px solid ${palette.border}; box-shadow:${useMinimalTheme ? "0 8px 24px rgba(28,25,23,0.06)" : "0 4px 6px -1px rgba(0,0,0,0.3), 0 2px 4px -1px rgba(0,0,0,0.2)"};">
             
             <!-- Header Banner -->
             <tr>
-              <td style="background:linear-gradient(135deg,#171717,#292524); padding:32px 30px; text-align:center;">
-                <img src="${logoUrl}" alt="TaskFlow Pro" width="60" height="60" style="display:inline-block; width:60px; height:60px; border-radius:14px; background-color:#ffffff; padding:8px; border:1px solid rgba(255,255,255,0.15); object-fit:contain; margin-bottom:12px; box-shadow:0 4px 6px rgba(0,0,0,0.15);" />
-                <h1 style="margin:0; font-size:26px; line-height:1.2; color:#ffffff; font-weight:800; letter-spacing:-0.5px;">
+              <td style="background:${palette.header}; padding:${useMinimalTheme ? "24px 30px 20px" : "32px 30px"}; text-align:center;${useMinimalTheme ? ` border-bottom:1px solid ${palette.border};` : ""}">
+                <img src="${logoUrl}" alt="TaskFlow Pro" width="${useMinimalTheme ? "48" : "60"}" height="${useMinimalTheme ? "48" : "60"}" style="display:inline-block; width:${useMinimalTheme ? "48px" : "60px"}; height:${useMinimalTheme ? "48px" : "60px"}; border-radius:12px; background-color:#ffffff; padding:${useMinimalTheme ? "6px" : "8px"}; border:1px solid ${palette.border}; object-fit:contain; margin-bottom:10px;${useMinimalTheme ? "" : " box-shadow:0 4px 6px rgba(0,0,0,0.15);"}" />
+                <h1 style="margin:0; font-size:${useMinimalTheme ? "22px" : "26px"}; line-height:1.2; color:${palette.brand}; font-weight:800; letter-spacing:-0.5px;">
                   TaskFlow Pro
                 </h1>
-                <p style="margin:6px 0 0; color:#A8A29E; font-size:13px; font-weight:500;">
+                <p style="margin:6px 0 0; color:${palette.tagline}; font-size:13px; font-weight:500;">
                   Project management made simple
                 </p>
               </td>
@@ -133,17 +169,17 @@ function buildHtmlLayout(options) {
             <!-- Content Area -->
             <tr>
               <td style="padding:32px 32px 24px;">
-                <div style="display:inline-block; padding:5px 10px; border-radius:999px; background-color:#334155; color:#f8fafc; font-size:11px; font-weight:700; margin-bottom:16px; text-transform:uppercase; letter-spacing:0.5px;">
+                <div style="display:inline-block; padding:5px 10px; border-radius:999px; background-color:${palette.badgeBackground}; color:${palette.badgeText}; font-size:11px; font-weight:700; margin-bottom:16px; text-transform:uppercase; letter-spacing:0.5px;">
                   ${resolvedBadge}
                 </div>
 
-                <h2 style="margin:0 0 12px; font-size:22px; line-height:1.3; color:#f8fafc; font-weight:700; letter-spacing:-0.3px;">
+                <h2 style="margin:0 0 12px; font-size:22px; line-height:1.3; color:${palette.title}; font-weight:700; letter-spacing:-0.3px;">
                   ${resolvedTitle}
                 </h2>
 
-                ${resolvedSubtitle ? `<p style="margin:0 0 20px; font-size:14px; line-height:1.5; color:#94a3b8;">${resolvedSubtitle}</p>` : ''}
+                ${resolvedSubtitle ? `<p style="margin:0 0 20px; font-size:14px; line-height:1.5; color:${palette.subtitle};">${resolvedSubtitle}</p>` : ''}
 
-                <div style="font-size:15px; line-height:1.6; color:#e2e8f0;">
+                <div style="font-size:15px; line-height:1.6; color:${palette.content};">
                   ${bodyContent}
                 </div>
 
@@ -154,7 +190,7 @@ function buildHtmlLayout(options) {
             <!-- Footer Note -->
             <tr>
               <td style="padding:0 32px 24px;">
-                <p style="margin:0; font-size:13px; line-height:1.5; color:#64748b;">
+                <p style="margin:0; font-size:13px; line-height:1.5; color:${palette.note};">
                   ${!code 
                     ? "This is an automated notification. Please do not reply directly to this email." 
                     : "If you did not request this email, you can safely ignore it."}
@@ -164,11 +200,11 @@ function buildHtmlLayout(options) {
 
             <!-- Footer -->
             <tr>
-              <td style="background-color:#0f172a; padding:20px 32px; border-top:1px solid #334155; text-align:center;">
-                <p style="margin:0 0 4px; font-size:12px; color:#94a3b8; font-weight:600;">
-                  Sent by <span style="color:#f8fafc;">TaskFlow Pro</span>
+              <td style="background-color:${palette.footer}; padding:20px 32px; border-top:1px solid ${palette.border}; text-align:center;">
+                <p style="margin:0 0 4px; font-size:12px; color:${palette.footerPrimary}; font-weight:600;">
+                  Sent by <span style="color:${palette.brand};">TaskFlow Pro</span>
                 </p>
-                <p style="margin:0; font-size:11px; color:#64748b;">
+                <p style="margin:0; font-size:11px; color:${palette.footerSecondary};">
                   Manage projects, clients, tasks, and teams in one place.
                 </p>
               </td>
