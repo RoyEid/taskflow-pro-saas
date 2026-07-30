@@ -453,7 +453,7 @@ function DashboardLayout({ children }) {
                         />
                         {isCompact && item.to === "/chat" && chatUnreadCount > 0 && (
                           <span
-                            className="absolute -top-1.5 -right-2.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--tf-error-dot)] px-1 text-[9px] font-bold leading-none text-white shadow-sm ring-2 ring-[var(--tf-bg-sidebar)]"
+                            className="absolute top-0 right-0 -translate-y-1 translate-x-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--tf-error-dot)] px-1 text-[9px] font-bold leading-none text-white shadow-sm ring-2 ring-[var(--tf-bg-sidebar)]"
                           >
                             {chatUnreadCount > 99 ? "99+" : chatUnreadCount}
                           </span>

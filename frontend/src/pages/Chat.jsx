@@ -2726,7 +2726,7 @@ function Chat() {
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-[minmax(0,1fr)_240px] lg:grid-cols-[minmax(0,1fr)_260px]">
         <section className="flex min-h-[520px] max-h-[calc(100vh-160px)] min-w-0 flex-col overflow-hidden rounded-2xl tf-card">
           <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3.5 dark:border-slate-800/70 sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <div className="flex min-w-0 items-center gap-3">
@@ -3459,7 +3459,7 @@ function Chat() {
               </div>
 
               {!isRecording && !isUploading && !tempAudioBlob && (
-                <div className="flex items-center justify-between bg-slate-50/70 px-2 py-1.5 dark:bg-slate-950/20">
+                <div className="flex items-center justify-between bg-slate-50/70 pl-2 pr-16 md:pr-2 py-1.5 dark:bg-slate-950/20">
                   <div className="flex items-center gap-1">
                     <button
                       type="button"

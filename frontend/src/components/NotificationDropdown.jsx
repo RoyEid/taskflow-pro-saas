@@ -177,7 +177,7 @@ export default function NotificationDropdown({ onOpenSettings }) {
               className="transition-transform group-hover:animate-bell-wiggle"
             />
             {unreadCount > 0 && (
-              <span className="absolute top-[8px] right-[8px] flex h-2 w-2">
+              <span className="absolute top-[2px] right-[4px] flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
               </span>
