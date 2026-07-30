@@ -11,6 +11,7 @@ export default function NotificationSettingsModal({ open, onClose }) {
     taskStatusChanged: true,
     roleChanged: true,
     support: true,
+    emailRoleChanged: true,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -19,13 +20,15 @@ export default function NotificationSettingsModal({ open, onClose }) {
     setLoading(true);
     try {
       const data = await getPreferences();
-      if (data && data.data) {
+      const loadedPreferences = data?.data ?? data;
+      if (loadedPreferences) {
         setPreferences({
-          taskAssigned: data.data.taskAssigned ?? true,
-          taskCommented: data.data.taskCommented ?? true,
-          taskStatusChanged: data.data.taskStatusChanged ?? true,
-          roleChanged: data.data.roleChanged ?? true,
-          support: data.data.support ?? true,
+          taskAssigned: loadedPreferences.taskAssigned ?? true,
+          taskCommented: loadedPreferences.taskCommented ?? true,
+          taskStatusChanged: loadedPreferences.taskStatusChanged ?? true,
+          roleChanged: loadedPreferences.roleChanged ?? true,
+          support: loadedPreferences.support ?? true,
+          emailRoleChanged: loadedPreferences.emailRoleChanged ?? true,
         });
       }
     } catch {
@@ -91,11 +94,7 @@ export default function NotificationSettingsModal({ open, onClose }) {
     >
       <div>
         <p className="text-sm tf-text-muted mb-6">
-          Choose which notifications you'd like to receive in the app.
-          <br/>
-          <span className="text-xs italic mt-2 block opacity-80">
-            Note: Important account and workspace emails are always sent. Task activity notifications appear in the app.
-          </span>
+          Choose which activity should appear in the app and which role updates should be emailed.
         </p>
 
         {loading ? (
@@ -139,7 +138,15 @@ export default function NotificationSettingsModal({ open, onClose }) {
               onChange={() => handleChange('support')} 
             />
 
-
+            <div className="pt-5 pb-2">
+              <h4 className="text-[13px] font-bold uppercase tracking-wider tf-text-muted">Email Notifications</h4>
+            </div>
+            <ToggleOption
+              label="Workspace Role Updates"
+              description="Email me when an owner changes my role between admin and member"
+              checked={preferences.emailRoleChanged}
+              onChange={() => handleChange('emailRoleChanged')}
+            />
           </div>
         )}
 

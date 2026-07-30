@@ -37,6 +37,10 @@ const notificationPreferenceSchema = new mongoose.Schema(
             type: Boolean,
             default: true,
         },
+        emailRoleChanged: {
+            type: Boolean,
+            default: true,
+        },
         emailTaskAssigned: {
             type: Boolean,
             default: false,

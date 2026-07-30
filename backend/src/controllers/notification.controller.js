@@ -128,6 +128,7 @@ export const updatePreferences = asyncHandler(async (req, res) => {
         roleChanged,
         support,
         emailWorkspaceInvites,
+        emailRoleChanged,
         emailTaskAssigned,
         emailTaskComments,
         emailTaskStatusChanged,
@@ -148,6 +149,7 @@ export const updatePreferences = asyncHandler(async (req, res) => {
     if (support !== undefined) preferences.support = support;
 
     if (emailWorkspaceInvites !== undefined) preferences.emailWorkspaceInvites = emailWorkspaceInvites;
+    if (emailRoleChanged !== undefined) preferences.emailRoleChanged = emailRoleChanged;
     if (emailTaskAssigned !== undefined) preferences.emailTaskAssigned = emailTaskAssigned;
     if (emailTaskComments !== undefined) preferences.emailTaskComments = emailTaskComments;
     if (emailTaskStatusChanged !== undefined) preferences.emailTaskStatusChanged = emailTaskStatusChanged;
