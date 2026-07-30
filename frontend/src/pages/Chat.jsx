@@ -1835,17 +1835,8 @@ function Chat() {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [
-    addReaderToMessages,
-    appendMessage,
-    clearTypingTimer,
-    currentUserId,
-    emitTyping,
-    mergeMessages,
-    notifyUnreadUpdated,
-    updateMessageInList,
-    workspaceId,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceId, currentUserId]);
 
   const handleDraftChange = (e) => {
     setDraft(e.target.value);
