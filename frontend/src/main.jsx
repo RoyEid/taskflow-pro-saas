@@ -9,6 +9,8 @@ import AuthProvider from "./context/AuthProvider.jsx";
 import WorkspaceProvider from "./context/WorkspaceProvider.jsx";
 import AssistantProvider from "./context/AssistantProvider.jsx";
 
+import ChatSocketProvider from "./context/ChatSocketProvider.jsx";
+
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
@@ -17,7 +19,9 @@ createRoot(document.getElementById("root")).render(
           <AuthProvider>
             <WorkspaceProvider>
               <AssistantProvider>
-                <App />
+                <ChatSocketProvider>
+                  <App />
+                </ChatSocketProvider>
               </AssistantProvider>
             </WorkspaceProvider>
           </AuthProvider>

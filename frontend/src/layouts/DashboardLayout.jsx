@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import useAuth from "../context/useAuth";
 import useTheme from "../context/useTheme";
 import useWorkspace from "../context/useWorkspace";
+import useChatSocket from "../context/useChatSocket";
 import { getChatUnreadCount } from "../services/chatService";
 import AppBackground from "../components/ui3d/AppBackground";
 import { easeOutFast, springSoft } from "../components/ui3d/motionTokens";
@@ -122,7 +123,8 @@ function DashboardLayout({ children }) {
   const [isHovered, setIsHovered] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [comingSoonFeature, setComingSoonFeature] = useState(null);
-  const [chatUnreadCount, setChatUnreadCount] = useState(0);
+  const { unreadCounts, setUnreadCount: setGlobalUnreadCount } = useChatSocket();
+  const chatUnreadCount = unreadCounts[workspaceId] || 0;
 
   const touchStart = useRef({ x: 0, y: 0 });
   const touchDelta = useRef({ x: 0, y: 0 });
@@ -178,7 +180,7 @@ function DashboardLayout({ children }) {
 
     async function loadChatUnreadCount() {
       if (!workspaceId) {
-        setChatUnreadCount(0);
+        setGlobalUnreadCount(workspaceId, 0);
         return;
       }
 
@@ -186,34 +188,24 @@ function DashboardLayout({ children }) {
         const data = await getChatUnreadCount(workspaceId);
 
         if (!cancelled) {
-          setChatUnreadCount(data?.unreadCount || 0);
+          setGlobalUnreadCount(workspaceId, data?.unreadCount || 0);
         }
       } catch {
         if (!cancelled) {
-          setChatUnreadCount(0);
+          setGlobalUnreadCount(workspaceId, 0);
         }
       }
     }
 
     loadChatUnreadCount();
 
-    const handleChatUnreadUpdated = (event) => {
-      if (!workspaceId || event.detail?.workspaceId !== workspaceId) {
-        return;
-      }
-
-      setChatUnreadCount(event.detail?.unreadCount || 0);
-    };
-
-    window.addEventListener("chatUnreadUpdated", handleChatUnreadUpdated);
     window.addEventListener("focus", loadChatUnreadCount);
 
     return () => {
       cancelled = true;
-      window.removeEventListener("chatUnreadUpdated", handleChatUnreadUpdated);
       window.removeEventListener("focus", loadChatUnreadCount);
     };
-  }, [workspaceId, location.pathname]);
+  }, [workspaceId, location.pathname, setGlobalUnreadCount]);
 
   useEffect(() => {
     if (!mobileOpen) return undefined;

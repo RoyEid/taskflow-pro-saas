@@ -504,12 +504,12 @@ function CustomAudioPlayer({ src, duration, isOwnMessage, isPreview = false }) {
 import { getToken } from "../utils/tokenStorage";
 import useAuth from "../context/useAuth";
 import useWorkspace from "../context/useWorkspace";
+import useChatSocket from "../context/useChatSocket";
 import EmptyState from "../components/EmptyState";
 import LoadingState from "../components/LoadingState";
 import PageHeader from "../components/PageHeader";
 import {
   CHAT_PAGE_SIZE,
-  createChatSocket,
   deleteMessage as deleteMessageRequest,
   editMessage as editMessageRequest,
   getChatMeta,
@@ -1006,7 +1006,13 @@ function Chat() {
   const workspaceId = getWorkspaceId(workspace);
   const currentUserId = getUserId(user);
 
-  const socketRef = useRef(null);
+  const { socket, connected } = useChatSocket();
+  const socketRef = useRef(socket);
+
+  useEffect(() => {
+    socketRef.current = socket;
+  }, [socket]);
+
   const messageListRef = useRef(null);
   const bottomRef = useRef(null);
   const messageElementRefs = useRef(new Map());
@@ -1043,7 +1049,6 @@ function Chat() {
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
   const [sending, setSending] = useState(false);
   const [archiving, setArchiving] = useState(false);
-  const [connected, setConnected] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [archiveNotice, setArchiveNotice] = useState("");
   const [error, setError] = useState("");
@@ -1054,7 +1059,6 @@ function Chat() {
   const [permissionNow, setPermissionNow] = useState(() => Date.now());
   // Holds the image the lightbox is showing; null keeps the overlay unmounted.
   const [previewImage, setPreviewImage] = useState(null);
-  const [showMembersMobile, setShowMembersMobile] = useState(true);
 
   const openImagePreview = async (mediaUrl, alt, resolvedUrl = "") => {
     setError("");
@@ -1624,39 +1628,11 @@ function Chat() {
   ]);
 
   useEffect(() => {
-    if (!workspaceId) {
+    if (!workspaceId || !socket) {
       return undefined;
     }
 
     let cancelled = false;
-    const socket = createChatSocket(workspaceId);
-    socketRef.current = socket;
-
-    // Socket.IO gives up permanently when the connection is refused by a server
-    // middleware, which is why a dropped session used to require a page refresh.
-    // These retries revive the socket by hand with a capped backoff.
-    let authRetryTimer = null;
-    let authRetryCount = 0;
-    const clearAuthRetry = () => {
-      if (authRetryTimer) {
-        window.clearTimeout(authRetryTimer);
-        authRetryTimer = null;
-      }
-    };
-
-    const scheduleReconnect = () => {
-      if (cancelled || authRetryTimer || socket.active) return;
-
-      const delay = Math.min(1000 * 2 ** Math.min(authRetryCount, 4), 15000);
-      authRetryCount += 1;
-
-      authRetryTimer = window.setTimeout(() => {
-        authRetryTimer = null;
-        if (!cancelled && !socket.active) {
-          socket.connect();
-        }
-      }, delay);
-    };
 
     const loadChat = async () => {
       setLoading(true);
@@ -1697,13 +1673,11 @@ function Chat() {
         if (cancelled) return;
 
         if (!response?.success) {
-          setConnected(false);
           setError(response?.message || "Unable to join workspace chat.");
           return;
         }
 
         setError("");
-        setConnected(true);
         setOnlineUserIds(normalizeOnlineUsers(response.onlineUsers));
         setUnreadCount(response.unreadCount || 0);
         notifyUnreadUpdated(response.unreadCount || 0);
@@ -1712,8 +1686,6 @@ function Chat() {
 
     const handleConnect = () => {
       if (!cancelled) {
-        clearAuthRetry();
-        authRetryCount = 0;
         setError("");
         joinWorkspaceChat();
       }
@@ -1722,7 +1694,6 @@ function Chat() {
     const handleDisconnect = () => {
       if (!cancelled) {
         typingActiveRef.current = false;
-        setConnected(false);
       }
     };
 
@@ -1851,14 +1822,10 @@ function Chat() {
     const handleConnectError = (connectError) => {
       if (cancelled) return;
 
-      setConnected(false);
-
       const errorMsg = connectError?.message;
       const isTransportError =
         errorMsg === "websocket error" || errorMsg === "xhr poll error";
 
-      // Transport errors are retried by Socket.IO itself. Anything else came
-      // from a server middleware, which stops reconnection altogether.
       if (socket.active) return;
 
       if (!getToken()) {
@@ -1874,8 +1841,6 @@ function Chat() {
       if (!isTransportError && errorMsg) {
         setError(errorMsg);
       }
-
-      scheduleReconnect();
     };
 
     loadChat();
@@ -1892,11 +1857,13 @@ function Chat() {
     socket.on("workspaceChatArchived", handleChatArchived);
     socket.on("chatError", handleChatError);
     socket.on("connect_error", handleConnectError);
-    socket.connect();
+
+    if (socket.connected) {
+      handleConnect();
+    }
 
     return () => {
       cancelled = true;
-      clearAuthRetry();
       clearTypingTimer();
       emitTyping(false);
       socket.off("connect", handleConnect);
@@ -1911,8 +1878,6 @@ function Chat() {
       socket.off("workspaceChatArchived", handleChatArchived);
       socket.off("chatError", handleChatError);
       socket.off("connect_error", handleConnectError);
-      socket.disconnect();
-      socketRef.current = null;
     };
   }, [
     addReaderToMessages,
@@ -1923,6 +1888,7 @@ function Chat() {
     notifyUnreadUpdated,
     updateMessageInList,
     workspaceId,
+    socket,
   ]);
 
   const handleDraftChange = (e) => {

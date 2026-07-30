@@ -521,6 +521,8 @@ export const updateUnreadForInactiveMembers = async ({
     const senderId = sender._id.toString();
     const viewingSet = new Set(viewingUserIds.map((id) => id.toString()));
 
+    const unreadUpdates = [];
+
     for (const member of members) {
         const memberUser = member.user;
         const memberUserId = memberUser?._id?.toString();
@@ -542,14 +544,19 @@ export const updateUnreadForInactiveMembers = async ({
         }
 
         const shouldNotify = !state.notificationSent;
-        const shouldEmail = !state.missedEmailSent;
 
         state.unreadCount += 1;
         state.lastUnreadMessage = message._id;
         state.notificationSent = true;
-        state.missedEmailSent = true;
+        // Missed email logic disabled to prevent immediate spam. Can be handled via a delayed queue later.
+        // state.missedEmailSent = true; 
 
         await state.save();
+
+        unreadUpdates.push({
+            userId: memberUserId,
+            unreadCount: state.unreadCount,
+        });
 
         if (shouldNotify) {
             await createNotification({
@@ -567,14 +574,9 @@ export const updateUnreadForInactiveMembers = async ({
                 },
             });
         }
-
-        if (shouldEmail && memberUser.email && workspace) {
-            void sendMissedChatEmail({
-                recipient: memberUser,
-                workspace,
-            });
-        }
     }
+
+    return unreadUpdates;
 };
 
 export const archiveWorkspaceChat = async ({ workspaceId, archivedBy }) => {

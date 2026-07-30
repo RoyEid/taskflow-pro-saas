@@ -555,13 +555,24 @@ const registerChatSocket = (io) => {
                     sender: socket.user,
                     message,
                     viewingUserIds,
-                }).catch((error) => {
-                    console.error("Failed to update offline chat recipients:", {
-                        workspaceId,
-                        messageId: message._id,
-                        message: error.message,
+                })
+                    .then((updates) => {
+                        if (updates && updates.length > 0) {
+                            for (const update of updates) {
+                                io.to(getUserRoom(update.userId)).emit("chatUnreadCount", {
+                                    workspaceId,
+                                    unreadCount: update.unreadCount,
+                                });
+                            }
+                        }
+                    })
+                    .catch((error) => {
+                        console.error("Failed to update offline chat recipients:", {
+                            workspaceId,
+                            messageId: message._id,
+                            message: error.message,
+                        });
                     });
-                });
             } catch {
                 emitError(socket, callback, "Failed to send message", 500);
             }

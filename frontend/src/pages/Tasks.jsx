@@ -188,7 +188,7 @@ function Tasks() {
   const loadData = useCallback(async () => {
     await Promise.resolve();
 
-    if (!workspaceId || !isValidMongoId(workspaceId)) {
+    if (!workspaceId) {
       setProjects([]);
       setTasks([]);
       setMembers([]);
@@ -213,7 +213,7 @@ function Tasks() {
         (p) => (p._id || p.id) === selectedProjectId
       );
 
-      if (selectedProjectId && isValidMongoId(selectedProjectId) && activeProjectExists) {
+      if (selectedProjectId && activeProjectExists) {
         const tasksData = await getTasks(workspaceId, selectedProjectId);
         setTasks(normalizeTasks(tasksData));
       } else {
