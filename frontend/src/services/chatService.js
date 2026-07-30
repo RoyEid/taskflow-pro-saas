@@ -101,13 +101,13 @@ export const uploadChatFile = async (workspaceId, file, onUploadProgress) => {
 export const createChatSocket = () => {
   return io(socketUrl, {
     autoConnect: false,
-    auth: {
-      token: getToken() || "",
+    auth: (cb) => {
+      cb({ token: getToken() || "" });
     },
-    transports: ["websocket", "polling"],
+    transports: ["polling", "websocket"],
     reconnection: true,
     reconnectionDelay: 500,
-    reconnectionDelayMax: 5000,
-    reconnectionAttempts: 20,
+    reconnectionDelayMax: 3000,
+    reconnectionAttempts: Infinity,
   });
 };

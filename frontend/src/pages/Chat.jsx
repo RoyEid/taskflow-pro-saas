@@ -553,9 +553,9 @@ function ChatImage({ src, alt, onOpen, isOwnMessage }) {
   }
 
   return (
-    <div className="relative w-full max-w-full sm:max-w-sm">
+    <div className="relative w-fit max-w-full sm:max-w-sm overflow-hidden rounded-lg">
       {status === "loading" && (
-        <div className="tf-shimmer absolute inset-0 flex h-40 items-center justify-center rounded-lg bg-slate-200/60 dark:bg-slate-800/60">
+        <div className="tf-shimmer absolute inset-0 flex h-40 min-w-[160px] items-center justify-center rounded-lg bg-slate-200/60 dark:bg-slate-800/60">
           <Loader2 size={18} className="animate-spin text-slate-400" />
         </div>
       )}
@@ -568,7 +568,7 @@ function ChatImage({ src, alt, onOpen, isOwnMessage }) {
           onLoad={() => setStatus("loaded")}
           onError={() => setStatus("error")}
           onClick={() => onOpen(media.resolvedUrl)}
-          className={`block max-h-72 max-w-full cursor-zoom-in rounded-lg object-contain transition hover:opacity-95 ${
+          className={`block max-h-72 w-auto max-w-full cursor-zoom-in rounded-lg object-contain transition hover:opacity-95 ${
             status === "loading" || media.loading ? "opacity-0" : "opacity-100"
           }`}
         />
@@ -1639,6 +1639,7 @@ function Chat() {
           return;
         }
 
+        setError("");
         setConnected(true);
         setOnlineUserIds(normalizeOnlineUsers(response.onlineUsers));
         setUnreadCount(response.unreadCount || 0);
@@ -1648,6 +1649,7 @@ function Chat() {
 
     const handleConnect = () => {
       if (!cancelled) {
+        setError("");
         // Refresh the auth token in case it was updated while disconnected
         socket.auth = { token: getToken() || "" };
         joinWorkspaceChat();
@@ -1678,21 +1680,23 @@ function Chat() {
           if (existingIdx >= 0) return prev;
 
           // Check if there is a pending optimistic message from the same
-          // sender with the same content (the real message just arrived)
-          const tempIdx = prev.findIndex(
-            (m) =>
-              m._tempId &&
-              m._pending &&
-              idsEqual(getSenderId(m), getSenderId(message)) &&
-              m.content === message.content,
-          );
+          // sender with matching content or media type
+          const tempIdx = prev.findIndex((m) => {
+            if (!m._tempId || !m._pending) return false;
+            if (!idsEqual(getSenderId(m), getSenderId(message))) return false;
+            if (message.messageType === "text") {
+              return m.content === message.content;
+            }
+            return m.messageType === message.messageType;
+          });
+
           if (tempIdx >= 0) {
             const updated = [...prev];
             updated[tempIdx] = message;
             return updated;
           }
 
-          return [...prev, message];
+          return sortMessagesByDate([...prev, message]);
         });
         setUnreadCount(0);
         notifyUnreadUpdated(0);
@@ -1785,7 +1789,14 @@ function Chat() {
     const handleConnectError = (connectError) => {
       if (!cancelled) {
         setConnected(false);
-        setError(connectError?.message || "Unable to connect to chat.");
+        const errorMsg = connectError?.message;
+        if (
+          errorMsg &&
+          errorMsg !== "websocket error" &&
+          errorMsg !== "xhr poll error"
+        ) {
+          setError(errorMsg);
+        }
       }
     };
 
@@ -2904,7 +2915,7 @@ function Chat() {
                         }`
                       : `whitespace-pre-wrap break-words break-anywhere rounded-2xl text-[13px] leading-6 shadow-sm min-w-0 ${
                           isMedia
-                            ? "p-1 sm:p-1.5 w-full max-w-full"
+                            ? "p-1 sm:p-1.5 w-fit max-w-full"
                             : "px-4 py-2.5"
                         } ${
                           isOwnMessage
@@ -3009,7 +3020,7 @@ function Chat() {
                               {messageDeleted ? (
                                 displayContent
                               ) : messageKind === "image" && mediaUrl ? (
-                                <div className="flex max-w-full flex-col gap-1.5 p-1">
+                                <div className="flex w-fit max-w-full flex-col gap-1 p-0.5">
                                   <ChatImage
                                     src={mediaUrl}
                                     alt={message.fileName || "Chat image"}
@@ -3023,13 +3034,13 @@ function Chat() {
                                     }
                                   />
                                   <div
-                                    className={`mt-1 flex items-center justify-between gap-2 px-1 text-[11px] font-semibold ${
+                                    className={`mt-0.5 flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1 text-[11px] font-semibold ${
                                       isOwnMessage
-                                        ? "text-indigo-200"
-                                        : "tf-text-muted"
+                                        ? "bg-black/20 text-white"
+                                        : "bg-slate-200/60 text-slate-700 dark:bg-slate-800/80 dark:text-slate-200"
                                     }`}
                                   >
-                                    <span className="truncate block max-w-[180px]">
+                                    <span className="truncate block max-w-[120px] sm:max-w-[160px]">
                                       {message.fileName || "image.png"}
                                     </span>
                                     <div className="flex shrink-0 items-center gap-1">
