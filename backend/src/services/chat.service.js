@@ -494,19 +494,41 @@ export const deleteWorkspaceMessage = async ({
     return populateMessageSender(message);
 };
 
-const sendMissedChatEmail = async ({ recipient, workspace }) => {
+const sendMissedChatEmail = async ({ recipient, workspace, message }) => {
     try {
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+        const chatLink = `${frontendUrl.replace(/\/$/, "")}/chat/${workspace._id}`;
+        
+        let messagePreview = "Sent an attachment";
+        if (message.messageType === "text" && message.content) {
+            messagePreview = message.content.length > 50 
+                ? message.content.substring(0, 50) + "..." 
+                : message.content;
+        }
+
         await sendEmail({
             email: recipient.email,
             subject: `New unread messages in ${workspace.name}`,
-            message: `Hello ${recipient.name},\n\nYou have new unread messages in the ${workspace.name} workspace on TaskFlow Pro.\n\nPlease open TaskFlow Pro and check your workspace chat when you are available.\n\nThank you,\nTaskFlow Pro`,
+            title: "New Chat Message",
+            badge: "Missed Chat",
+            subtitle: `You have new unread messages in the ${workspace.name} workspace.`,
+            contentHtml: `
+                <p>Hello <strong>${recipient.name}</strong>,</p>
+                <p>You received a new message in the <strong>${workspace.name}</strong> workspace on TaskFlow Pro.</p>
+                <div style="margin: 16px 0; padding: 12px 16px; background-color: #1e293b; border-left: 4px solid #4f46e5; border-radius: 4px; color: #f8fafc; font-style: italic;">
+                    "${messagePreview}"
+                </div>
+                <p>Please open TaskFlow Pro to check your workspace chat when you are available.</p>
+                <div style="margin: 28px 0; text-align: center;">
+                    <a href="${chatLink}" target="_blank" style="display: inline-block; background-color: #4f46e5; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; font-weight: 700; text-decoration: none; padding: 14px 28px; border-radius: 8px; box-shadow: 0 4px 6px rgba(79, 70, 229, 0.2); transition: background-color 0.2s;">
+                        Open Chat
+                    </a>
+                </div>
+            `,
         });
+        console.log(`[Chat Email] successfully sent to ${recipient.email}`);
     } catch (error) {
-        console.error("Failed to send missed chat email:", {
-            user: recipient._id,
-            workspace: workspace._id,
-            message: error.message,
-        });
+        console.error(`[Chat Email] failed to send email to ${recipient.email}:`, error.message);
     }
 };
 
@@ -515,6 +537,7 @@ export const updateUnreadForInactiveMembers = async ({
     sender,
     message,
     viewingUserIds = [],
+    isUserOnline = () => false,
 }) => {
     const workspace = await Workspace.findById(workspaceId).select("name");
     const members = await getActiveWorkspaceMembers(workspaceId);
@@ -522,6 +545,11 @@ export const updateUnreadForInactiveMembers = async ({
     const viewingSet = new Set(viewingUserIds.map((id) => id.toString()));
 
     const unreadUpdates = [];
+
+    // Pre-fetch all member notification preferences to avoid N queries
+    const memberIds = members.map(m => m.user._id);
+    const preferencesList = await import("../models/NotificationPreference.model.js").then(m => m.default.find({ user: { $in: memberIds } }));
+    const preferencesMap = new Map(preferencesList.map(p => [p.user.toString(), p]));
 
     for (const member of members) {
         const memberUser = member.user;
@@ -544,12 +572,26 @@ export const updateUnreadForInactiveMembers = async ({
         }
 
         const shouldNotify = !state.notificationSent;
+        const hasMissedEmailBeenSent = state.missedEmailSent;
+        const isOnline = isUserOnline(memberUserId);
+        
+        const userPrefs = preferencesMap.get(memberUserId);
+        const wantsEmail = userPrefs ? userPrefs.emailChatMessages : true; // default true
 
         state.unreadCount += 1;
         state.lastUnreadMessage = message._id;
         state.notificationSent = true;
-        // Missed email logic disabled to prevent immediate spam. Can be handled via a delayed queue later.
-        // state.missedEmailSent = true; 
+
+        if (isOnline) {
+            console.log(`[Chat Email] recipient online — email skipped for ${memberUser.email}`);
+        } else if (hasMissedEmailBeenSent) {
+            console.log(`[Chat Email] already sent for unread batch — skipped for ${memberUser.email}`);
+        } else if (!wantsEmail) {
+            console.log(`[Chat Email] user disabled chat email preferences — skipped for ${memberUser.email}`);
+        } else {
+            state.missedEmailSent = true;
+            void sendMissedChatEmail({ recipient: memberUser, workspace, message });
+        }
 
         await state.save();
 

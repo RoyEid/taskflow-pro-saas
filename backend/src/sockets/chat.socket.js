@@ -555,6 +555,10 @@ const registerChatSocket = (io) => {
                     sender: socket.user,
                     message,
                     viewingUserIds,
+                    isUserOnline: (userId) => {
+                        const room = io.sockets.adapter.rooms.get(`user:${userId}`);
+                        return room && room.size > 0;
+                    },
                 })
                     .then((updates) => {
                         if (updates && updates.length > 0) {

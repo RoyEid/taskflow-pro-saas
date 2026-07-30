@@ -33,6 +33,10 @@ const notificationPreferenceSchema = new mongoose.Schema(
             type: Boolean,
             default: true, // Always true or required
         },
+        emailChatMessages: {
+            type: Boolean,
+            default: true,
+        },
         emailTaskAssigned: {
             type: Boolean,
             default: false,

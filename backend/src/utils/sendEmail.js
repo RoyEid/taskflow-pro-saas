@@ -69,7 +69,7 @@ function buildHtmlLayout(options) {
   const logoUrl = process.env.BRAND_LOGO_URL || `${(process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "")}/favicon.png`;
   
   // Determine the inner content HTML
-  let bodyContent = "";
+    let bodyContent = "";
   if (contentHtml) {
     bodyContent = contentHtml;
   } else if (html) {
@@ -80,25 +80,25 @@ function buildHtmlLayout(options) {
     if (hasHtmlTags) {
       bodyContent = options.message;
     } else {
-      bodyContent = `<p style="margin:0; font-size:15px; line-height:1.7; color:#374151; white-space:pre-line;">${options.message}</p>`;
+      bodyContent = `<p style="margin:0; font-size:15px; line-height:1.7; color:#f1f5f9; white-space:pre-line;">${options.message}</p>`;
     }
   } else {
-    bodyContent = `<p style="margin:0; font-size:15px; line-height:1.7; color:#374151;">You have a new notification from TaskFlow Pro.</p>`;
+    bodyContent = `<p style="margin:0; font-size:15px; line-height:1.7; color:#f1f5f9;">You have a new notification from TaskFlow Pro.</p>`;
   }
 
   // Handle Code Section
   let codeSection = "";
   if (code) {
     codeSection = `
-      <div style="background-color:#f8fafc; border:1px solid #e5e7eb; border-radius:12px; padding:20px; text-align:center; margin-top:20px;">
-        <p style="margin:0 0 8px; font-size:12px; color:#6b7280; font-weight:700; text-transform:uppercase; letter-spacing:1px;">
+      <div style="background-color:#0f172a; border:1px solid #334155; border-radius:12px; padding:20px; text-align:center; margin-top:20px;">
+        <p style="margin:0 0 8px; font-size:12px; color:#94a3b8; font-weight:700; text-transform:uppercase; letter-spacing:1px;">
           Your verification code
         </p>
-        <div style="font-size:36px; line-height:1; font-weight:800; letter-spacing:6px; color:#171717; margin:8px 0;">
+        <div style="font-size:36px; line-height:1; font-weight:800; letter-spacing:6px; color:#f8fafc; margin:8px 0;">
           ${code}
         </div>
-        <p style="margin:8px 0 0; font-size:12px; color:#6b7280;">
-          This code will expire in <strong style="color:#111827;">15 minutes</strong>.
+        <p style="margin:8px 0 0; font-size:12px; color:#94a3b8;">
+          This code will expire in <strong style="color:#f8fafc;">15 minutes</strong>.
         </p>
       </div>
     `;
@@ -111,11 +111,11 @@ function buildHtmlLayout(options) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>${resolvedTitle}</title>
   </head>
-  <body style="margin:0; padding:0; background-color:#f4f6fb; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color:#111827;-webkit-font-smoothing:antialiased;">
-    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6fb; padding:40px 16px;">
+  <body style="margin:0; padding:0; background-color:#0f172a; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color:#f1f5f9;-webkit-font-smoothing:antialiased;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0f172a; padding:40px 16px;">
       <tr>
         <td align="center">
-          <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px; background-color:#ffffff; border-radius:16px; overflow:hidden; border:1px solid #e2e8f0; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);">
+          <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px; background-color:#1e293b; border-radius:16px; overflow:hidden; border:1px solid #334155; box-shadow:0 4px 6px -1px rgba(0,0,0,0.3), 0 2px 4px -1px rgba(0,0,0,0.2);">
             
             <!-- Header Banner -->
             <tr>
@@ -133,17 +133,17 @@ function buildHtmlLayout(options) {
             <!-- Content Area -->
             <tr>
               <td style="padding:32px 32px 24px;">
-                <div style="display:inline-block; padding:5px 10px; border-radius:999px; background-color:#F5F5F4; color:#292524; font-size:11px; font-weight:700; margin-bottom:16px; text-transform:uppercase; letter-spacing:0.5px;">
+                <div style="display:inline-block; padding:5px 10px; border-radius:999px; background-color:#334155; color:#f8fafc; font-size:11px; font-weight:700; margin-bottom:16px; text-transform:uppercase; letter-spacing:0.5px;">
                   ${resolvedBadge}
                 </div>
 
-                <h2 style="margin:0 0 12px; font-size:22px; line-height:1.3; color:#111827; font-weight:700; letter-spacing:-0.3px;">
+                <h2 style="margin:0 0 12px; font-size:22px; line-height:1.3; color:#f8fafc; font-weight:700; letter-spacing:-0.3px;">
                   ${resolvedTitle}
                 </h2>
 
-                ${resolvedSubtitle ? `<p style="margin:0 0 20px; font-size:14px; line-height:1.5; color:#6b7280;">${resolvedSubtitle}</p>` : ''}
+                ${resolvedSubtitle ? `<p style="margin:0 0 20px; font-size:14px; line-height:1.5; color:#94a3b8;">${resolvedSubtitle}</p>` : ''}
 
-                <div style="font-size:15px; line-height:1.6; color:#374151;">
+                <div style="font-size:15px; line-height:1.6; color:#e2e8f0;">
                   ${bodyContent}
                 </div>
 
@@ -154,7 +154,7 @@ function buildHtmlLayout(options) {
             <!-- Footer Note -->
             <tr>
               <td style="padding:0 32px 24px;">
-                <p style="margin:0; font-size:13px; line-height:1.5; color:#9ca3af;">
+                <p style="margin:0; font-size:13px; line-height:1.5; color:#64748b;">
                   ${!code 
                     ? "This is an automated notification. Please do not reply directly to this email." 
                     : "If you did not request this email, you can safely ignore it."}
@@ -164,11 +164,11 @@ function buildHtmlLayout(options) {
 
             <!-- Footer -->
             <tr>
-              <td style="background-color:#f9fafb; padding:20px 32px; border-top:1px solid #edf2f7; text-align:center;">
-                <p style="margin:0 0 4px; font-size:12px; color:#4b5563; font-weight:600;">
-                  Sent by <span style="color:#111827;">TaskFlow Pro</span>
+              <td style="background-color:#0f172a; padding:20px 32px; border-top:1px solid #334155; text-align:center;">
+                <p style="margin:0 0 4px; font-size:12px; color:#94a3b8; font-weight:600;">
+                  Sent by <span style="color:#f8fafc;">TaskFlow Pro</span>
                 </p>
-                <p style="margin:0; font-size:11px; color:#9ca3af;">
+                <p style="margin:0; font-size:11px; color:#64748b;">
                   Manage projects, clients, tasks, and teams in one place.
                 </p>
               </td>
