@@ -101,8 +101,8 @@ export const uploadChatFile = async (workspaceId, file, onUploadProgress) => {
 export const createChatSocket = () => {
   return io(socketUrl, {
     autoConnect: false,
-    auth: (cb) => {
-      cb({ token: getToken() || "" });
+    auth: {
+      token: getToken() || "",
     },
     transports: ["polling", "websocket"],
     reconnection: true,
