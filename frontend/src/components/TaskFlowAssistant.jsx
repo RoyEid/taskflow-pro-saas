@@ -204,14 +204,7 @@ function TaskFlowAssistant() {
 
   /*
    * Rendered through a portal for the same reason the dropdowns are: this
-   * component sits inside DashboardLayout, whose glass panels use
-   * `backdrop-filter`. That establishes a containing block for fixed-position
-   * descendants, so a `fixed bottom-6 right-6` panel anchors to the panel it
-   * happens to be nested in rather than the viewport - which is how the window
-   * ended up detached from its launcher.
-   *
-   * Launcher and panel now live in one bottom-right stack, so the panel is
-   * always attached to the launcher and scales out of it.
+   * component sits inside DashboardLayout.
    */
   return createPortal(
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[60] flex flex-col items-stretch gap-3 p-3 sm:inset-x-auto sm:right-0 sm:items-end sm:p-6">

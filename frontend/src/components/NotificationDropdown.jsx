@@ -188,59 +188,68 @@ export default function NotificationDropdown({ onOpenSettings }) {
     >
       {({ close }) => (
         <>
-      <div className="flex items-center justify-between px-3.5 sm:px-4 py-2.5 tf-bd border-b gap-1.5">
-        <div className="flex shrink-0 items-center gap-1.5 min-w-0">
-          <span className="text-[13px] sm:text-[14px] font-bold tf-text whitespace-nowrap">
+      <div className="flex items-center justify-between px-4 py-3 tf-bd border-b">
+        <div className="flex items-center gap-2">
+          <h3 className="text-[14px] font-bold tf-text tracking-tight">
             Notifications
-          </span>
+          </h3>
           {unreadCount > 0 && (
-            <span className="tf-badge tf-badge-accent text-[10px] px-1.5 py-0.5 shrink-0">
-              {unreadCount}
+            <span className="tf-badge tf-badge-accent text-[10px] sm:text-[11px] px-2 py-0.5 font-bold">
+              {unreadCount} {unreadCount === 1 ? "unread" : "unread"}
             </span>
           )}
         </div>
 
-        <div className="flex shrink-0 items-center gap-0.5 sm:gap-1 min-w-0">
-          {notifications.some(n => n.read) && (
-            <button
-              type="button"
-              onClick={handleClearRead}
-              className="tf-btn-link text-[11px] tf-text-muted hover:tf-text whitespace-nowrap px-1"
-            >
-              Clear read
-            </button>
-          )}
-          {unreadCount > 0 && (
-            <button
-              type="button"
-              onClick={handleMarkAllRead}
-              className="tf-btn-link text-[11px] whitespace-nowrap px-1"
-            >
-              <span className="hidden xs:inline">Mark all read</span>
-              <span className="xs:hidden">Mark read</span>
-            </button>
-          )}
+        <div className="flex items-center gap-1 shrink-0">
           <button
             type="button"
             onClick={() => {
               close();
               onOpenSettings?.();
             }}
-            className="tf-btn-icon tf-size-sm shrink-0"
-            title="Manage notification settings"
+            className="tf-btn-icon tf-size-sm"
+            title="Notification settings"
           >
-            <SettingsIcon size={15} />
+            <SettingsIcon size={16} />
           </button>
           <button
             type="button"
             onClick={close}
-            className="sm:hidden tf-btn-icon tf-size-sm shrink-0"
+            className="sm:hidden tf-btn-icon tf-size-sm"
             title="Close notifications"
           >
-            <X size={15} />
+            <X size={16} />
           </button>
         </div>
       </div>
+
+      {(unreadCount > 0 || notifications.some(n => n.read)) && (
+        <div className="flex items-center justify-between px-4 py-2 tf-bd border-b bg-slate-50/60 dark:bg-slate-800/40 text-[12px] gap-2">
+          {unreadCount > 0 ? (
+            <button
+              type="button"
+              onClick={handleMarkAllRead}
+              className="tf-btn-link font-semibold flex items-center gap-1.5 cursor-pointer whitespace-nowrap text-[12px]"
+            >
+              <Check size={13} strokeWidth={2.5} />
+              Mark all read
+            </button>
+          ) : (
+            <span />
+          )}
+
+          {notifications.some(n => n.read) && (
+            <button
+              type="button"
+              onClick={handleClearRead}
+              className="tf-text-muted hover:tf-text font-medium flex items-center gap-1.5 cursor-pointer whitespace-nowrap text-[11px] sm:text-[12px] ml-auto"
+            >
+              <Trash2 size={12} />
+              Clear read
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="max-h-[60vh] sm:max-h-[360px] overflow-y-auto no-scrollbar py-1">
         {!initialLoaded || loading ? (
