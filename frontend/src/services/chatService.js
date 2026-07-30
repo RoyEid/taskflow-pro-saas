@@ -98,12 +98,16 @@ export const uploadChatFile = async (workspaceId, file, onUploadProgress) => {
   return d(res);
 };
 
-export const createChatSocket = () => {
+export const createChatSocket = (workspaceId) => {
   return io(socketUrl, {
     autoConnect: false,
-    auth: {
-      token: getToken() || "",
-    },
+    // Resolved on every connection attempt rather than captured once, so a
+    // reconnect always presents the current token instead of a stale one.
+    auth: (cb) =>
+      cb({
+        token: getToken() || "",
+        workspaceId: workspaceId || "",
+      }),
     transports: ["polling", "websocket"],
     reconnection: true,
     reconnectionDelay: 500,

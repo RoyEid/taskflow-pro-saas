@@ -8,8 +8,7 @@ import {
     deleteWorkspaceMessage,
     editWorkspaceMessage,
     findActiveMembership,
-    markWorkspaceMessageReceiptsRead,
-    resetWorkspaceChatUnread,
+    markWorkspaceChatRead,
     serializeMessage,
     serializeUser,
     updateUnreadForInactiveMembers,
@@ -92,6 +91,21 @@ const getTokenFromSocket = (socket) => {
 };
 
 const getWorkspaceRoom = (workspaceId) => `workspace:${workspaceId}`;
+const getUserRoom = (userId) => `user:${userId}`;
+
+const getClientMessageId = (value) => {
+    const clientMessageId = String(value || "").trim();
+
+    if (
+        !clientMessageId ||
+        clientMessageId.length > 128 ||
+        !/^[a-zA-Z0-9:_-]+$/.test(clientMessageId)
+    ) {
+        return null;
+    }
+
+    return clientMessageId;
+};
 
 const getWorkspacePresence = (workspaceId) => {
     const key = workspaceId.toString();
@@ -104,15 +118,17 @@ const getWorkspacePresence = (workspaceId) => {
 };
 
 const getOnlineUsers = (workspaceId) => {
-    const presence = getWorkspacePresence(workspaceId);
+    const presence = workspacePresence.get(String(workspaceId));
 
-    return [...presence.values()].map((entry) => serializeUser(entry.user));
+    return presence
+        ? [...presence.values()].map((entry) => serializeUser(entry.user))
+        : [];
 };
 
 const getViewingUserIds = (workspaceId) => {
-    const presence = getWorkspacePresence(workspaceId);
+    const presence = workspacePresence.get(String(workspaceId));
 
-    return [...presence.keys()];
+    return presence ? [...presence.keys()] : [];
 };
 
 const addPresence = (workspaceId, socket) => {
@@ -158,7 +174,36 @@ const removePresence = (workspaceId, socket) => {
     }
 };
 
+// Presence is keyed by live socket ids, so anything the disconnect handler
+// missed is dropped here before the list is published or read.
+const prunePresence = (io, workspaceId) => {
+    const key = workspaceId.toString();
+    const presence = workspacePresence.get(key);
+
+    if (!presence) {
+        return;
+    }
+
+    for (const [userId, entry] of presence) {
+        for (const socketId of entry.socketIds) {
+            if (!io.sockets.sockets.has(socketId)) {
+                entry.socketIds.delete(socketId);
+            }
+        }
+
+        if (entry.socketIds.size === 0) {
+            presence.delete(userId);
+        }
+    }
+
+    if (presence.size === 0) {
+        workspacePresence.delete(key);
+    }
+};
+
 const emitPresence = (io, workspaceId) => {
+    prunePresence(io, workspaceId);
+
     io.to(getWorkspaceRoom(workspaceId)).emit("workspaceChatPresence", {
         workspaceId,
         onlineUsers: getOnlineUsers(workspaceId),
@@ -191,64 +236,165 @@ const getJoinedMembership = (socket, workspaceId) => {
     return socket.data.joinedWorkspaceMemberships?.get(String(workspaceId)) || null;
 };
 
+// Socket.IO stops reconnecting after a middleware error, so the client can only
+// recover by reconnecting by hand. Tagging the error lets the client tell a real
+// credential problem (stop) from a transient backend problem (retry) instead of
+// silently staying offline until the page is refreshed.
+const buildAuthError = (message, { retryable }) => {
+    const error = new Error(message);
+    error.data = { retryable };
+    return error;
+};
+
 const registerChatSocket = (io) => {
     io.use(async (socket, next) => {
+        const token = getTokenFromSocket(socket);
+
+        if (!token || token === "null" || token === "undefined") {
+            return next(buildAuthError("Not authorized, token missing", { retryable: false }));
+        }
+
+        let decoded;
+
         try {
-            const token = getTokenFromSocket(socket);
+            decoded = jwt.verify(token, process.env.JWT_SECRET);
+        } catch {
+            return next(buildAuthError("Not authorized, token failed", { retryable: false }));
+        }
 
-            if (!token || token === "null" || token === "undefined") {
-                return next(new Error("Not authorized, token missing"));
-            }
-
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        try {
             const user = await User.findById(decoded.userId).select("name email avatar status");
 
             if (!user) {
-                return next(new Error("User no longer exists"));
+                return next(buildAuthError("User no longer exists", { retryable: false }));
             }
 
             if (user.status === "disabled") {
-                return next(new Error("Your account is disabled"));
+                return next(buildAuthError("Your account is disabled", { retryable: false }));
             }
 
             socket.user = user;
             return next();
-        } catch {
-            return next(new Error("Not authorized, token failed"));
+        } catch (error) {
+            // A database hiccup is not an authentication failure. Reporting it as
+            // one used to kill the socket permanently for a fully valid session.
+            console.error("Socket authentication lookup failed:", error.message);
+            return next(buildAuthError("Chat is temporarily unavailable", { retryable: true }));
         }
     });
 
+    // A reconnect produces a brand new server-side socket that belongs to no room,
+    // so every join step has to be repeatable and is shared by the explicit
+    // joinWorkspaceChat event and the automatic rejoin performed on connection.
+    const runJoinWorkspace = async (socket, workspaceId) => {
+        const membership = await findActiveMembership(workspaceId, socket.user._id);
+
+        if (!membership) {
+            return null;
+        }
+
+        // The socket can drop while the membership lookup is in flight. Its
+        // disconnect handler has already run by then, so registering presence
+        // now would strand an entry that keeps the user online forever.
+        if (!socket.connected) {
+            return null;
+        }
+
+        socket.join(getWorkspaceRoom(workspaceId));
+        addPresence(workspaceId, socket);
+        socket.data.joinedWorkspaceMemberships =
+            socket.data.joinedWorkspaceMemberships || new Map();
+        socket.data.joinedWorkspaceMemberships.set(String(workspaceId), membership);
+
+        socket.emit("chatUnreadCount", {
+            workspaceId,
+            unreadCount: 0,
+        });
+
+        emitPresence(io, workspaceId);
+
+        // The room and presence become live before the heavier read-state
+        // update. A slow database write must not leave an authenticated user
+        // looking offline or prevent the join acknowledgement.
+        void markWorkspaceChatRead(workspaceId, socket.user._id)
+            .then((readState) => {
+                io.to(getWorkspaceRoom(workspaceId)).emit("messagesRead", {
+                    workspaceId,
+                    user: serializeUser(socket.user),
+                    readAt: readState.readAt,
+                });
+            })
+            .catch((error) => {
+                console.error("Failed to persist workspace chat read state:", {
+                    workspaceId,
+                    userId: socket.user._id,
+                    message: error.message,
+                });
+            });
+
+        return membership;
+    };
+
+    // The handshake rejoin and the client's own join request race each other on
+    // every connection, so both share a single in-flight join per workspace
+    // instead of duplicating the read-state writes and presence broadcasts.
+    const joinWorkspace = (socket, workspaceId) => {
+        const key = String(workspaceId);
+
+        socket.data.joinRequests = socket.data.joinRequests || new Map();
+
+        const existing = socket.data.joinRequests.get(key);
+
+        if (existing) {
+            return existing;
+        }
+
+        const pending = runJoinWorkspace(socket, workspaceId)
+            .then((membership) => {
+                // Only a successful join is worth remembering; a rejection must
+                // stay retryable, for instance once membership is granted.
+                if (!membership) {
+                    socket.data.joinRequests.delete(key);
+                }
+
+                return membership;
+            })
+            .catch((error) => {
+                socket.data.joinRequests.delete(key);
+                throw error;
+            });
+
+        socket.data.joinRequests.set(key, pending);
+
+        return pending;
+    };
+
     io.on("connection", (socket) => {
+        socket.join(getUserRoom(socket.user._id));
+
+        // The workspace travels in the handshake, so rooms and presence are
+        // restored on every reconnect without waiting for the client to ask.
+        const handshakeWorkspaceId = socket.handshake.auth?.workspaceId;
+
+        if (handshakeWorkspaceId) {
+            void joinWorkspace(socket, handshakeWorkspaceId).catch((error) => {
+                console.error("Failed to auto-join workspace chat on connect:", {
+                    workspaceId: handshakeWorkspaceId,
+                    userId: socket.user?._id,
+                    message: error.message,
+                });
+            });
+        }
+
         socket.on("joinWorkspaceChat", async (payload = {}, callback) => {
             try {
                 const workspaceId = payload.workspaceId;
-                const membership = await findActiveMembership(workspaceId, socket.user._id);
+                const membership = await joinWorkspace(socket, workspaceId);
 
                 if (!membership) {
                     emitError(socket, callback, "You are not a member of this workspace", 403);
                     return;
                 }
-
-                socket.join(getWorkspaceRoom(workspaceId));
-                addPresence(workspaceId, socket);
-                socket.data.joinedWorkspaceMemberships =
-                    socket.data.joinedWorkspaceMemberships || new Map();
-                socket.data.joinedWorkspaceMemberships.set(String(workspaceId), membership);
-
-                // Persist the lightweight unread counter reset before telling the
-                // client it is connected. Updating per-message read receipts is
-                // the expensive part and continues below in the background.
-                const readState = await resetWorkspaceChatUnread(
-                    workspaceId,
-                    socket.user._id
-                );
-
-                socket.emit("chatUnreadCount", {
-                    workspaceId,
-                    unreadCount: 0,
-                });
-
-                emitPresence(io, workspaceId);
 
                 if (typeof callback === "function") {
                     callback({
@@ -258,29 +404,6 @@ const registerChatSocket = (io) => {
                         unreadCount: 0,
                     });
                 }
-
-                // Persist read receipts after the client has joined. Updating every
-                // unread message can be expensive for long chats and should not
-                // delay presence, connection state, or the join acknowledgement.
-                void markWorkspaceMessageReceiptsRead(
-                    workspaceId,
-                    socket.user._id,
-                    readState.readAt
-                )
-                    .then(() => {
-                        io.to(getWorkspaceRoom(workspaceId)).emit("messagesRead", {
-                            workspaceId,
-                            user: serializeUser(socket.user),
-                            readAt: readState.readAt,
-                        });
-                    })
-                    .catch((error) => {
-                        console.error("Failed to persist workspace chat read state:", {
-                            workspaceId,
-                            userId: socket.user._id,
-                            message: error.message,
-                        });
-                    });
             } catch {
                 emitError(socket, callback, "Failed to join workspace chat", 500);
             }
@@ -349,6 +472,7 @@ const registerChatSocket = (io) => {
                 const fileUrl = resolveMessageFileUrl(payload);
                 const fileSize = Number(payload.fileSize) || null;
                 const mimeType = normalizeMimeType(payload.mimeType);
+                const clientMessageId = getClientMessageId(payload.clientMessageId);
 
                 if (!allowedMessageTypes.has(messageType)) {
                     emitError(socket, callback, "Unsupported message type");
@@ -387,6 +511,7 @@ const registerChatSocket = (io) => {
                     return;
                 }
 
+                prunePresence(io, workspaceId);
                 const viewingUserIds = getViewingUserIds(workspaceId);
                 const message = await createWorkspaceMessage({
                     workspaceId,
@@ -402,7 +527,10 @@ const registerChatSocket = (io) => {
                     readUserIds: viewingUserIds,
                 });
 
-                const serializedMessage = serializeMessage(message, socket.user);
+                const serializedMessage = {
+                    ...serializeMessage(message, socket.user),
+                    ...(clientMessageId ? { clientMessageId } : {}),
+                };
 
                 io.to(getWorkspaceRoom(workspaceId)).emit("receiveMessage", serializedMessage);
                 emitTyping(socket, workspaceId, false);

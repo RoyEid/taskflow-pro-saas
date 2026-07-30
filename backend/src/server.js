@@ -33,6 +33,11 @@ const startServer = async () => {
                 },
                 credentials: true,
             },
+            // A closed browser is only noticed when the heartbeat lapses. The
+            // defaults (25s + 20s) left users showing as online for roughly
+            // three quarters of a minute after they had gone.
+            pingInterval: 10000,
+            pingTimeout: 10000,
         });
 
         app.set("io", io);

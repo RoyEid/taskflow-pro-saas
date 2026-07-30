@@ -789,11 +789,22 @@ function getMemberUser(member) {
 }
 
 function getMemberUserId(member) {
-  return (
-    getUserId(getMemberUser(member)) ||
-    getEntityId(member?.user) ||
-    getEntityId(member)
-  );
+  const fromUserField =
+    getUserId(getMemberUser(member)) || getEntityId(member?.user);
+
+  if (fromUserField) {
+    return fromUserField;
+  }
+
+  // Some endpoints hand back plain user objects instead of membership
+  // documents. Falling back to the entity id is only correct in that case:
+  // on a membership document it would yield the membership id, which never
+  // matches a presence entry and leaves the member showing as offline.
+  if (member && !("user" in member) && !("role" in member)) {
+    return getEntityId(member);
+  }
+
+  return null;
 }
 
 function normalizeSearchResults(data) {
@@ -1596,8 +1607,34 @@ function Chat() {
     }
 
     let cancelled = false;
-    const socket = createChatSocket();
+    const socket = createChatSocket(workspaceId);
     socketRef.current = socket;
+
+    // Socket.IO gives up permanently when the connection is refused by a server
+    // middleware, which is why a dropped session used to require a page refresh.
+    // These retries revive the socket by hand with a capped backoff.
+    let authRetryTimer = null;
+    let authRetryCount = 0;
+    const clearAuthRetry = () => {
+      if (authRetryTimer) {
+        window.clearTimeout(authRetryTimer);
+        authRetryTimer = null;
+      }
+    };
+
+    const scheduleReconnect = () => {
+      if (cancelled || authRetryTimer || socket.active) return;
+
+      const delay = Math.min(1000 * 2 ** Math.min(authRetryCount, 4), 15000);
+      authRetryCount += 1;
+
+      authRetryTimer = window.setTimeout(() => {
+        authRetryTimer = null;
+        if (!cancelled && !socket.active) {
+          socket.connect();
+        }
+      }, delay);
+    };
 
     const loadChat = async () => {
       setLoading(true);
@@ -1653,9 +1690,9 @@ function Chat() {
 
     const handleConnect = () => {
       if (!cancelled) {
+        clearAuthRetry();
+        authRetryCount = 0;
         setError("");
-        // Refresh the auth token in case it was updated while disconnected
-        socket.auth = { token: getToken() || "" };
         joinWorkspaceChat();
       }
     };
@@ -1683,16 +1720,15 @@ function Chat() {
           );
           if (existingIdx >= 0) return prev;
 
-          // Check if there is a pending optimistic message from the same
-          // sender with matching content or media type
-          const tempIdx = prev.findIndex((m) => {
-            if (!m._tempId || !m._pending) return false;
-            if (!idsEqual(getSenderId(m), getSenderId(message))) return false;
-            if (message.messageType === "text") {
-              return m.content === message.content;
-            }
-            return m.messageType === message.messageType;
-          });
+          // Reconcile only the exact optimistic send. Matching by content or
+          // type can collapse two legitimate identical messages into one.
+          const tempIdx = message.clientMessageId
+            ? prev.findIndex(
+                (m) =>
+                  m._pending &&
+                  m.clientMessageId === message.clientMessageId,
+              )
+            : -1;
 
           if (tempIdx >= 0) {
             const updated = [...prev];
@@ -1791,17 +1827,33 @@ function Chat() {
     };
 
     const handleConnectError = (connectError) => {
-      if (!cancelled) {
-        setConnected(false);
-        const errorMsg = connectError?.message;
-        if (
-          errorMsg &&
-          errorMsg !== "websocket error" &&
-          errorMsg !== "xhr poll error"
-        ) {
-          setError(errorMsg);
-        }
+      if (cancelled) return;
+
+      setConnected(false);
+
+      const errorMsg = connectError?.message;
+      const isTransportError =
+        errorMsg === "websocket error" || errorMsg === "xhr poll error";
+
+      // Transport errors are retried by Socket.IO itself. Anything else came
+      // from a server middleware, which stops reconnection altogether.
+      if (socket.active) return;
+
+      if (!getToken()) {
+        setError("Your session has expired. Please sign in again.");
+        return;
       }
+
+      if (connectError?.data?.retryable === false) {
+        setError(errorMsg || "Your chat session is no longer authorized.");
+        return;
+      }
+
+      if (!isTransportError && errorMsg) {
+        setError(errorMsg);
+      }
+
+      scheduleReconnect();
     };
 
     loadChat();
@@ -1822,6 +1874,7 @@ function Chat() {
 
     return () => {
       cancelled = true;
+      clearAuthRetry();
       clearTypingTimer();
       emitTyping(false);
       socket.off("connect", handleConnect);
@@ -1839,8 +1892,16 @@ function Chat() {
       socket.disconnect();
       socketRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspaceId, currentUserId]);
+  }, [
+    addReaderToMessages,
+    clearTypingTimer,
+    currentUserId,
+    emitTyping,
+    mergeMessages,
+    notifyUnreadUpdated,
+    updateMessageInList,
+    workspaceId,
+  ]);
 
   const handleDraftChange = (e) => {
     setDraft(e.target.value);
@@ -1884,6 +1945,7 @@ function Chat() {
       _id: tempId,
       _tempId: tempId,
       _pending: true,
+      clientMessageId: tempId,
       workspace: workspaceId,
       sender: user,
       messageType: "text",
@@ -1895,7 +1957,7 @@ function Chat() {
 
     socketRef.current.emit(
       "sendMessage",
-      { workspaceId, content },
+      { workspaceId, content, clientMessageId: tempId },
       (response) => {
         setSending(false);
 
