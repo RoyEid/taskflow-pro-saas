@@ -3,6 +3,7 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import multer from "multer";
 import crypto from "crypto";
+import mongoose from "mongoose";
 import Message from "../models/Message.model.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
@@ -11,8 +12,7 @@ import asyncHandler from "../utils/asyncHandler.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const uploadDir = path.resolve(__dirname, "../../../uploads");
-
-// TODO: Local uploads are okay for development. For production, use Cloudinary, AWS S3, Supabase Storage, or Firebase Storage.
+const attachmentBucketName = "chatAttachments";
 
 const normalizeMimeType = (mimeType = "") =>
     String(mimeType).split(";")[0].trim().toLowerCase();
@@ -42,11 +42,6 @@ const mimeExtensionMap = {
     "audio/m4a": "m4a",
     "audio/aac": "aac",
 };
-
-// Ensure directory exists
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
 
 const allowedMimeTypes = [
     // Images
@@ -91,18 +86,109 @@ const getStoredFilename = (file) => {
     return `${baseName}${extension}`;
 };
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + "-" + crypto.randomBytes(4).toString("hex");
-        cb(null, uniqueSuffix + "-" + getStoredFilename(file));
-    },
-});
+const getAttachmentBucket = () => {
+    if (!mongoose.connection.db) {
+        throw new ApiError(503, "Attachment storage is unavailable");
+    }
+
+    return new mongoose.mongo.GridFSBucket(mongoose.connection.db, {
+        bucketName: attachmentBucketName,
+    });
+};
+
+const parseByteRange = (rangeHeader, fileSize) => {
+    if (!rangeHeader) return null;
+
+    const match = /^bytes=(\d*)-(\d*)$/i.exec(String(rangeHeader).trim());
+    if (!match || (!match[1] && !match[2])) {
+        return { invalid: true };
+    }
+
+    const startText = match[1];
+    const endText = match[2];
+    const suffixLength = !startText ? Number.parseInt(endText, 10) : null;
+    const start = suffixLength !== null
+        ? Math.max(fileSize - suffixLength, 0)
+        : Number.parseInt(startText, 10);
+    const requestedEnd = startText && endText
+        ? Number.parseInt(endText, 10)
+        : fileSize - 1;
+    const end = Math.min(requestedEnd, fileSize - 1);
+
+    if (
+        Number.isNaN(start) ||
+        Number.isNaN(end) ||
+        (suffixLength !== null && (Number.isNaN(suffixLength) || suffixLength <= 0)) ||
+        start < 0 ||
+        start >= fileSize ||
+        start > end
+    ) {
+        return { invalid: true };
+    }
+
+    return { start, end };
+};
+
+const setDownloadDisposition = (res, fileName) => {
+    const encodedName = encodeURIComponent(fileName).replace(
+        /['()]/g,
+        (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`
+    );
+    res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodedName}`);
+};
+
+const streamAttachment = ({
+    req,
+    res,
+    fileSize,
+    contentType,
+    fileName,
+    createReadStream,
+}) => {
+    const pipeToResponse = (stream) => {
+        stream.once("error", (error) => {
+            if (!res.headersSent) {
+                res.status(500).end();
+                return;
+            }
+
+            res.destroy(error);
+        });
+        stream.pipe(res);
+    };
+
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Accept-Ranges", "bytes");
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Cache-Control", "private, max-age=3600");
+
+    if (req.query.download === "true") {
+        setDownloadDisposition(res, fileName);
+    }
+
+    const range = parseByteRange(req.headers.range, fileSize);
+    if (range?.invalid) {
+        res.status(416).setHeader("Content-Range", `bytes */${fileSize}`);
+        res.end();
+        return;
+    }
+
+    if (range) {
+        const { start, end } = range;
+        res.status(206);
+        res.setHeader("Content-Range", `bytes ${start}-${end}/${fileSize}`);
+        res.setHeader("Content-Length", end - start + 1);
+        pipeToResponse(createReadStream({ start, end }));
+        return;
+    }
+
+    res.setHeader("Content-Length", fileSize);
+    pipeToResponse(createReadStream());
+};
 
 export const uploadMiddleware = multer({
-    storage,
+    storage: multer.memoryStorage(),
     limits: {
         fileSize: 10 * 1024 * 1024, // 10MB limit
     },
@@ -121,11 +207,6 @@ export const getAttachmentSecurely = asyncHandler(async (req, res) => {
 
     // Sanitize filename to prevent directory traversal
     const safeFilename = path.basename(filename);
-    const filePath = path.join(uploadDir, safeFilename);
-
-    if (!fs.existsSync(filePath)) {
-        throw new ApiError(404, "File not found on server");
-    }
 
     // Verify in database that this file is linked to the requested workspace
     const escapeRegex = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -140,50 +221,54 @@ export const getAttachmentSecurely = asyncHandler(async (req, res) => {
         throw new ApiError(403, "Access denied: file does not belong to this workspace");
     }
 
-    const stats = await fs.promises.stat(filePath);
     const contentType = normalizeMimeType(message.mimeType) || "application/octet-stream";
+    const downloadName = message.fileName || safeFilename;
+    const bucket = getAttachmentBucket();
+    const storedFile = await bucket
+        .find({
+            filename: safeFilename,
+            "metadata.workspaceId": String(workspaceId),
+        })
+        .sort({ uploadDate: -1 })
+        .limit(1)
+        .next();
 
-    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-    res.setHeader("X-Content-Type-Options", "nosniff");
-    res.setHeader("Accept-Ranges", "bytes");
-
-    if (req.query.download === "true") {
-        res.download(filePath, message.fileName || safeFilename);
-    } else {
-        res.setHeader("Content-Type", contentType);
-
-        const range = req.headers.range;
-        if (range) {
-            const [startText, endText] = range.replace(/bytes=/, "").split("-");
-            const suffixLength = !startText && endText ? Number.parseInt(endText, 10) : null;
-            const start = suffixLength
-                ? Math.max(stats.size - suffixLength, 0)
-                : Number.parseInt(startText, 10);
-            const requestedEnd = endText && startText ? Number.parseInt(endText, 10) : stats.size - 1;
-            const end = Math.min(requestedEnd, stats.size - 1);
-
-            if (
-                Number.isNaN(start) ||
-                Number.isNaN(end) ||
-                (suffixLength !== null && Number.isNaN(suffixLength)) ||
-                start < 0 ||
-                start > end
-            ) {
-                res.status(416).setHeader("Content-Range", `bytes */${stats.size}`);
-                res.end();
-                return;
-            }
-
-            res.status(206);
-            res.setHeader("Content-Range", `bytes ${start}-${end}/${stats.size}`);
-            res.setHeader("Content-Length", end - start + 1);
-            fs.createReadStream(filePath, { start, end }).pipe(res);
-            return;
-        }
-
-        res.setHeader("Content-Length", stats.size);
-        fs.createReadStream(filePath).pipe(res);
+    if (storedFile) {
+        streamAttachment({
+            req,
+            res,
+            fileSize: storedFile.length,
+            contentType,
+            fileName: downloadName,
+            createReadStream: (range) =>
+                bucket.openDownloadStream(
+                    storedFile._id,
+                    range
+                        ? { start: range.start, end: range.end + 1 }
+                        : undefined
+                ),
+        });
+        return;
     }
+
+    // Compatibility fallback for files uploaded before GridFS storage.
+    const filePath = path.join(uploadDir, safeFilename);
+    if (!fs.existsSync(filePath)) {
+        throw new ApiError(404, "Attachment file is no longer available");
+    }
+
+    const stats = await fs.promises.stat(filePath);
+    streamAttachment({
+        req,
+        res,
+        fileSize: stats.size,
+        contentType,
+        fileName: downloadName,
+        createReadStream: (range) =>
+            range
+                ? fs.createReadStream(filePath, range)
+                : fs.createReadStream(filePath),
+    });
 });
 
 export const uploadAttachment = asyncHandler(async (req, res) => {
@@ -197,7 +282,26 @@ export const uploadAttachment = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Uploaded file is empty");
     }
 
-    const uniqueFilename = req.file.filename;
+    const uniqueSuffix = `${Date.now()}-${crypto.randomBytes(4).toString("hex")}`;
+    const uniqueFilename = `${uniqueSuffix}-${getStoredFilename(req.file)}`;
+    const contentType = normalizeMimeType(req.file.mimetype);
+    const bucket = getAttachmentBucket();
+    const uploadStream = bucket.openUploadStream(uniqueFilename, {
+        contentType,
+        metadata: {
+            workspaceId: String(workspaceId),
+            uploaderId: String(req.user._id),
+            originalName: req.file.originalname,
+            mimeType: contentType,
+        },
+    });
+
+    await new Promise((resolve, reject) => {
+        uploadStream.once("error", reject);
+        uploadStream.once("finish", resolve);
+        uploadStream.end(req.file.buffer);
+    });
+
     const fileUrl = `/api/workspaces/${workspaceId}/messages/attachments/${uniqueFilename}`;
 
     res.status(200).json(
@@ -205,7 +309,7 @@ export const uploadAttachment = asyncHandler(async (req, res) => {
             fileUrl,
             fileName: req.file.originalname,
             fileSize: req.file.size,
-            mimeType: normalizeMimeType(req.file.mimetype),
+            mimeType: contentType,
         })
     );
 });

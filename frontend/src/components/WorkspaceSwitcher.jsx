@@ -12,13 +12,35 @@ export default function WorkspaceSwitcher({
   onExpandSidebar = () => {},
 }) {
   const navigate = useNavigate();
-  const { workspace, setWorkspace, memberRole } = useWorkspace();
+  const {
+    workspace,
+    setWorkspace,
+    memberRole,
+    workspaces: contextWorkspaces,
+  } = useWorkspace();
 
-  const workspacesList = Array.isArray(userWorkspaces)
+  // Use the prop list first; fall back to the context-provided list so the
+  // switcher is never empty when the provider has already fetched workspaces.
+  const rawList = Array.isArray(userWorkspaces) && userWorkspaces.length > 0
     ? userWorkspaces
-    : Array.isArray(userWorkspaces?.workspaces)
+    : Array.isArray(userWorkspaces?.workspaces) && userWorkspaces.workspaces.length > 0
     ? userWorkspaces.workspaces
+    : Array.isArray(contextWorkspaces) && contextWorkspaces.length > 0
+    ? contextWorkspaces
     : [];
+
+  // Guarantee the active workspace appears in the list even when neither the
+  // prop nor the context array includes it yet (e.g. during initial load).
+  const currentWorkspaceId = workspace?._id || workspace?.id;
+  const activeAlreadyListed = rawList.some((item) => {
+    const ws = item?.workspace || item;
+    return (ws?._id || ws?.id) === currentWorkspaceId;
+  });
+
+  const workspacesList =
+    workspace && currentWorkspaceId && !activeAlreadyListed
+      ? [{ workspace, role: memberRole }, ...rawList]
+      : rawList;
 
   const handleWorkspaceSelect = (ws) => {
     setWorkspace(ws);
@@ -47,7 +69,7 @@ export default function WorkspaceSwitcher({
     );
   };
 
-  const currentWorkspaceId = workspace?._id || workspace?.id;
+
 
   return (
     <div className="flex min-w-0 flex-1 flex-col">

@@ -16,8 +16,10 @@ import {
   ChevronUp,
   Download,
   Edit3,
+  ExternalLink,
   FileText,
   Image,
+  Maximize2,
   Mic,
   MessageSquare,
   Paperclip,
@@ -107,18 +109,186 @@ function getMessageMediaUrl(message) {
   return message?.fileUrl || message?.mediaUrl || message?.url || "";
 }
 
-function downloadFile(url, fileName) {
-  if (!url) return;
+function getManagedAttachmentUrl(url) {
+  const rawUrl = String(url || "").trim();
+
+  if (!rawUrl || rawUrl.startsWith("blob:") || rawUrl.startsWith("data:")) {
+    return null;
+  }
+
+  const apiBase = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+  const apiOrigin = apiBase.replace(/\/api\/?$/, "");
+
+  try {
+    const parsedUrl = /^https?:\/\//i.test(rawUrl)
+      ? new URL(rawUrl)
+      : new URL(rawUrl.startsWith("/") ? rawUrl : `/${rawUrl}`, apiOrigin);
+
+    if (
+      !/^\/api\/workspaces\/[^/]+\/messages\/attachments\/[^/]+$/i.test(
+        parsedUrl.pathname,
+      )
+    ) {
+      return null;
+    }
+
+    return new URL(`${parsedUrl.pathname}${parsedUrl.search}`, apiOrigin).toString();
+  } catch {
+    return null;
+  }
+}
+
+async function fetchAttachmentBlob(url) {
+  const requestUrl = getManagedAttachmentUrl(url);
+
+  if (!requestUrl) {
+    throw new Error("Attachment is not hosted by TaskFlow Pro.");
+  }
+
+  const token = getToken();
+  if (!token) {
+    throw new Error("Please sign in again to open this attachment.");
+  }
+
+  const response = await fetch(requestUrl, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    let message = `Attachment request failed (${response.status}).`;
+    try {
+      const errorBody = await response.json();
+      message = errorBody?.message || errorBody?.error || message;
+    } catch {
+      // The endpoint may return an empty or binary error response.
+    }
+    throw new Error(message);
+  }
+
+  return response.blob();
+}
+
+function useAuthenticatedMediaUrl(url) {
+  const [retryKey, setRetryKey] = useState(0);
+  const [result, setResult] = useState({
+    requestKey: "",
+    resolvedUrl: "",
+    error: null,
+  });
+  const rawUrl = String(url || "").trim();
+  const managedUrl = getManagedAttachmentUrl(rawUrl);
+  const requestKey = managedUrl ? `${managedUrl}:${retryKey}` : "";
+
+  useEffect(() => {
+    let active = true;
+    let objectUrl = "";
+
+    if (!managedUrl) {
+      return undefined;
+    }
+
+    fetchAttachmentBlob(managedUrl)
+      .then((blob) => {
+        if (!active) return;
+        objectUrl = URL.createObjectURL(blob);
+        setResult({ requestKey, resolvedUrl: objectUrl, error: null });
+      })
+      .catch((error) => {
+        if (!active) return;
+        setResult({ requestKey, resolvedUrl: "", error });
+      });
+
+    return () => {
+      active = false;
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [managedUrl, requestKey]);
+
+  if (!managedUrl) {
+    return {
+      resolvedUrl: rawUrl,
+      loading: false,
+      error: rawUrl ? null : new Error("Attachment URL is missing."),
+      retry: () => setRetryKey((key) => key + 1),
+    };
+  }
+
+  const currentResult = result.requestKey === requestKey;
+
+  return {
+    resolvedUrl: currentResult ? result.resolvedUrl : "",
+    loading: !currentResult,
+    error: currentResult ? result.error : null,
+    retry: () => setRetryKey((key) => key + 1),
+  };
+}
+
+async function downloadFile(url, fileName) {
+  if (!url) throw new Error("Attachment URL is missing.");
+
+  const managedUrl = getManagedAttachmentUrl(url);
+  let objectUrl = "";
+  let downloadUrl = url;
+
+  if (managedUrl) {
+    const blob = await fetchAttachmentBlob(managedUrl);
+    objectUrl = URL.createObjectURL(blob);
+    downloadUrl = objectUrl;
+  }
+
   const a = document.createElement("a");
-  a.href = url;
+  a.href = downloadUrl;
   if (fileName) {
     a.download = fileName;
   }
-  a.target = "_blank";
-  a.rel = "noopener noreferrer";
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+
+  if (objectUrl) {
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  }
+}
+
+async function openFile(url) {
+  if (!url) throw new Error("Attachment URL is missing.");
+
+  const managedUrl = getManagedAttachmentUrl(url);
+  if (!managedUrl) {
+    window.open(url, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  const previewWindow = window.open("about:blank", "_blank");
+  if (previewWindow) {
+    previewWindow.opener = null;
+  }
+
+  try {
+    const blob = await fetchAttachmentBlob(managedUrl);
+    const objectUrl = URL.createObjectURL(blob);
+
+    if (previewWindow) {
+      previewWindow.location.replace(objectUrl);
+    } else {
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+  } catch (error) {
+    previewWindow?.close();
+    throw error;
+  }
 }
 
 const WAVEFORM_BARS = [35, 60, 45, 80, 55, 90, 70, 40, 65, 85, 50, 75, 40, 95, 60, 80, 45, 70, 50, 85, 40, 60, 75, 50];
@@ -133,17 +303,13 @@ function formatAudioTime(seconds) {
 }
 
 function CustomAudioPlayer({ src, duration, isOwnMessage, isPreview = false }) {
+  const media = useAuthenticatedMediaUrl(src);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [totalDuration, setTotalDuration] = useState(duration || 0);
   const [isBuffering, setIsBuffering] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const audioRef = useRef(null);
-
-  useEffect(() => {
-    if (duration && duration > 0) {
-      setTotalDuration(duration);
-    }
-  }, [duration]);
 
   const togglePlay = (e) => {
     e.stopPropagation();
@@ -152,10 +318,35 @@ function CustomAudioPlayer({ src, duration, isOwnMessage, isPreview = false }) {
     if (isPlaying) {
       audioRef.current.pause();
     } else {
+      setLoadError(false);
       audioRef.current.play().catch((err) => {
         console.error("Audio playback error:", err);
+        setIsBuffering(false);
+        setLoadError(true);
       });
     }
+  };
+
+  const retryPlayback = (e) => {
+    e.stopPropagation();
+
+    if (media.error) {
+      setLoadError(false);
+      setIsBuffering(true);
+      media.retry();
+      return;
+    }
+
+    if (!audioRef.current) return;
+
+    setLoadError(false);
+    setIsBuffering(true);
+    audioRef.current.load();
+    audioRef.current.play().catch((err) => {
+      console.error("Audio playback retry error:", err);
+      setIsBuffering(false);
+      setLoadError(true);
+    });
   };
 
   const handleTimeUpdate = () => {
@@ -171,6 +362,7 @@ function CustomAudioPlayer({ src, duration, isOwnMessage, isPreview = false }) {
     if (audioRef.current && audioRef.current.duration && audioRef.current.duration !== Infinity) {
       setTotalDuration(audioRef.current.duration);
     }
+    setLoadError(false);
     setIsBuffering(false);
   };
 
@@ -198,7 +390,7 @@ function CustomAudioPlayer({ src, duration, isOwnMessage, isPreview = false }) {
     >
       <audio
         ref={audioRef}
-        src={src}
+        src={media.resolvedUrl || undefined}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         onEnded={() => {
@@ -209,59 +401,85 @@ function CustomAudioPlayer({ src, duration, isOwnMessage, isPreview = false }) {
         onLoadedMetadata={handleLoadedMetadata}
         onWaiting={() => setIsBuffering(true)}
         onPlaying={() => setIsBuffering(false)}
+        onError={() => {
+          setIsPlaying(false);
+          setIsBuffering(false);
+          setLoadError(true);
+        }}
         preload="metadata"
       />
 
-      <button
-        type="button"
-        onClick={togglePlay}
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition active:scale-95 shadow-sm ${
-          isOwnMessage
-            ? "bg-white text-indigo-700 hover:bg-slate-100"
-            : "bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
-        }`}
-        title={isPlaying ? "Pause" : "Play"}
-      >
-        {isBuffering ? (
-          <Loader2 size={16} className="animate-spin" />
-        ) : isPlaying ? (
-          <Pause size={16} className="fill-current" />
-        ) : (
-          <Play size={16} className="fill-current ml-0.5" />
-        )}
-      </button>
-
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <div className="flex h-6 items-center gap-0.5 cursor-pointer py-1" title="Seek audio">
-          {WAVEFORM_BARS.map((heightPercent, idx) => {
-            const barFraction = (idx + 1) / WAVEFORM_BARS.length;
-            const isPlayed = barFraction <= progressFraction;
-
-            return (
-              <button
-                key={idx}
-                type="button"
-                onClick={(e) => handleSeek(e, idx)}
-                style={{ height: `${heightPercent}%` }}
-                className={`w-1 rounded-full transition-all duration-150 hover:opacity-100 ${
-                  isPlayed
-                    ? isOwnMessage
-                      ? "bg-white opacity-100"
-                      : "bg-indigo-600 dark:bg-indigo-400 opacity-100"
-                    : isOwnMessage
-                    ? "bg-white/40 hover:bg-white/70"
-                    : "bg-slate-300 dark:bg-slate-700 hover:bg-slate-400"
-                }`}
-              />
-            );
-          })}
+      {loadError || media.error ? (
+        <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <AlertCircle size={16} className="shrink-0" />
+            <span className="truncate text-[12px] font-semibold">
+              Voice note unavailable
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={retryPlayback}
+            className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-bold transition hover:bg-black/5 dark:hover:bg-white/10"
+          >
+            <RotateCcw size={12} />
+            Try again
+          </button>
         </div>
+      ) : (
+        <>
+          <button
+            type="button"
+            onClick={togglePlay}
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition active:scale-95 shadow-sm ${
+              isOwnMessage
+                ? "bg-white text-indigo-700 hover:bg-slate-100"
+                : "bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+            }`}
+            title={isPlaying ? "Pause" : "Play"}
+          >
+            {isBuffering || media.loading ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : isPlaying ? (
+              <Pause size={16} className="fill-current" />
+            ) : (
+              <Play size={16} className="fill-current ml-0.5" />
+            )}
+          </button>
 
-        <div className="flex items-center justify-between text-[11px] font-medium opacity-80 tabular-nums">
-          <span>{formatAudioTime(currentTime)}</span>
-          <span>{formatAudioTime(totalDuration)}</span>
-        </div>
-      </div>
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <div className="flex h-6 items-center gap-0.5 cursor-pointer py-1" title="Seek audio">
+              {WAVEFORM_BARS.map((heightPercent, idx) => {
+                const barFraction = (idx + 1) / WAVEFORM_BARS.length;
+                const isPlayed = barFraction <= progressFraction;
+
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={(e) => handleSeek(e, idx)}
+                    style={{ height: `${heightPercent}%` }}
+                    className={`w-1 rounded-full transition-all duration-150 hover:opacity-100 ${
+                      isPlayed
+                        ? isOwnMessage
+                          ? "bg-white opacity-100"
+                          : "bg-indigo-600 dark:bg-indigo-400 opacity-100"
+                        : isOwnMessage
+                        ? "bg-white/40 hover:bg-white/70"
+                        : "bg-slate-300 dark:bg-slate-700 hover:bg-slate-400"
+                    }`}
+                  />
+                );
+              })}
+            </div>
+
+            <div className="flex items-center justify-between text-[11px] font-medium opacity-80 tabular-nums">
+              <span>{formatAudioTime(currentTime)}</span>
+              <span>{formatAudioTime(totalDuration)}</span>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -274,12 +492,10 @@ import LoadingState from "../components/LoadingState";
 import PageHeader from "../components/PageHeader";
 import {
   CHAT_PAGE_SIZE,
-  CHAT_SEARCH_MAX_LIMIT,
   createChatSocket,
   deleteMessage as deleteMessageRequest,
   editMessage as editMessageRequest,
   getChatMeta,
-  getChatUnreadCount,
   getMessageContext,
   getRecentMessages,
   searchMessages,
@@ -301,16 +517,18 @@ import {
  * now local to the image that failed, and recoverable.
  */
 function ChatImage({ src, alt, onOpen, isOwnMessage }) {
+  const media = useAuthenticatedMediaUrl(src);
   const [status, setStatus] = useState("loading");
   const [reloadKey, setReloadKey] = useState(0);
 
   const handleRetry = (event) => {
     event.stopPropagation();
     setStatus("loading");
+    media.retry();
     setReloadKey((key) => key + 1);
   };
 
-  if (status === "error") {
+  if (status === "error" || media.error) {
     return (
       <div
         className={`flex w-full max-w-full flex-col items-start gap-2 rounded-lg p-3 sm:max-w-sm ${
@@ -341,18 +559,20 @@ function ChatImage({ src, alt, onOpen, isOwnMessage }) {
           <Loader2 size={18} className="animate-spin text-slate-400" />
         </div>
       )}
-      <img
-        key={reloadKey}
-        src={src}
-        alt={alt}
-        loading="lazy"
-        onLoad={() => setStatus("loaded")}
-        onError={() => setStatus("error")}
-        onClick={onOpen}
-        className={`block max-h-72 max-w-full cursor-zoom-in rounded-lg object-contain transition hover:opacity-95 ${
-          status === "loading" ? "opacity-0" : "opacity-100"
-        }`}
-      />
+      {media.resolvedUrl && (
+        <img
+          key={`${reloadKey}-${media.resolvedUrl}`}
+          src={media.resolvedUrl}
+          alt={alt}
+          loading="lazy"
+          onLoad={() => setStatus("loaded")}
+          onError={() => setStatus("error")}
+          onClick={() => onOpen(media.resolvedUrl)}
+          className={`block max-h-72 max-w-full cursor-zoom-in rounded-lg object-contain transition hover:opacity-95 ${
+            status === "loading" || media.loading ? "opacity-0" : "opacity-100"
+          }`}
+        />
+      )}
     </div>
   );
 }
@@ -491,6 +711,23 @@ function formatFileSize(fileSize) {
   if (size > 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 
   return `${(size / 1024).toFixed(1)} KB`;
+}
+
+function getFileTypeLabel(fileName, mimeType) {
+  const extension = String(fileName || "")
+    .split(".")
+    .pop()
+    ?.trim()
+    .toUpperCase();
+
+  if (extension && extension !== String(fileName || "").toUpperCase()) {
+    return extension.slice(0, 8);
+  }
+
+  const normalizedType = normalizeMimeType(mimeType);
+  const subtype = normalizedType.split("/")[1]?.split(/[.+-]/)[0];
+
+  return subtype ? subtype.toUpperCase().slice(0, 8) : "FILE";
 }
 
 function getWorkspaceId(workspace) {
@@ -744,40 +981,13 @@ function Chat() {
   const pendingScrollMessageIdRef = useRef(null);
 
   const mediaRecorderRef = useRef(null);
+  const imageInputRef = useRef(null);
+  const fileInputRef = useRef(null);
   const recordingStreamRef = useRef(null);
   const recordingCancelledRef = useRef(false);
   const audioChunksRef = useRef([]);
   const recordingTimerRef = useRef(null);
   const startTimeRef = useRef(null);
-
-  const getAuthenticatedUrl = (url, download = false) => {
-    const rawUrl = String(url || "").trim();
-
-    if (!rawUrl) return "";
-    if (rawUrl.startsWith("blob:") || rawUrl.startsWith("data:")) return rawUrl;
-
-    const apiBase = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-    const origin = apiBase.replace(/\/api\/?$/, "");
-    const token = getToken();
-
-    try {
-      const mediaUrl = /^https?:\/\//i.test(rawUrl)
-        ? new URL(rawUrl)
-        : new URL(rawUrl.startsWith("/") ? rawUrl : `/${rawUrl}`, origin);
-
-      if (token) {
-        mediaUrl.searchParams.set("token", token);
-      }
-
-      if (download) {
-        mediaUrl.searchParams.set("download", "true");
-      }
-
-      return mediaUrl.toString();
-    } catch {
-      return rawUrl;
-    }
-  };
 
   const [messages, setMessages] = useState([]);
   const [members, setMembers] = useState([]);
@@ -808,6 +1018,51 @@ function Chat() {
   // Holds the image the lightbox is showing; null keeps the overlay unmounted.
   const [previewImage, setPreviewImage] = useState(null);
   const [showMembersMobile, setShowMembersMobile] = useState(false);
+
+  const openImagePreview = async (mediaUrl, alt, resolvedUrl = "") => {
+    setError("");
+
+    try {
+      if (resolvedUrl) {
+        setPreviewImage({
+          src: resolvedUrl,
+          alt,
+          downloadUrl: mediaUrl,
+          revokeOnClose: false,
+        });
+        return;
+      }
+
+      const managedUrl = getManagedAttachmentUrl(mediaUrl);
+      if (!managedUrl) {
+        setPreviewImage({
+          src: mediaUrl,
+          alt,
+          downloadUrl: mediaUrl,
+          revokeOnClose: false,
+        });
+        return;
+      }
+
+      const blob = await fetchAttachmentBlob(managedUrl);
+      setPreviewImage({
+        src: URL.createObjectURL(blob),
+        alt,
+        downloadUrl: mediaUrl,
+        revokeOnClose: true,
+      });
+    } catch (openError) {
+      setError(openError?.message || "Image could not be opened.");
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (previewImage?.revokeOnClose && previewImage.src) {
+        URL.revokeObjectURL(previewImage.src);
+      }
+    };
+  }, [previewImage]);
 
   useEffect(() => {
     editingMessageIdRef.current = editingMessageId;
@@ -1393,6 +1648,8 @@ function Chat() {
 
     const handleConnect = () => {
       if (!cancelled) {
+        // Refresh the auth token in case it was updated while disconnected
+        socket.auth = { token: getToken() || "" };
         joinWorkspaceChat();
       }
     };
@@ -1411,7 +1668,32 @@ function Chat() {
           : message?.workspace;
 
       if (String(messageWorkspaceId) === String(workspaceId)) {
-        appendMessage(message);
+        const incomingId = getMessageId(message);
+        // Replace any optimistic placeholder for this message, or append
+        setMessages((prev) => {
+          // Check if a confirmed message with this ID is already present
+          const existingIdx = prev.findIndex(
+            (m) => !m._tempId && idsEqual(getMessageId(m), incomingId),
+          );
+          if (existingIdx >= 0) return prev;
+
+          // Check if there is a pending optimistic message from the same
+          // sender with the same content (the real message just arrived)
+          const tempIdx = prev.findIndex(
+            (m) =>
+              m._tempId &&
+              m._pending &&
+              idsEqual(getSenderId(m), getSenderId(message)) &&
+              m.content === message.content,
+          );
+          if (tempIdx >= 0) {
+            const updated = [...prev];
+            updated[tempIdx] = message;
+            return updated;
+          }
+
+          return [...prev, message];
+        });
         setUnreadCount(0);
         notifyUnreadUpdated(0);
       }
@@ -1589,6 +1871,22 @@ function Chat() {
     emitTyping(false);
     setDraft("");
 
+    // Optimistic rendering: show the message immediately so the sender
+    // does not have to wait for the server round-trip.
+    const tempId = `_temp_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const optimisticMessage = {
+      _id: tempId,
+      _tempId: tempId,
+      _pending: true,
+      workspace: workspaceId,
+      sender: user,
+      messageType: "text",
+      content,
+      createdAt: new Date().toISOString(),
+      readBy: [],
+    };
+    appendMessage(optimisticMessage);
+
     socketRef.current.emit(
       "sendMessage",
       { workspaceId, content },
@@ -1596,20 +1894,40 @@ function Chat() {
         setSending(false);
 
         if (!response?.success) {
+          // Remove the optimistic message and restore the draft
+          setMessages((prev) => prev.filter((m) => getMessageId(m) !== tempId));
           setDraft(content);
           setError(response?.message || "Failed to send message.");
           return;
         }
 
-        appendMessage(response.message);
+        // Replace the optimistic placeholder with the real server message
+        setMessages((prev) => {
+          const confirmedId = getMessageId(response.message);
+          // Remove both the temp message and any duplicate from receiveMessage
+          const cleaned = prev.filter((m) => {
+            const id = getMessageId(m);
+            return id !== tempId && id !== confirmedId;
+          });
+          return sortMessagesByDate([...cleaned, response.message]);
+        });
       },
     );
   };
 
   const handleSendSticker = (stickerId) => {
-    if (!workspaceId || !socketRef.current?.connected) return;
+    if (!workspaceId) {
+      setError("Please select a workspace before sending.");
+      return;
+    }
+
+    if (!socketRef.current?.connected) {
+      setError("Chat is reconnecting. Please try again in a moment.");
+      return;
+    }
 
     setShowStickerPicker(false);
+    setError("");
 
     socketRef.current.emit(
       "sendMessage",
@@ -1628,9 +1946,22 @@ function Chat() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (!workspaceId) {
+      setError("Please select a workspace before sending.");
+      e.target.value = "";
+      return;
+    }
+
+    if (!socketRef.current?.connected) {
+      setError("Chat is reconnecting. Please try again in a moment.");
+      e.target.value = "";
+      return;
+    }
+
     const limitBytes = 10 * 1024 * 1024;
     if (file.size > limitBytes) {
       setError("File exceeds the maximum size limit of 10MB.");
+      e.target.value = "";
       return;
     }
 
@@ -1918,6 +2249,11 @@ function Chat() {
 
     if (!workspaceId) {
       setError("Please select a workspace before sending.");
+      return;
+    }
+
+    if (!socketRef.current?.connected) {
+      setError("Chat is reconnecting. Please try again in a moment.");
       return;
     }
 
@@ -2544,7 +2880,6 @@ function Chat() {
                   const displayContentText = String(displayContent || "");
                   const messageKind = getMessageKind(message);
                   const mediaUrl = getMessageMediaUrl(message);
-                  const authenticatedMediaUrl = getAuthenticatedUrl(mediaUrl);
                   const isActiveSearchResult =
                     isSearchMode &&
                     activeSearchMessageId &&
@@ -2676,18 +3011,15 @@ function Chat() {
                               ) : messageKind === "image" && mediaUrl ? (
                                 <div className="flex max-w-full flex-col gap-1.5 p-1">
                                   <ChatImage
-                                    src={authenticatedMediaUrl}
+                                    src={mediaUrl}
                                     alt={message.fileName || "Chat image"}
                                     isOwnMessage={isOwnMessage}
-                                    onOpen={() =>
-                                      setPreviewImage({
-                                        src: authenticatedMediaUrl,
-                                        alt: message.fileName || "Chat image",
-                                        downloadUrl: getAuthenticatedUrl(
-                                          mediaUrl,
-                                          true,
-                                        ),
-                                      })
+                                    onOpen={(resolvedUrl) =>
+                                      void openImagePreview(
+                                        mediaUrl,
+                                        message.fileName || "Chat image",
+                                        resolvedUrl,
+                                      )
                                     }
                                   />
                                   <div
@@ -2700,113 +3032,151 @@ function Chat() {
                                     <span className="truncate block max-w-[180px]">
                                       {message.fileName || "image.png"}
                                     </span>
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        downloadFile(
-                                          authenticatedMediaUrl,
-                                          message.fileName || "image.png",
-                                        )
-                                      }
-                                      className={`flex shrink-0 items-center gap-1 font-bold transition-all active:scale-95 ${
-                                        isOwnMessage
-                                          ? "text-white hover:text-indigo-100"
-                                          : "text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
-                                      }`}
-                                    >
-                                      <Download size={13} strokeWidth={2.5} />
-                                      Download
-                                    </button>
+                                    <div className="flex shrink-0 items-center gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          void openImagePreview(
+                                            mediaUrl,
+                                            message.fileName || "Chat image",
+                                          )
+                                        }
+                                        className={`flex items-center gap-1 rounded-md px-1.5 py-1 font-bold transition active:scale-95 ${
+                                          isOwnMessage
+                                            ? "text-white hover:bg-white/15"
+                                            : "text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
+                                        }`}
+                                        aria-label={`Open ${message.fileName || "image"}`}
+                                      >
+                                        <Maximize2 size={13} strokeWidth={2.5} />
+                                        Open
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setError("");
+                                          void downloadFile(
+                                            mediaUrl,
+                                            message.fileName || "image.png",
+                                          ).catch((downloadError) => {
+                                            setError(
+                                              downloadError?.message ||
+                                                "Image could not be downloaded.",
+                                            );
+                                          });
+                                        }}
+                                        className={`flex items-center gap-1 rounded-md px-1.5 py-1 font-bold transition active:scale-95 ${
+                                          isOwnMessage
+                                            ? "text-white hover:bg-white/15"
+                                            : "text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
+                                        }`}
+                                        aria-label={`Download ${message.fileName || "image"}`}
+                                      >
+                                        <Download size={13} strokeWidth={2.5} />
+                                        Download
+                                      </button>
+                                    </div>
                                   </div>
                                 </div>
                               ) : messageKind === "file" && mediaUrl ? (
                                 <div
-                                  className={`flex items-center gap-3 min-w-0 max-w-full rounded-xl p-2 sm:p-2.5 ${
+                                  className={`min-w-0 max-w-full rounded-xl p-2.5 ${
                                     isOwnMessage
-                                      ? "bg-white/10 text-white"
-                                      : "bg-slate-100/60 dark:bg-slate-900/60 tf-text"
+                                      ? "bg-white/10 text-white ring-1 ring-white/10"
+                                      : "bg-white text-slate-800 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-100 dark:ring-slate-800"
                                   }`}
                                 >
-                                  <div
-                                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-                                      isOwnMessage
-                                        ? "bg-white/15 text-white"
-                                        : "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400"
-                                    }`}
-                                  >
-                                    <FileText size={20} />
-                                  </div>
-                                  <div className="min-w-0 flex-1">
-                                    <p
-                                      className={`truncate text-[13px] font-semibold ${
+                                  <div className="flex min-w-0 items-center gap-3">
+                                    <div
+                                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
                                         isOwnMessage
-                                          ? "text-white"
-                                          : "tf-text"
+                                          ? "bg-white/15 text-white"
+                                          : "bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-300"
                                       }`}
                                     >
-                                      {message.fileName}
-                                    </p>
-                                    <p
-                                      className={`text-[11px] ${
-                                        isOwnMessage
-                                          ? "text-indigo-200"
-                                          : "tf-text-muted"
-                                      }`}
-                                    >
-                                      {formatFileSize(message.fileSize)}
-                                    </p>
-                                  </div>
-                                  <div className="flex items-center gap-1 shrink-0">
-                                    <a
-                                      href={getAuthenticatedUrl(
-                                        mediaUrl,
-                                        false,
-                                      )}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      title="Open file in new tab"
-                                      className={`flex h-8 w-8 items-center justify-center rounded-lg transition ${
-                                        isOwnMessage
-                                          ? "hover:bg-white/20 text-indigo-100 hover:text-white"
-                                          : "hover:bg-slate-200/50 hover:text-slate-850 dark:hover:bg-slate-800/50 dark:hover:text-slate-150 tf-text-muted"
-                                      }`}
-                                    >
-                                      <svg
-                                        className="h-4.5 w-4.5"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                        strokeWidth={2.5}
+                                      <FileText size={20} />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <p
+                                        className={`truncate text-[13px] font-semibold ${
+                                          isOwnMessage ? "text-white" : "tf-text"
+                                        }`}
                                       >
-                                        <path
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                        />
-                                        <path
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                        />
-                                      </svg>
-                                    </a>
+                                        {message.fileName || "Document"}
+                                      </p>
+                                      <div
+                                        className={`mt-0.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide ${
+                                          isOwnMessage
+                                            ? "text-indigo-200"
+                                            : "tf-text-muted"
+                                        }`}
+                                      >
+                                        <span>
+                                          {getFileTypeLabel(
+                                            message.fileName,
+                                            message.mimeType,
+                                          )}
+                                        </span>
+                                        {formatFileSize(message.fileSize) && (
+                                          <>
+                                            <span aria-hidden="true">·</span>
+                                            <span className="normal-case tracking-normal">
+                                              {formatFileSize(message.fileSize)}
+                                            </span>
+                                          </>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="mt-2 grid grid-cols-2 gap-1.5">
                                     <button
                                       type="button"
-                                      title="Download file"
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        downloadFile(
-                                          getAuthenticatedUrl(mediaUrl, true),
-                                          message.fileName,
+                                      onClick={() => {
+                                        setError("");
+                                        void openFile(mediaUrl).catch(
+                                          (openError) => {
+                                            setError(
+                                              openError?.message ||
+                                                "Document could not be opened.",
+                                            );
+                                          },
                                         );
                                       }}
-                                      className={`flex h-8 w-8 items-center justify-center rounded-lg transition ${
+                                      aria-label={`Open ${message.fileName || "document"}`}
+                                      className={`flex h-8 items-center justify-center gap-1.5 rounded-lg text-[11px] font-bold transition active:scale-[0.98] ${
                                         isOwnMessage
-                                          ? "hover:bg-white/20 text-indigo-100 hover:text-white"
-                                          : "hover:bg-slate-200/50 hover:text-slate-850 dark:hover:bg-slate-800/50 dark:hover:text-slate-150 tf-text-muted"
+                                          ? "bg-white/10 text-white hover:bg-white/20"
+                                          : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:text-indigo-300 dark:hover:bg-indigo-900/60"
                                       }`}
                                     >
-                                      <Download size={16} />
+                                      <ExternalLink size={14} />
+                                      Open
+                                    </button>
+                                    <button
+                                      type="button"
+                                      aria-label={`Download ${message.fileName || "document"}`}
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        setError("");
+                                        void downloadFile(
+                                          mediaUrl,
+                                          message.fileName,
+                                        ).catch((downloadError) => {
+                                          setError(
+                                            downloadError?.message ||
+                                              "Document could not be downloaded.",
+                                          );
+                                        });
+                                      }}
+                                      className={`flex h-8 items-center justify-center gap-1.5 rounded-lg text-[11px] font-bold transition active:scale-[0.98] ${
+                                        isOwnMessage
+                                          ? "bg-white/10 text-white hover:bg-white/20"
+                                          : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                                      }`}
+                                    >
+                                      <Download size={14} />
+                                      Download
                                     </button>
                                   </div>
                                 </div>
@@ -2814,7 +3184,7 @@ function Chat() {
                                 STICKER_MAP[message.stickerId] || "✨"
                               ) : messageKind === "audio" && mediaUrl ? (
                                 <CustomAudioPlayer
-                                  src={authenticatedMediaUrl}
+                                  src={mediaUrl}
                                   duration={message.audioDuration || message.duration}
                                   isOwnMessage={isOwnMessage}
                                 />
@@ -2839,7 +3209,11 @@ function Chat() {
                                   type="button"
                                   title="Edit message"
                                   aria-label="Edit message"
-                                  onClick={() => beginEditingMessage(message)}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    beginEditingMessage(message);
+                                  }}
                                   disabled={
                                     savingEdit ||
                                     idsEqual(deletingMessageId, messageId)
@@ -2907,6 +3281,7 @@ function Chat() {
             )}
 
             <input
+              ref={fileInputRef}
               type="file"
               id="chat-file-upload"
               accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
@@ -2916,6 +3291,7 @@ function Chat() {
             />
 
             <input
+              ref={imageInputRef}
               type="file"
               id="chat-image-upload"
               accept="image/*"
@@ -2924,7 +3300,7 @@ function Chat() {
               disabled={isUploading || isRecording}
             />
 
-            <div className="flex flex-col rounded-xl border border-slate-200 bg-white shadow-xs focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 dark:border-slate-800 dark:bg-slate-900 transition-all">
+            <div className="flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm transition-colors focus-within:bg-slate-50/70 dark:bg-slate-900 dark:focus-within:bg-slate-900/80">
               <div className="flex items-end p-1.5 sm:p-2">
                 {isUploading ? (
                   <div className="min-w-0 flex-1 flex items-center gap-2.5 px-3 py-2 text-[13px] text-indigo-600 dark:text-indigo-400 font-semibold select-none">
@@ -2938,7 +3314,7 @@ function Chat() {
                     <div className="flex items-center gap-2 px-2 py-1 text-[13px] text-red-500 font-semibold animate-pulse select-none">
                       <span className="h-2.5 w-2.5 rounded-full bg-red-500 animate-ping shrink-0" />
                       <span className="truncate">
-                        Recording: {formatDuration(recordingDuration)}
+                        Recording: {formatAudioTime(recordingDuration)}
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
@@ -3004,44 +3380,50 @@ function Chat() {
                     maxLength={2000}
                     placeholder="Write a message..."
                     aria-label="Write a chat message"
-                    className="max-h-32 min-h-[40px] min-w-0 flex-1 resize-none bg-transparent px-2.5 py-2 text-[13px] leading-snug text-slate-800 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
+                    className="max-h-32 min-h-[40px] min-w-0 flex-1 resize-none appearance-none border-0 bg-transparent px-2.5 py-2 text-[13px] leading-snug text-slate-800 outline-none ring-0 placeholder:text-slate-400 focus:border-0 focus:outline-none focus:ring-0 focus-visible:!outline-none dark:text-slate-100 dark:placeholder:text-slate-500"
                   />
                 )}
               </div>
 
               {!isRecording && !isUploading && !tempAudioBlob && (
-                <div className="flex items-center justify-between border-t border-slate-100/60 bg-slate-50/30 px-2 py-1.5 dark:border-slate-800/50 dark:bg-slate-950/10 rounded-b-xl">
+                <div className="flex items-center justify-between bg-slate-50/70 px-2 py-1.5 dark:bg-slate-950/20">
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
                       onClick={() => setShowStickerPicker((prev) => !prev)}
                       className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition dark:text-slate-400 dark:hover:bg-slate-800"
                       title="Send sticker"
+                      aria-label="Send sticker"
                     >
                       <Smile size={17} />
                     </button>
 
-                    <label
-                      htmlFor="chat-image-upload"
-                      className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition dark:text-slate-400 dark:hover:bg-slate-800"
+                    <button
+                      type="button"
+                      onClick={() => imageInputRef.current?.click()}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition dark:text-slate-400 dark:hover:bg-slate-800"
                       title="Attach picture"
+                      aria-label="Attach picture"
                     >
                       <Image size={17} />
-                    </label>
+                    </button>
 
-                    <label
-                      htmlFor="chat-file-upload"
-                      className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition dark:text-slate-400 dark:hover:bg-slate-800"
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition dark:text-slate-400 dark:hover:bg-slate-800"
                       title="Attach document/file"
+                      aria-label="Attach document/file"
                     >
                       <Paperclip size={17} />
-                    </label>
+                    </button>
 
                     <button
                       type="button"
                       onClick={startVoiceRecording}
                       className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition dark:text-slate-400 dark:hover:bg-slate-800"
                       title="Record voice note"
+                      aria-label="Record voice note"
                     >
                       <Mic size={17} />
                     </button>
@@ -3121,9 +3503,17 @@ function Chat() {
         src={previewImage?.src}
         alt={previewImage?.alt}
         onClose={() => setPreviewImage(null)}
-        onDownload={() =>
-          downloadFile(previewImage?.downloadUrl, previewImage?.alt)
-        }
+        onDownload={() => {
+          setError("");
+          void downloadFile(
+            previewImage?.downloadUrl,
+            previewImage?.alt,
+          ).catch((downloadError) => {
+            setError(
+              downloadError?.message || "Image could not be downloaded.",
+            );
+          });
+        }}
       />
     </DashboardLayout>
   );

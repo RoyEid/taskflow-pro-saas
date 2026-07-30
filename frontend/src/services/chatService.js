@@ -105,5 +105,9 @@ export const createChatSocket = () => {
       token: getToken() || "",
     },
     transports: ["websocket", "polling"],
+    reconnection: true,
+    reconnectionDelay: 500,
+    reconnectionDelayMax: 5000,
+    reconnectionAttempts: 20,
   });
 };
