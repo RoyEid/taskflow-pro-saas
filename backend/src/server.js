@@ -19,7 +19,18 @@ const startServer = async () => {
         const httpServer = http.createServer(app);
         const io = new Server(httpServer, {
             cors: {
-                origin: allowedOrigins,
+                origin: (origin, callback) => {
+                    if (
+                        !origin ||
+                        allowedOrigins.some(
+                            (allowed) => allowed.replace(/\/$/, "") === origin.replace(/\/$/, "")
+                        )
+                    ) {
+                        callback(null, true);
+                    } else {
+                        callback(new Error("Not allowed by Socket CORS"));
+                    }
+                },
                 credentials: true,
             },
         });

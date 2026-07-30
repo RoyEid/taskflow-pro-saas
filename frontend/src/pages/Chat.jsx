@@ -789,7 +789,11 @@ function getMemberUser(member) {
 }
 
 function getMemberUserId(member) {
-  return getUserId(getMemberUser(member)) || getEntityId(member?.user);
+  return (
+    getUserId(getMemberUser(member)) ||
+    getEntityId(member?.user) ||
+    getEntityId(member)
+  );
 }
 
 function normalizeSearchResults(data) {
