@@ -1668,6 +1668,31 @@ function Chat() {
       }
     };
 
+    const isActivelyViewingChat = () =>
+      document.visibilityState === "visible" && document.hasFocus();
+
+    const updateViewingState = () => {
+      if (!socket.connected || cancelled) return;
+
+      const isViewing = isActivelyViewingChat();
+
+      socket.emit(
+        "setWorkspaceChatViewing",
+        {
+          workspaceId,
+          isViewing,
+        },
+        (response) => {
+          if (cancelled || !response?.success) return;
+
+          if (isViewing) {
+            setUnreadCount(0);
+            notifyUnreadUpdated(0);
+          }
+        },
+      );
+    };
+
     const joinWorkspaceChat = () => {
       socket.emit("joinWorkspaceChat", { workspaceId }, (response) => {
         if (cancelled) return;
@@ -1681,6 +1706,7 @@ function Chat() {
         setOnlineUserIds(normalizeOnlineUsers(response.onlineUsers));
         setUnreadCount(response.unreadCount || 0);
         notifyUnreadUpdated(response.unreadCount || 0);
+        updateViewingState();
       });
     };
 
@@ -1689,6 +1715,18 @@ function Chat() {
         setError("");
         joinWorkspaceChat();
       }
+    };
+
+    const handleVisibilityChange = () => {
+      updateViewingState();
+    };
+
+    const handleWindowFocus = () => {
+      updateViewingState();
+    };
+
+    const handleWindowBlur = () => {
+      updateViewingState();
     };
 
     const handleDisconnect = () => {
@@ -1730,8 +1768,10 @@ function Chat() {
 
           return sortMessagesByDate([...prev, message]);
         });
-        setUnreadCount(0);
-        notifyUnreadUpdated(0);
+        if (isActivelyViewingChat()) {
+          setUnreadCount(0);
+          notifyUnreadUpdated(0);
+        }
         setArchiveNotice("");
       }
     };
@@ -1858,6 +1898,10 @@ function Chat() {
     socket.on("chatError", handleChatError);
     socket.on("connect_error", handleConnectError);
 
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleWindowFocus);
+    window.addEventListener("blur", handleWindowBlur);
+
     if (socket.connected) {
       handleConnect();
     }
@@ -1866,6 +1910,20 @@ function Chat() {
       cancelled = true;
       clearTypingTimer();
       emitTyping(false);
+
+      if (socket.connected) {
+        socket.emit("setWorkspaceChatViewing", {
+          workspaceId,
+          isViewing: false,
+        });
+
+        socket.emit("leaveWorkspaceChat", { workspaceId });
+      }
+
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleWindowFocus);
+      window.removeEventListener("blur", handleWindowBlur);
+
       socket.off("connect", handleConnect);
       socket.off("disconnect", handleDisconnect);
       socket.off("receiveMessage", handleReceiveMessage);

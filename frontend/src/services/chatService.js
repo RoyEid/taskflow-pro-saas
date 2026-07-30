@@ -170,7 +170,7 @@ export const uploadChatFile = async (
   return extractData(response);
 };
 
-export const createChatSocket = (workspaceId) => {
+export const createChatSocket = () => {
   if (!socketUrl) {
     throw new Error(
       "Socket server URL is missing. Set VITE_SOCKET_URL in the frontend environment variables.",
@@ -181,23 +181,17 @@ export const createChatSocket = (workspaceId) => {
     autoConnect: false,
 
     /*
-     * The authentication callback is executed on every connection attempt.
-     * This ensures reconnections use the newest stored token instead of a
-     * token captured when the socket was first created.
+     * Read the latest token on every connection and reconnection. Do not send
+     * a workspace ID here: being connected to the website must not be treated
+     * as actively viewing a workspace chat.
      */
     auth: (callback) => {
       callback({
         token: getToken() || "",
-        workspaceId: String(workspaceId || ""),
       });
     },
 
     withCredentials: true,
-
-    /*
-     * Connect using WebSocket when available and fall back to polling when
-     * the host, browser, or proxy does not support the WebSocket upgrade.
-     */
     transports: ["websocket", "polling"],
 
     reconnection: true,

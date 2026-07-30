@@ -15,6 +15,12 @@ export const DELETED_CHAT_MESSAGE_CONTENT = "This message was deleted.";
 export const CHAT_SEARCH_MAX_LIMIT = 100;
 export const CHAT_CONTEXT_WINDOW_SIZE = 25;
 
+const CHAT_EMAIL_DELAY_MS = process.env.CHAT_EMAIL_DELAY_MS 
+    ? parseInt(process.env.CHAT_EMAIL_DELAY_MS, 10) 
+    : 10000;
+
+const emailQueue = new Map();
+
 export const serializeUser = (user) => {
     if (!user) return null;
 
@@ -506,7 +512,7 @@ const sendMissedChatEmail = async ({ recipient, workspace, message }) => {
                 : message.content;
         }
 
-        await sendEmail({
+        const result = await sendEmail({
             email: recipient.email,
             subject: `New unread messages in ${workspace.name}`,
             title: "New Chat Message",
@@ -527,8 +533,10 @@ const sendMissedChatEmail = async ({ recipient, workspace, message }) => {
             `,
         });
         console.log(`[Chat Email] successfully sent to ${recipient.email}`);
+        return result;
     } catch (error) {
         console.error(`[Chat Email] failed to send email to ${recipient.email}:`, error.message);
+        throw error;
     }
 };
 
@@ -589,8 +597,38 @@ export const updateUnreadForInactiveMembers = async ({
         } else if (!wantsEmail) {
             console.log(`[Chat Email] user disabled chat email preferences — skipped for ${memberUser.email}`);
         } else {
-            state.missedEmailSent = true;
-            void sendMissedChatEmail({ recipient: memberUser, workspace, message });
+            const jobKey = `${workspaceId}:${memberUserId}`;
+            if (!emailQueue.has(jobKey)) {
+                state.missedEmailPending = true;
+                
+                const timerId = setTimeout(async () => {
+                    emailQueue.delete(jobKey);
+                    
+                    try {
+                        const freshState = await ChatReadState.findOne({ workspace: workspaceId, user: memberUserId });
+                        
+                        if (!freshState || freshState.unreadCount === 0 || freshState.missedEmailSent) {
+                            console.log(`[Chat Email] batch was read during delay — skipped for ${memberUser.email}`);
+                            return;
+                        }
+
+                        if (isUserOnline(memberUserId)) {
+                            console.log(`[Chat Email] user came online during delay — skipped for ${memberUser.email}`);
+                            return;
+                        }
+
+                        await sendMissedChatEmail({ recipient: memberUser, workspace, message });
+
+                        freshState.missedEmailSent = true;
+                        freshState.missedEmailPending = false;
+                        await freshState.save();
+                    } catch (err) {
+                        console.error(`[Chat Email] failed scheduled execution for ${memberUser.email}:`, err.message);
+                    }
+                }, CHAT_EMAIL_DELAY_MS);
+                
+                emailQueue.set(jobKey, timerId);
+            }
         }
 
         await state.save();

@@ -8,6 +8,7 @@ import {
     deleteWorkspaceMessage,
     editWorkspaceMessage,
     findActiveMembership,
+    getWorkspaceUnreadCount,
     markWorkspaceChatRead,
     serializeMessage,
     serializeUser,
@@ -283,9 +284,8 @@ const registerChatSocket = (io) => {
         }
     });
 
-    // A reconnect produces a brand new server-side socket that belongs to no room,
-    // so every join step has to be repeatable and is shared by the explicit
-    // joinWorkspaceChat event and the automatic rejoin performed on connection.
+    // A reconnect produces a new server-side socket that belongs to no workspace
+    // room. The Chat page explicitly joins again after each connection.
     const runJoinWorkspace = async (socket, workspaceId) => {
         const membership = await findActiveMembership(workspaceId, socket.user._id);
 
@@ -293,51 +293,30 @@ const registerChatSocket = (io) => {
             return null;
         }
 
-        // The socket can drop while the membership lookup is in flight. Its
-        // disconnect handler has already run by then, so registering presence
-        // now would strand an entry that keeps the user online forever.
         if (!socket.connected) {
             return null;
         }
 
+        const key = String(workspaceId);
+
         socket.join(getWorkspaceRoom(workspaceId));
-        addPresence(workspaceId, socket);
         socket.data.joinedWorkspaceMemberships =
             socket.data.joinedWorkspaceMemberships || new Map();
-        socket.data.joinedWorkspaceMemberships.set(String(workspaceId), membership);
+        socket.data.joinedWorkspaceMemberships.set(key, membership);
 
-        socket.emit("chatUnreadCount", {
-            workspaceId,
-            unreadCount: 0,
-        });
+        socket.data.joinedWorkspaceIds = socket.data.joinedWorkspaceIds || new Set();
+        socket.data.joinedWorkspaceIds.add(key);
 
-        emitPresence(io, workspaceId);
-
-        // The room and presence become live before the heavier read-state
-        // update. A slow database write must not leave an authenticated user
-        // looking offline or prevent the join acknowledgement.
-        void markWorkspaceChatRead(workspaceId, socket.user._id)
-            .then((readState) => {
-                io.to(getWorkspaceRoom(workspaceId)).emit("messagesRead", {
-                    workspaceId,
-                    user: serializeUser(socket.user),
-                    readAt: readState.readAt,
-                });
-            })
-            .catch((error) => {
-                console.error("Failed to persist workspace chat read state:", {
-                    workspaceId,
-                    userId: socket.user._id,
-                    message: error.message,
-                });
-            });
-
+        /*
+         * Joining the Socket.IO room means the Chat page is mounted and can
+         * receive messages. It does not mean the browser window is currently
+         * focused or that the user has read the chat.
+         */
         return membership;
     };
 
-    // The handshake rejoin and the client's own join request race each other on
-    // every connection, so both share a single in-flight join per workspace
-    // instead of duplicating the read-state writes and presence broadcasts.
+    // Reconnects and explicit joins can race. Share one in-flight join per
+    // workspace so room membership is restored only once.
     const joinWorkspace = (socket, workspaceId) => {
         const key = String(workspaceId);
 
@@ -372,20 +351,6 @@ const registerChatSocket = (io) => {
     io.on("connection", (socket) => {
         socket.join(getUserRoom(socket.user._id));
 
-        // The workspace travels in the handshake, so rooms and presence are
-        // restored on every reconnect without waiting for the client to ask.
-        const handshakeWorkspaceId = socket.handshake.auth?.workspaceId;
-
-        if (handshakeWorkspaceId) {
-            void joinWorkspace(socket, handshakeWorkspaceId).catch((error) => {
-                console.error("Failed to auto-join workspace chat on connect:", {
-                    workspaceId: handshakeWorkspaceId,
-                    userId: socket.user?._id,
-                    message: error.message,
-                });
-            });
-        }
-
         socket.on("joinWorkspaceChat", async (payload = {}, callback) => {
             try {
                 const workspaceId = payload.workspaceId;
@@ -396,16 +361,116 @@ const registerChatSocket = (io) => {
                     return;
                 }
 
+                const unreadCount = await getWorkspaceUnreadCount(
+                    workspaceId,
+                    socket.user._id
+                );
+
                 if (typeof callback === "function") {
                     callback({
                         success: true,
                         workspaceId,
                         onlineUsers: getOnlineUsers(workspaceId),
+                        unreadCount,
+                    });
+                }
+            } catch (error) {
+                console.error("Failed to join workspace chat:", error.message);
+                emitError(socket, callback, "Failed to join workspace chat", 500);
+            }
+        });
+
+        socket.on("setWorkspaceChatViewing", async (payload = {}, callback) => {
+            try {
+                const workspaceId = payload.workspaceId;
+                const isViewing = Boolean(payload.isViewing);
+
+                let membership = getJoinedMembership(socket, workspaceId);
+
+                if (!membership) {
+                    membership = await joinWorkspace(socket, workspaceId);
+                }
+
+                if (!membership) {
+                    emitError(socket, callback, "You are not a member of this workspace", 403);
+                    return;
+                }
+
+                if (!isViewing) {
+                    emitTyping(socket, workspaceId, false);
+                    removePresence(workspaceId, socket);
+                    emitPresence(io, workspaceId);
+
+                    if (typeof callback === "function") {
+                        callback({
+                            success: true,
+                            workspaceId,
+                            isViewing: false,
+                        });
+                    }
+
+                    return;
+                }
+
+                addPresence(workspaceId, socket);
+
+                const readState = await markWorkspaceChatRead(
+                    workspaceId,
+                    socket.user._id
+                );
+
+                io.to(getWorkspaceRoom(workspaceId)).emit("messagesRead", {
+                    workspaceId,
+                    user: serializeUser(socket.user),
+                    readAt: readState.readAt,
+                });
+
+                socket.emit("chatUnreadCount", {
+                    workspaceId,
+                    unreadCount: 0,
+                });
+
+                emitPresence(io, workspaceId);
+
+                if (typeof callback === "function") {
+                    callback({
+                        success: true,
+                        workspaceId,
+                        isViewing: true,
                         unreadCount: 0,
                     });
                 }
-            } catch {
-                emitError(socket, callback, "Failed to join workspace chat", 500);
+            } catch (error) {
+                console.error("Failed to update chat viewing state:", error.message);
+                emitError(socket, callback, "Failed to update chat viewing state", 500);
+            }
+        });
+
+        socket.on("leaveWorkspaceChat", async (payload = {}, callback) => {
+            try {
+                const workspaceId = String(payload.workspaceId || "");
+
+                if (!workspaceId) {
+                    emitError(socket, callback, "Workspace ID is required", 400);
+                    return;
+                }
+
+                emitTyping(socket, workspaceId, false);
+                removePresence(workspaceId, socket);
+                socket.leave(getWorkspaceRoom(workspaceId));
+
+                socket.data.joinedWorkspaceMemberships?.delete(workspaceId);
+                socket.data.joinedWorkspaceIds?.delete(workspaceId);
+                socket.data.joinRequests?.delete(workspaceId);
+
+                emitPresence(io, workspaceId);
+
+                if (typeof callback === "function") {
+                    callback({ success: true, workspaceId });
+                }
+            } catch (error) {
+                console.error("Failed to leave workspace chat:", error.message);
+                emitError(socket, callback, "Failed to leave workspace chat", 500);
             }
         });
 

@@ -243,6 +243,8 @@ const sendEmail = async (options) => {
       response: result.response,
       messageId: result.messageId,
     });
+
+    return result;
   } catch (error) {
     console.error(
       `[Email] ❌ Failed to send email to ${options.email}:`,

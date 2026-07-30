@@ -36,6 +36,17 @@ const chatReadStateSchema = new mongoose.Schema(
             default: false,
         },
 
+        missedEmailPending: {
+            type: Boolean,
+            default: false,
+        },
+
+        missedEmailPendingFor: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Message",
+            default: null,
+        },
+
         notificationSent: {
             type: Boolean,
             default: false,
