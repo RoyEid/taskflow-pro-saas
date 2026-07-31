@@ -24,6 +24,7 @@ import {
   LayoutList,
   AlignLeft,
 } from "lucide-react";
+import useDocumentTitle from "../hooks/useDocumentTitle";
 
 function getWorkspaceId(workspace) {
   return workspace?._id || workspace?.id || null;
@@ -126,6 +127,8 @@ function TaskDetail() {
 
   const [showConfirm, setShowConfirm] = useState(false);
   const [deletingComment, setDeletingComment] = useState(null);
+
+  useDocumentTitle(task?.title || "Task");
 
   const loadData = useCallback(async () => {
     await Promise.resolve();

@@ -19,6 +19,7 @@ import {
   ListTodo,
   Timer,
 } from "lucide-react";
+import useDocumentTitle from "../hooks/useDocumentTitle";
 
 function getWorkspaceId(workspace) {
   return workspace?._id || workspace?.id || null;
@@ -80,6 +81,8 @@ function ProjectDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("overview");
+
+  useDocumentTitle(project?.name || "Project");
 
   const loadData = useCallback(async () => {
     await Promise.resolve();
