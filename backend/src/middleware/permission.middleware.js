@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import WorkspaceMember from "../models/WorkspaceMember.model.js";
 import ApiError from "../utils/ApiError.js";
 import asyncHandler from "../utils/asyncHandler.js";
@@ -12,6 +13,10 @@ export const checkWorkspaceRole = (...allowedRoles) =>
 
         if (!workspaceId) {
             throw new ApiError(400, "Workspace ID is required");
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(workspaceId)) {
+            throw new ApiError(400, "Invalid workspace ID format");
         }
 
         const membership = await WorkspaceMember.findOne({
@@ -39,4 +44,3 @@ export const checkWorkspaceRole = (...allowedRoles) =>
 
         next();
     });
-    

@@ -121,7 +121,7 @@ function getFirstName(name) {
 
 function Dashboard() {
   const { user } = useAuth();
-  const { workspace, memberRole, refreshWorkspaces } = useWorkspace();
+  const { workspace, memberRole } = useWorkspace();
   const navigate = useNavigate();
 
   const workspaceId = getWorkspaceId(workspace);
@@ -250,22 +250,10 @@ function Dashboard() {
       const status = err?.response?.status;
 
       if (status === 403 || status === 404) {
-        const refreshedWorkspaces = await refreshWorkspaces();
-        const selectedWorkspaceStillExists = refreshedWorkspaces?.some(
-          (item) =>
-            String(getWorkspaceId(item?.workspace || item)) ===
-            String(workspaceId)
-        );
-
-        if (
-          Array.isArray(refreshedWorkspaces) &&
-          !selectedWorkspaceStillExists
-        ) {
-          setData(null);
-          setRealActivities([]);
-          setError("");
-          return false;
-        }
+        setData(null);
+        setRealActivities([]);
+        setError("");
+        return null;
       }
 
       setError("Failed to load dashboard data.");
@@ -273,7 +261,7 @@ function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, [workspaceId, dateRange, refreshWorkspaces]);
+  }, [workspaceId, dateRange]);
 
   const handleRefresh = async () => {
     if (isRefreshing) return;
@@ -282,9 +270,9 @@ function Dashboard() {
 
     const success = await loadDashboard();
 
-    if (success) {
+    if (success === true) {
       showSuccess("Dashboard refreshed successfully");
-    } else {
+    } else if (success === false) {
       showError("Failed to refresh dashboard data");
     }
 

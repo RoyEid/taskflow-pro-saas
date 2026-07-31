@@ -1,19 +1,13 @@
 import Workspace from "../models/Workspace.model.js";
 import WorkspaceMember from "../models/WorkspaceMember.model.js";
 import ActivityLog from "../models/ActivityLog.model.js";
-import Project from "../models/Project.model.js";
-import Task from "../models/Task.model.js";
-import Client from "../models/Client.model.js";
-import Comment from "../models/Comment.model.js";
-import ChatReadState from "../models/ChatReadState.model.js";
-import Message from "../models/Message.model.js";
-import Notification from "../models/Notification.model.js";
-import SupportRequest from "../models/SupportRequest.model.js";
-import Feedback from "../models/Feedback.model.js";
+import mongoose from "mongoose";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { logActivity } from "../services/activityLog.service.js";
+import { deleteWorkspacePermanently } from "../services/workspaceDeletion.service.js";
+import { broadcastWorkspaceDeleted } from "../sockets/chat.socket.js";
 
 export const createWorkspace = asyncHandler(async (req, res) => {
     const { name, description } = req.body;
@@ -116,40 +110,36 @@ export const updateWorkspace = asyncHandler(async (req, res) => {
 export const deleteWorkspace = asyncHandler(async (req, res) => {
     const { workspaceId } = req.params;
 
-    const workspace = await Workspace.findById(workspaceId);
-
-    if (!workspace) {
-        throw new ApiError(404, "Workspace not found");
+    if (!mongoose.Types.ObjectId.isValid(workspaceId)) {
+        throw new ApiError(400, "Invalid workspace ID format");
     }
 
-    // Check if user has other workspaces before deleting this one
-    const userWorkspacesCount = await WorkspaceMember.countDocuments({
-        user: req.user._id,
-        status: "active",
+    const deletion = await deleteWorkspacePermanently({
+        workspaceId,
+        ownerId: req.user._id,
     });
 
-    if (userWorkspacesCount <= 1) {
-        throw new ApiError(400, "You cannot delete your only workspace. Create or join another workspace first.");
+    const io = req.app.get("io");
+    if (io) {
+        try {
+            await broadcastWorkspaceDeleted({
+                io,
+                workspaceId: deletion.deletedWorkspaceId,
+                affectedUserIds: deletion.affectedUserIds,
+                deletedBy: req.user._id,
+            });
+        } catch (error) {
+            console.error(
+                "[Workspace deletion] Failed to broadcast deletion:",
+                error.message
+            );
+        }
     }
 
-    // Perform safe cascading delete
-    await Promise.all([
-        Project.deleteMany({ workspace: workspaceId }),
-        Task.deleteMany({ workspace: workspaceId }),
-        Client.deleteMany({ workspace: workspaceId }),
-        Comment.deleteMany({ workspace: workspaceId }),
-        ChatReadState.deleteMany({ workspace: workspaceId }),
-        Message.deleteMany({ workspace: workspaceId }),
-        Notification.deleteMany({ workspace: workspaceId }),
-        SupportRequest.deleteMany({ workspace: workspaceId }),
-        Feedback.deleteMany({ workspace: workspaceId }),
-        WorkspaceMember.deleteMany({ workspace: workspaceId }),
-    ]);
-
-    await Workspace.findByIdAndDelete(workspaceId);
-
     res.status(200).json(
-        new ApiResponse(200, "Workspace deleted successfully", {})
+        new ApiResponse(200, "Workspace deleted successfully", {
+            deletedWorkspaceId: deletion.deletedWorkspaceId,
+        })
     );
 });
 

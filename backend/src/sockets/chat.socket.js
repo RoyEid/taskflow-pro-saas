@@ -175,6 +175,39 @@ const removePresence = (workspaceId, socket) => {
     }
 };
 
+export const broadcastWorkspaceDeleted = async ({
+    io,
+    workspaceId,
+    affectedUserIds = [],
+    deletedBy,
+}) => {
+    const normalizedWorkspaceId = String(workspaceId);
+    const workspaceRoom = getWorkspaceRoom(normalizedWorkspaceId);
+    const payload = {
+        workspaceId: normalizedWorkspaceId,
+        deletedWorkspaceId: normalizedWorkspaceId,
+        deletedBy: deletedBy ? String(deletedBy) : null,
+        message: "This workspace no longer exists.",
+    };
+    const workspaceSockets = await io.in(workspaceRoom).fetchSockets();
+
+    io.to(workspaceRoom).emit("workspaceDeleted", payload);
+
+    for (const socket of workspaceSockets) {
+        removePresence(normalizedWorkspaceId, socket);
+        socket.data.joinedWorkspaceMemberships?.delete(normalizedWorkspaceId);
+        socket.data.joinedWorkspaceIds?.delete(normalizedWorkspaceId);
+        socket.data.joinRequests?.delete(normalizedWorkspaceId);
+        await socket.leave(workspaceRoom);
+    }
+
+    workspacePresence.delete(normalizedWorkspaceId);
+
+    for (const userId of new Set(affectedUserIds.map(String))) {
+        io.to(getUserRoom(userId)).emit("workspaceDeleted", payload);
+    }
+};
+
 // Presence is keyed by live socket ids, so anything the disconnect handler
 // missed is dropped here before the list is published or read.
 const prunePresence = (io, workspaceId) => {

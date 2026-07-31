@@ -1,7 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router";
 import WorkspaceContext from "./WorkspaceContext";
 import { getWorkspaces } from "../services/workspaceService";
 import useAuth from "./useAuth";
+import { showWarning } from "../utils/alerts";
+import {
+  WORKSPACE_ACCESS_LOST_EVENT,
+  WORKSPACE_DELETED_EVENT,
+} from "../utils/workspaceEvents";
 
 function getWorkspaceId(ws) {
   return ws?._id || ws?.id || null;
@@ -28,6 +34,51 @@ function normalizeWorkspaceList(data) {
   return [];
 }
 
+function persistWorkspaceId(workspaceId) {
+  try {
+    if (workspaceId) {
+      localStorage.setItem("workspaceId", String(workspaceId));
+      sessionStorage.removeItem("workspaceId");
+    } else {
+      localStorage.removeItem("workspaceId");
+      sessionStorage.removeItem("workspaceId");
+    }
+  } catch {
+    // Storage can be blocked. The in-memory selection remains authoritative.
+  }
+}
+
+function getPersistedWorkspaceId() {
+  try {
+    return (
+      localStorage.getItem("workspaceId") ||
+      sessionStorage.getItem("workspaceId")
+    );
+  } catch {
+    return null;
+  }
+}
+
+function workspaceListContains(workspaceList, workspaceId) {
+  return workspaceList.some(
+    (item) =>
+      String(getWorkspaceId(normalizeWorkspace(item))) === String(workspaceId),
+  );
+}
+
+function isWorkspaceDependentPath(pathname) {
+  return [
+    "/dashboard",
+    "/clients",
+    "/projects",
+    "/tasks",
+    "/chat",
+    "/members",
+  ].some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
+
 function getChatWorkspaceIdFromPath() {
   const match = window.location.pathname.match(/^\/chat\/([^/]+)\/?$/);
 
@@ -42,6 +93,8 @@ function getChatWorkspaceIdFromPath() {
 
 function WorkspaceProvider({ children }) {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const lastUnavailableWorkspace = useRef({ id: null, time: 0 });
 
   const [workspace, setWorkspaceState] = useState(null);
   const [memberRole, setMemberRole] = useState(null);
@@ -62,11 +115,7 @@ function WorkspaceProvider({ children }) {
       setMemberRole(null);
     }
 
-    if (workspaceId) {
-      localStorage.setItem("workspaceId", workspaceId);
-    } else {
-      localStorage.removeItem("workspaceId");
-    }
+    persistWorkspaceId(workspaceId);
   }, []);
 
   const refreshWorkspaces = useCallback(async () => {
@@ -122,6 +171,11 @@ function WorkspaceProvider({ children }) {
         return normalizeWorkspace(fallbackWorkspace);
       }
 
+      const persistedWorkspaceId = getPersistedWorkspaceId();
+      if (String(persistedWorkspaceId) === String(workspaceId)) {
+        persistWorkspaceId(getWorkspaceId(workspace));
+      }
+
       return workspace;
     },
     [workspace, workspaces, setWorkspace]
@@ -162,7 +216,7 @@ function WorkspaceProvider({ children }) {
 
       if (cancelled) return;
 
-      const savedWorkspaceId = localStorage.getItem("workspaceId");
+      const savedWorkspaceId = getPersistedWorkspaceId();
       const linkedWorkspaceId = getChatWorkspaceIdFromPath();
       const preferredWorkspaceId = linkedWorkspaceId || savedWorkspaceId;
 
@@ -183,10 +237,12 @@ function WorkspaceProvider({ children }) {
           matchedWorkspace?.membership?.role ||
           matchedWorkspace?.userRole;
         setMemberRole(role ? role.toLowerCase() : null);
-        localStorage.setItem("workspaceId", normalizedId);
+        persistWorkspaceId(normalizedId);
         setLoading(false);
         return;
       }
+
+      const invalidPreferredWorkspace = Boolean(preferredWorkspaceId);
 
       // If savedWorkspaceId is invalid/forbidden or missing, fallback to first available workspace
       if (userWorkspaces.length > 0) {
@@ -199,15 +255,20 @@ function WorkspaceProvider({ children }) {
           userWorkspaces[0]?.membership?.role ||
           userWorkspaces[0]?.userRole;
         setMemberRole(role ? role.toLowerCase() : null);
-        if (fallbackId) {
-          localStorage.setItem("workspaceId", fallbackId);
-        } else {
-          localStorage.removeItem("workspaceId");
-        }
+        persistWorkspaceId(fallbackId);
       } else {
         setWorkspaceState(null);
         setMemberRole(null);
-        localStorage.removeItem("workspaceId");
+        persistWorkspaceId(null);
+      }
+
+      if (
+        invalidPreferredWorkspace &&
+        (linkedWorkspaceId ||
+          isWorkspaceDependentPath(window.location.pathname))
+      ) {
+        navigate("/workspaces", { replace: true });
+        showWarning("This workspace no longer exists.", "Workspace unavailable");
       }
 
       setLoading(false);
@@ -218,7 +279,89 @@ function WorkspaceProvider({ children }) {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, navigate]);
+
+  useEffect(() => {
+    const handleWorkspaceUnavailable = async (event) => {
+      const eventWorkspaceId =
+        event?.detail?.deletedWorkspaceId || event?.detail?.workspaceId;
+
+      if (!eventWorkspaceId) return;
+
+      const now = Date.now();
+      if (
+        String(lastUnavailableWorkspace.current.id) ===
+          String(eventWorkspaceId) &&
+        now - lastUnavailableWorkspace.current.time < 1000
+      ) {
+        return;
+      }
+
+      lastUnavailableWorkspace.current = {
+        id: String(eventWorkspaceId),
+        time: now,
+      };
+
+      const isDeletionEvent = event.type === WORKSPACE_DELETED_EVENT;
+      const activeWorkspaceWasRemoved =
+        String(getWorkspaceId(workspace)) === String(eventWorkspaceId);
+      const linkedWorkspaceWasRemoved =
+        String(getChatWorkspaceIdFromPath()) === String(eventWorkspaceId);
+
+      if (isDeletionEvent) {
+        removeWorkspace(eventWorkspaceId);
+      }
+
+      const refreshedWorkspaces = await refreshWorkspaces();
+      if (!Array.isArray(refreshedWorkspaces)) return;
+
+      const workspaceStillAccessible = workspaceListContains(
+        refreshedWorkspaces,
+        eventWorkspaceId,
+      );
+
+      if (workspaceStillAccessible && !isDeletionEvent) {
+        return;
+      }
+
+      removeWorkspace(eventWorkspaceId, refreshedWorkspaces);
+
+      if (
+        activeWorkspaceWasRemoved ||
+        linkedWorkspaceWasRemoved ||
+        !isDeletionEvent
+      ) {
+        navigate("/workspaces", { replace: true });
+      }
+
+      showWarning(
+        isDeletionEvent
+          ? event?.detail?.message || "This workspace no longer exists."
+          : "This workspace no longer exists or you no longer have access.",
+        "Workspace unavailable",
+      );
+    };
+
+    window.addEventListener(
+      WORKSPACE_ACCESS_LOST_EVENT,
+      handleWorkspaceUnavailable,
+    );
+    window.addEventListener(
+      WORKSPACE_DELETED_EVENT,
+      handleWorkspaceUnavailable,
+    );
+
+    return () => {
+      window.removeEventListener(
+        WORKSPACE_ACCESS_LOST_EVENT,
+        handleWorkspaceUnavailable,
+      );
+      window.removeEventListener(
+        WORKSPACE_DELETED_EVENT,
+        handleWorkspaceUnavailable,
+      );
+    };
+  }, [navigate, refreshWorkspaces, removeWorkspace, workspace]);
 
   const value = useMemo(() => {
     const workspaceId = getWorkspaceId(workspace);

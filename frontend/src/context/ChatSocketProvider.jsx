@@ -7,6 +7,10 @@ import {
   createChatSocket,
   getChatUnreadCount,
 } from "../services/chatService";
+import {
+  dispatchWorkspaceDeleted,
+  getPendingWorkspaceDeletionId,
+} from "../utils/workspaceEvents";
 
 function ChatSocketProvider({ children }) {
   const { user } = useAuth();
@@ -73,6 +77,31 @@ function ChatSocketProvider({ children }) {
       setUnreadCount(payload.workspaceId, payload.unreadCount || 0);
     };
 
+    const handleWorkspaceDeleted = (payload) => {
+      const deletedWorkspaceId =
+        payload?.deletedWorkspaceId || payload?.workspaceId;
+
+      if (!deletedWorkspaceId) return;
+
+      setUnreadCounts((previous) => {
+        const next = { ...previous };
+        delete next[String(deletedWorkspaceId)];
+        return next;
+      });
+
+      const pendingDeletionId = getPendingWorkspaceDeletionId();
+
+      if (String(pendingDeletionId) === String(deletedWorkspaceId)) {
+        return;
+      }
+
+      dispatchWorkspaceDeleted({
+        ...payload,
+        workspaceId: String(deletedWorkspaceId),
+        deletedWorkspaceId: String(deletedWorkspaceId),
+      });
+    };
+
     const handleConnectError = (error) => {
       console.error(
         "[Chat Socket] Connection failed:",
@@ -83,6 +112,7 @@ function ChatSocketProvider({ children }) {
     currentSocket.on("connect", handleConnect);
     currentSocket.on("disconnect", handleDisconnect);
     currentSocket.on("chatUnreadCount", handleUnreadCount);
+    currentSocket.on("workspaceDeleted", handleWorkspaceDeleted);
     currentSocket.on("connect_error", handleConnectError);
 
     setSocket(currentSocket);
@@ -92,6 +122,7 @@ function ChatSocketProvider({ children }) {
       currentSocket.off("connect", handleConnect);
       currentSocket.off("disconnect", handleDisconnect);
       currentSocket.off("chatUnreadCount", handleUnreadCount);
+      currentSocket.off("workspaceDeleted", handleWorkspaceDeleted);
       currentSocket.off("connect_error", handleConnectError);
       currentSocket.disconnect();
 

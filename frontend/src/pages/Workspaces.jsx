@@ -16,6 +16,11 @@ import AppDropdown from "../components/ui/AppDropdown";
 import PageHeader from "../components/PageHeader";
 import { showSuccess } from "../utils/alerts";
 import {
+  clearPendingWorkspaceDeletionId,
+  setPendingWorkspaceDeletionId,
+  WORKSPACE_DELETED_EVENT,
+} from "../utils/workspaceEvents";
+import {
   Plus,
   LayoutGrid,
   CheckCircle2,
@@ -86,6 +91,7 @@ function Workspaces() {
     workspace: activeWorkspace,
     setWorkspace,
     removeWorkspace,
+    refreshWorkspaces,
   } = useWorkspace();
 
   const [workspaces, setWorkspaces] = useState([]);
@@ -162,6 +168,35 @@ useEffect(() => {
   }
 }, []);
 
+useEffect(() => {
+  const removeDeletedWorkspaceFromPage = (event) => {
+    const deletedWorkspaceId =
+      event?.detail?.deletedWorkspaceId || event?.detail?.workspaceId;
+
+    if (!deletedWorkspaceId) return;
+
+    setWorkspaces((currentWorkspaces) =>
+      currentWorkspaces.filter(
+        (item) =>
+          String(getWorkspaceId(getWorkspaceFromItem(item))) !==
+          String(deletedWorkspaceId)
+      )
+    );
+  };
+
+  window.addEventListener(
+    WORKSPACE_DELETED_EVENT,
+    removeDeletedWorkspaceFromPage
+  );
+
+  return () => {
+    window.removeEventListener(
+      WORKSPACE_DELETED_EVENT,
+      removeDeletedWorkspaceFromPage
+    );
+  };
+}, []);
+
   const openCreateModal = () => {
     setForm(emptyWorkspaceForm);
     setFormError("");
@@ -215,7 +250,8 @@ useEffect(() => {
 
       showSuccess("Workspace created successfully!");
 
-      handleSelect(createdWorkspace);
+      await refreshWorkspaces();
+      handleSelect({ workspace: createdWorkspace, role: "owner" });
     } catch (err) {
       setFormError(
         err?.response?.data?.message || "Failed to create workspace."
@@ -319,9 +355,15 @@ useEffect(() => {
     }
 
     setSaving(true);
+    const requestedWorkspaceId = getWorkspaceId(deletingWorkspace);
+    let deletionSucceeded = false;
+    setPendingWorkspaceDeletionId(requestedWorkspaceId);
+
     try {
-      const deletedWorkspaceId = getWorkspaceId(deletingWorkspace);
-      await deleteWorkspace(deletedWorkspaceId);
+      const response = await deleteWorkspace(requestedWorkspaceId);
+      deletionSucceeded = true;
+      const deletedWorkspaceId =
+        response?.deletedWorkspaceId || requestedWorkspaceId;
       
       const newWorkspaces = workspaces.filter(
         (w) =>
@@ -334,13 +376,21 @@ useEffect(() => {
       showSuccess("Workspace deleted successfully.");
 
       if (String(activeWorkspaceId) === String(deletedWorkspaceId)) {
-        navigate("/dashboard", { replace: true });
+        navigate("/workspaces", { replace: true });
       }
 
       closeDeleteModal();
     } catch (err) {
       setFormError(err?.response?.data?.message || "Failed to delete workspace.");
     } finally {
+      if (deletionSucceeded) {
+        window.setTimeout(
+          () => clearPendingWorkspaceDeletionId(requestedWorkspaceId),
+          2000
+        );
+      } else {
+        clearPendingWorkspaceDeletionId(requestedWorkspaceId);
+      }
       setSaving(false);
     }
   };

@@ -1,6 +1,7 @@
 import { Check, ChevronDown, Plus } from "lucide-react";
 import { useNavigate } from "react-router";
 import useWorkspace from "../context/useWorkspace";
+import { dispatchWorkspaceAccessLost } from "../utils/workspaceEvents";
 
 export default function WorkspaceSwitcher({
   userWorkspaces = [],
@@ -17,6 +18,7 @@ export default function WorkspaceSwitcher({
     setWorkspace,
     memberRole,
     workspaces: contextWorkspaces,
+    loadingWorkspaces,
   } = useWorkspace();
 
   // Use the prop list first; fall back to the context-provided list so the
@@ -45,6 +47,25 @@ export default function WorkspaceSwitcher({
       : rawList;
 
   const handleWorkspaceSelect = (ws) => {
+    const selectedWorkspace = ws?.workspace || ws;
+    const selectedWorkspaceId = selectedWorkspace?._id || selectedWorkspace?.id;
+    const workspaceStillAccessible = contextWorkspaces.some((item) => {
+      const itemWorkspace = item?.workspace || item;
+      return (
+        String(itemWorkspace?._id || itemWorkspace?.id) ===
+        String(selectedWorkspaceId)
+      );
+    });
+
+    if (!loadingWorkspaces && !workspaceStillAccessible) {
+      dispatchWorkspaceAccessLost({
+        workspaceId: selectedWorkspaceId,
+        message: "This workspace no longer exists.",
+      });
+      setIsOpen(false);
+      return;
+    }
+
     setWorkspace(ws);
     if (mobileOpen) setMobileOpen(false);
     setIsOpen(false);
