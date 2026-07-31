@@ -21,20 +21,22 @@ export default function WorkspaceSwitcher({
 
   // Use the prop list first; fall back to the context-provided list so the
   // switcher is never empty when the provider has already fetched workspaces.
-  const rawList = Array.isArray(userWorkspaces) && userWorkspaces.length > 0
-    ? userWorkspaces
-    : Array.isArray(userWorkspaces?.workspaces) && userWorkspaces.workspaces.length > 0
-    ? userWorkspaces.workspaces
-    : Array.isArray(contextWorkspaces) && contextWorkspaces.length > 0
-    ? contextWorkspaces
-    : [];
+  const rawList =
+    Array.isArray(userWorkspaces) && userWorkspaces.length > 0
+      ? userWorkspaces
+      : Array.isArray(userWorkspaces?.workspaces) &&
+          userWorkspaces.workspaces.length > 0
+        ? userWorkspaces.workspaces
+        : Array.isArray(contextWorkspaces) && contextWorkspaces.length > 0
+          ? contextWorkspaces
+          : [];
 
   // Guarantee the active workspace appears in the list even when neither the
   // prop nor the context array includes it yet (e.g. during initial load).
   const currentWorkspaceId = workspace?._id || workspace?.id;
   const activeAlreadyListed = rawList.some((item) => {
     const ws = item?.workspace || item;
-    return (ws?._id || ws?.id) === currentWorkspaceId;
+    return String(ws?._id || ws?.id) === String(currentWorkspaceId);
   });
 
   const workspacesList =
@@ -58,18 +60,23 @@ export default function WorkspaceSwitcher({
 
   const getRoleBadge = (role) => {
     if (!role) return null;
-    let colorClass = "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400";
-    if (role === "owner") colorClass = "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400";
-    if (role === "admin") colorClass = "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400";
-    
+    let colorClass =
+      "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400";
+    if (role === "owner")
+      colorClass =
+        "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400";
+    if (role === "admin")
+      colorClass =
+        "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400";
+
     return (
-      <span className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${colorClass}`}>
+      <span
+        className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${colorClass}`}
+      >
         {role}
       </span>
     );
   };
-
-
 
   return (
     <div className="flex min-w-0 flex-1 flex-col">
@@ -112,22 +119,22 @@ export default function WorkspaceSwitcher({
           <div className="px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider tf-text-subtle">
             Switch Workspace
           </div>
-          
+
           <div className="max-h-[50vh] space-y-0.5 overflow-y-auto px-1.5 pb-1 no-scrollbar">
             {workspacesList.length > 0 ? (
               workspacesList.map((wsItem) => {
                 const ws = wsItem.workspace || wsItem;
                 const role = wsItem.role || null;
                 const wsId = ws._id || ws.id;
-                const isActive = currentWorkspaceId === wsId;
+                const isActive = String(currentWorkspaceId) === String(wsId);
 
                 return (
                   <button
                     key={wsId}
                     onClick={() => handleWorkspaceSelect(wsItem)}
                     className={`flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 ${
-                      isActive 
-                        ? "bg-indigo-50 text-indigo-900 dark:bg-indigo-500/10 dark:text-indigo-200" 
+                      isActive
+                        ? "bg-indigo-50 text-indigo-900 dark:bg-indigo-500/10 dark:text-indigo-200"
                         : "tf-text-secondary"
                     }`}
                   >
@@ -145,7 +152,10 @@ export default function WorkspaceSwitcher({
                       )}
                     </div>
                     {isActive && (
-                      <Check size={14} className="shrink-0 text-indigo-600 dark:text-indigo-400" />
+                      <Check
+                        size={14}
+                        className="shrink-0 text-indigo-600 dark:text-indigo-400"
+                      />
                     )}
                   </button>
                 );
@@ -158,7 +168,7 @@ export default function WorkspaceSwitcher({
           </div>
 
           <div className="border-t border-slate-100 dark:border-slate-800/80" />
-          
+
           <div className="p-1.5">
             <button
               onClick={() => {
@@ -169,7 +179,10 @@ export default function WorkspaceSwitcher({
               className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-indigo-600 transition-colors hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-500/10"
             >
               <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-indigo-100 dark:bg-indigo-500/20">
-                <Plus size={14} className="text-indigo-600 dark:text-indigo-400" />
+                <Plus
+                  size={14}
+                  className="text-indigo-600 dark:text-indigo-400"
+                />
               </div>
               <span className="text-[12px] font-semibold">New Workspace</span>
             </button>

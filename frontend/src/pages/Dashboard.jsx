@@ -121,7 +121,7 @@ function getFirstName(name) {
 
 function Dashboard() {
   const { user } = useAuth();
-  const { workspace, memberRole } = useWorkspace();
+  const { workspace, memberRole, refreshWorkspaces } = useWorkspace();
   const navigate = useNavigate();
 
   const workspaceId = getWorkspaceId(workspace);
@@ -246,13 +246,34 @@ function Dashboard() {
       setRealActivities(normalizeArrayResponse(actRes));
 
       return true;
-    } catch {
+    } catch (err) {
+      const status = err?.response?.status;
+
+      if (status === 403 || status === 404) {
+        const refreshedWorkspaces = await refreshWorkspaces();
+        const selectedWorkspaceStillExists = refreshedWorkspaces?.some(
+          (item) =>
+            String(getWorkspaceId(item?.workspace || item)) ===
+            String(workspaceId)
+        );
+
+        if (
+          Array.isArray(refreshedWorkspaces) &&
+          !selectedWorkspaceStillExists
+        ) {
+          setData(null);
+          setRealActivities([]);
+          setError("");
+          return false;
+        }
+      }
+
       setError("Failed to load dashboard data.");
       return false;
     } finally {
       setLoading(false);
     }
-  }, [workspaceId, dateRange]);
+  }, [workspaceId, dateRange, refreshWorkspaces]);
 
   const handleRefresh = async () => {
     if (isRefreshing) return;

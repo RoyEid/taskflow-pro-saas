@@ -82,7 +82,11 @@ function getSafeDateLabel(value) {
 
 function Workspaces() {
   const navigate = useNavigate();
-  const { workspace: activeWorkspace, setWorkspace } = useWorkspace();
+  const {
+    workspace: activeWorkspace,
+    setWorkspace,
+    removeWorkspace,
+  } = useWorkspace();
 
   const [workspaces, setWorkspaces] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -316,19 +320,21 @@ useEffect(() => {
 
     setSaving(true);
     try {
-      await deleteWorkspace(getWorkspaceId(deletingWorkspace));
+      const deletedWorkspaceId = getWorkspaceId(deletingWorkspace);
+      await deleteWorkspace(deletedWorkspaceId);
       
-      const newWorkspaces = workspaces.filter((w) => getWorkspaceId(getWorkspaceFromItem(w)) !== getWorkspaceId(deletingWorkspace));
+      const newWorkspaces = workspaces.filter(
+        (w) =>
+          String(getWorkspaceId(getWorkspaceFromItem(w))) !==
+          String(deletedWorkspaceId)
+      );
       setWorkspaces(newWorkspaces);
+      removeWorkspace(deletedWorkspaceId, newWorkspaces);
 
       showSuccess("Workspace deleted successfully.");
 
-      if (activeWorkspaceId === getWorkspaceId(deletingWorkspace)) {
-        if (newWorkspaces.length > 0) {
-          handleSelect(getWorkspaceFromItem(newWorkspaces[0]));
-        } else {
-          setWorkspace(null);
-        }
+      if (String(activeWorkspaceId) === String(deletedWorkspaceId)) {
+        navigate("/dashboard", { replace: true });
       }
 
       closeDeleteModal();

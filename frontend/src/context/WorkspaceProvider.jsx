@@ -72,18 +72,60 @@ function WorkspaceProvider({ children }) {
   const refreshWorkspaces = useCallback(async () => {
     if (!user) {
       setWorkspaces([]);
-      return;
+      setWorkspace(null);
+      return [];
     }
+
     setLoadingWorkspaces(true);
     try {
       const data = await getWorkspaces();
-      setWorkspaces(normalizeWorkspaceList(data));
+      const nextWorkspaces = normalizeWorkspaceList(data);
+      const currentWorkspaceId = getWorkspaceId(workspace);
+      const matchingWorkspace = nextWorkspaces.find((item) => {
+        const itemWorkspace = normalizeWorkspace(item);
+        return String(getWorkspaceId(itemWorkspace)) === String(currentWorkspaceId);
+      });
+
+      setWorkspaces(nextWorkspaces);
+
+      // Keep the selected workspace synchronized with the authoritative list.
+      // This also replaces a deleted or inaccessible workspace with a safe
+      // fallback so consumers never keep requesting its stale ID.
+      if (!matchingWorkspace) {
+        setWorkspace(nextWorkspaces[0] || null);
+      }
+
+      return nextWorkspaces;
     } catch (err) {
       console.error("Failed to refresh workspaces:", err);
+      return null;
     } finally {
       setLoadingWorkspaces(false);
     }
-  }, [user]);
+  }, [user, workspace, setWorkspace]);
+
+  const removeWorkspace = useCallback(
+    (workspaceId, remainingWorkspaces) => {
+      const sourceWorkspaces = Array.isArray(remainingWorkspaces)
+        ? normalizeWorkspaceList(remainingWorkspaces)
+        : workspaces;
+      const nextWorkspaces = sourceWorkspaces.filter((item) => {
+        const itemWorkspace = normalizeWorkspace(item);
+        return String(getWorkspaceId(itemWorkspace)) !== String(workspaceId);
+      });
+
+      setWorkspaces(nextWorkspaces);
+
+      if (String(getWorkspaceId(workspace)) === String(workspaceId)) {
+        const fallbackWorkspace = nextWorkspaces[0] || null;
+        setWorkspace(fallbackWorkspace);
+        return normalizeWorkspace(fallbackWorkspace);
+      }
+
+      return workspace;
+    },
+    [workspace, workspaces, setWorkspace]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -190,8 +232,18 @@ function WorkspaceProvider({ children }) {
       workspaces,
       loadingWorkspaces,
       refreshWorkspaces,
+      removeWorkspace,
     };
-  }, [workspace, setWorkspace, memberRole, loading, workspaces, loadingWorkspaces, refreshWorkspaces]);
+  }, [
+    workspace,
+    setWorkspace,
+    memberRole,
+    loading,
+    workspaces,
+    loadingWorkspaces,
+    refreshWorkspaces,
+    removeWorkspace,
+  ]);
 
   return (
     <WorkspaceContext.Provider value={value}>
